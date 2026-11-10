@@ -192,6 +192,8 @@ pre .c{color:var(--faint)} pre .k{color:var(--accent)}
 <tr><td><code>seek(t)</code> stays the only runtime primitive</td><td class="why">D2 to D5 carry over unchanged: every animation paused and persistent, seek drives <code>document.getAnimations()</code>, a backward seek replays forward. This is what makes render, preview and present agree.</td><td><span class="who">agent</span></td></tr>
 <tr><td>Free JS goes through <code>auditorium.track(fn)</code></td><td class="why">A function of <code>t</code> is seekable; a <code>requestAnimationFrame</code> loop is not. The check flags wall-clock calls, so custom code cannot break determinism quietly.</td><td><span class="who">agent</span></td></tr>
 <tr><td>A small curated library, not a large catalogue</td><td class="why">A small model picks well from ten layouts and twelve motions and badly from four hundred blocks. Each piece is documented in <code>help</code> with a snippet that passes the check.</td><td><span class="who">agent</span></td></tr>
+<tr><td><code>preview</code> edits the files in place</td><td class="why">A person fixes a word or a colour faster by clicking it than by asking an agent. The edit goes to the line the element came from, so the file stays the one source and the agent sees the change.</td><td><span class="who">maintainer</span></td></tr>
+<tr><td>Live data through declared endpoints</td><td class="why">A dashboard may fetch JSON at view time from an endpoint the project declares in <code>auditorium.toml</code>. The rest stays offline, and the check runs against a fixture so it never needs the network.</td><td><span class="who">maintainer</span></td></tr>
 <tr><td>PDF comes back</td><td class="why">4.0 removed it because a timeline has no canonical instant to print. In an HTML deck the end of each beat is that instant, and a page has none to choose.</td><td><span class="who">agent</span></td></tr>
 </tbody>
 </table>
@@ -249,6 +251,7 @@ launch/
   auditorium.toml     <span class="c"># format, language, reading rate, check overrides; written by template</span>
   README.md           <span class="c"># the template and version it came from</span>
   dist/               <span class="c"># bundle, render and export write here; never edited</span></pre>
+<p>Live data: a <code>[data]</code> table in <code>auditorium.toml</code> names each endpoint a page may fetch and the fixture file that stands in for it during <code>check</code>, <code>render</code> and <code>export</code>. The bundle keeps the fetch, so the published page shows current data; a video or PDF shows the data at the time it was made.</p>
 <p><code>index.html</code> loads <code>auditorium.js</code> and <code>auditorium.css</code> from a path the CLI serves, so the file opens in <code>auditorium preview</code> without a copy of the runtime in every project. <code>bundle</code> is what puts the runtime inside. A template carries its own <code>example/</code>, a finished artifact that passes the check with zero findings; CI checks every one.</p>
 
 <h2 id="contract"><span class="n">05</span>The file contract</h2>
@@ -298,13 +301,22 @@ launch/
 <tr><td>check</td><td class="why">Every rule of section 08; human text or <code>--json</code>; exit 1 on any error.</td><td class="why">#80, rescoped</td></tr>
 <tr><td>bundle</td><td class="why">One self-contained <code>dist/NAME.html</code>: runtime, CSS, fonts, images compressed to WebP (#94), audio optional. Refuses on missing assets and external URLs.</td><td class="why">new</td></tr>
 <tr><td>run</td><td class="why">Presents the folder with hot reload, presenter and audience views; <code>--public [--relay HOST]</code> gives the audience a URL through a relay.</td><td class="why">exists, takes a folder</td></tr>
-<tr><td>preview</td><td class="why">The authoring surface: scrubber, frame stepping, loop a range, findings drawn on the stage.</td><td class="why">exists, gains findings</td></tr>
+<tr><td>preview</td><td class="why">The authoring surface: scrubber, frame stepping, loop a range, findings drawn on the stage, and with <code>--edit</code> editing in place (below).</td><td class="why">exists, gains findings and editing</td></tr>
 <tr><td>render</td><td class="why">mp4 (or webm, PNG sequence) with <code>--jobs N</code> (#74), audio mixed from the contract.</td><td class="why">exists, extended</td></tr>
 <tr><td>export</td><td class="why"><code>png</code> (a poster, or any beat), <code>pdf</code>, <code>html</code> (alias of bundle).</td><td class="why">exists, gains pdf</td></tr>
 <tr><td>sheet</td><td class="why">Contact sheet of beats, or beats plus N frames between (#72); red tiles where a rule fired.</td><td class="why">#72</td></tr>
 <tr><td>relay</td><td class="why">Self-host a relay, unchanged.</td><td class="why">exists</td></tr>
 </tbody>
 </table>
+<h3>Editing in preview</h3>
+<ul>
+  <li><b>Text:</b> a click on any text element makes it editable (an overlay for SVG text, where contenteditable is unreliable). On commit the page posts the element's source position and the new text; the server replaces exactly that text range in <code>index.html</code> and leaves every other byte alone.</li>
+  <li><b>Attributes:</b> a selected element shows its <code>data-</code> attributes as fields, with the valid names for <code>data-enter</code> and friends as choices, and its time on the scrubber as handles for <code>data-in</code> and <code>data-out</code>.</li>
+  <li><b>Theme:</b> the variables of <code>theme.css</code> with colour pickers and number fields.</li>
+  <li><b>Source:</b> a pane with <code>index.html</code>, <code>theme.css</code> and <code>script.js</code>, saved on demand.</li>
+  <li>Each write reloads the page at the same time and runs the structure pass of the check, so a broken edit shows at once. <code>--edit</code> is off by default, and the server refuses writes outside the project folder.</li>
+</ul>
+<p>An app that embeds Auditorium can put this preview behind its own URL instead of writing an editor.</p>
 <p>Every command takes <code>--json</code>, never prompts, and ends on one count line, so an agent can tell success from failure without parsing prose. A music bed from Euterpe stays an optional extra: <code>auditorium music --mood calm --bpm 100 --length 30 -o assets/bed.wav</code> writes a file like any other asset.</p>
 
 <h2 id="check"><span class="n">08</span>The check</h2>
@@ -315,7 +327,7 @@ launch/
 <tr><td colspan="3">structure, no browser</td></tr>
 <tr><td>parse</td><td><span class="lv e">error</span></td><td class="why">Unclosed or misnested tags that browsers silently repair into a different tree</td></tr>
 <tr><td>unknown-name</td><td><span class="lv e">error</span></td><td class="why">A <code>data-enter</code>, layout class or format that does not exist, with the nearest valid name</td></tr>
-<tr><td>external-url</td><td><span class="lv e">error</span></td><td class="why">Anything loaded from the network; artifacts work offline</td></tr>
+<tr><td>external-url</td><td><span class="lv e">error</span></td><td class="why">Anything loaded from the network, except endpoints declared under <code>[data]</code> in <code>auditorium.toml</code>; artifacts work offline</td></tr>
 <tr><td>missing-asset</td><td><span class="lv e">error</span></td><td class="why">A referenced file that is not in the folder</td></tr>
 <tr><td>wall-clock</td><td><span class="lv e">error</span></td><td class="why"><code>requestAnimationFrame</code>, <code>setInterval</code>, <code>setTimeout</code>, <code>Date.now</code>, <code>performance.now</code>, <code>Math.random</code> outside the runtime</td></tr>
 <tr><td>bare-transition</td><td><span class="lv e">error</span></td><td class="why">A CSS <code>transition:</code> in author CSS (D3)</td></tr>
@@ -470,7 +482,7 @@ launch/
 <div class="slice"><div class="hd"><span class="id">M1</span><span class="ttl">Files, runtime, present</span><span class="lane">#79</span></div>
 <ul><li>The file contract, auditorium.js building the timeline from the DOM, the format table.</li><li><code>template</code> with talk and poster, <code>help</code> with start, formats and attributes, <code>bundle</code>, <code>run</code> and <code>preview</code> on a folder, <code>export png|pdf|html</code>.</li><li>Python authoring removed, examples rewritten.</li><li>Done when the talk template presents with <code>--public</code> through the relay and exports to one HTML file and a PDF.</li></ul></div>
 <div class="slice"><div class="hd"><span class="id">M2</span><span class="ttl">The check and the baseline</span><span class="lane">#80, #72, #81</span></div>
-<ul><li>The rule registry with source lines, structure and layout rules, <code>sheet</code>, <code>help rule</code>.</li><li>pitch, report and dashboard templates.</li><li>Done when every template example passes, every fixture fails, and the baseline gap is a published number.</li></ul></div>
+<ul><li>The rule registry with source lines, structure and layout rules, <code>sheet</code>, <code>help rule</code>.</li><li><code>preview --edit</code>: text, attributes, theme, source.</li><li>pitch, report and dashboard templates.</li><li>Done when every template example passes, every fixture fails, and the baseline gap is a published number.</li></ul></div>
 <div class="slice"><div class="hd"><span class="id">M3</span><span class="ttl">Time, motion and sound</span><span class="lane">#83, #85, #87, #73, #89, #90, #74</span></div>
 <ul><li>The motion library, explainer and short, deterministic capture, <code>render --jobs</code>, narration cues, audio mix, Euterpe extra.</li><li>Time and reading rules, <code>seek-stable</code>.</li><li>Done when a narrated short builds from clips and a brief with nothing outside the folder.</li></ul></div>
 <div class="slice"><div class="hd"><span class="id">M4</span><span class="ttl">Assets</span><span class="lane">#91, #92, #93, #94</span></div>
@@ -483,8 +495,8 @@ launch/
 <h3>Non-goals</h3>
 <ul>
   <li>A Python authoring API, a shim for <code>deck.py</code>, or a converter from it.</li>
-  <li>A visual editor; it would be one more client of the same files.</li>
-  <li>Calling TTS, image services or any network from a command other than <code>assets</code>.</li>
+  <li>A layout editor (drag, resize, a timeline editor). Preview edits text, attributes, theme variables and the source.</li>
+  <li>Calling TTS, image services or any network from a command other than <code>assets</code>. The check serves declared data endpoints from their fixtures.</li>
   <li>Node or npm as a dependency.</li>
 </ul>
 <h3>Open questions</h3>
