@@ -126,6 +126,14 @@ Rules added after the spec:
   (`--aud-accent`, a geometry series variable) and the theme picks the colour,
   so a figure keeps its meaning when the theme changes. See
   `docs/design/2026-08-27-themed-math-and-geometry.md`.
+- **A template is copied once, and the project owns the copy.** `template new`
+  never links back to the package, so upgrading auditorium never rewrites a
+  deck someone has finished. `auditorium.toml` records the template and the
+  version it came from.
+- **Help is the only guide, and it is tested against the code.** An agent with
+  the CLI needs no other doc, so a stale topic sends it into errors it cannot
+  fix. Tests hold each topic to what it describes: commands, formats,
+  attributes, templates and every snippet.
 - **Everything the browser loads is vendored.** KaTeX, highlight.js and fonts ship
   inside the package, so a deck runs offline and a render does not depend on a CDN.
 - **PDF comes back with `bundle` (#103).** 4.0 removed it because a timeline
