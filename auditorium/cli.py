@@ -1,6 +1,6 @@
-"""The ``auditorium`` command: ``run``, ``preview``, ``render``, ``export``, ``relay``.
+"""The ``auditorium`` command: ``run``, ``preview``, ``render``, ``export``, ``relay``, ``help``.
 
-Every command but ``relay`` takes a project: a folder holding index.html (or
+Every command but ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
 only in which surface they open and whether shared navigation is on. SIGINT is
 reset to ``SIG_DFL`` before uvicorn starts, for a clean shutdown.
@@ -213,6 +213,31 @@ def export(
 
     written = asyncio.run(export_png(folder, output or folder / "dist", size=dims, steps=steps))
     console.print(f"[green]✓[/] {len(written)} PNG files in [bold]{output or folder / 'dist'}/[/]")
+
+
+@app.command(name="help")
+def help_(
+    topic: str = typer.Argument(None, help="Topic to print; omit for the list"),
+) -> None:
+    """Print the guide that ships with this version, one topic at a time."""
+    from auditorium.help import nearest, topic_path, topics
+
+    if topic is None:
+        known = topics()
+        width = max(len(n) for n in known)
+        for name, summary in known.items():
+            print(f"{name:<{width}}  {summary}")
+        print(f"{len(known)} topics; auditorium help TOPIC prints one")
+        return
+    path = topic_path(topic)
+    if not path.is_file():
+        guess = nearest(topic)
+        hint = f" Did you mean '{guess}'?" if guess else ""
+        print(f"error: no help topic '{topic}'.{hint} auditorium help lists them.")
+        raise typer.Exit(1)
+    # Plain print, not the rich console: snippets hold [brackets] and markup
+    # rich would eat, and an agent reads the bytes as written.
+    print(path.read_text(), end="")
 
 
 def _start_live_status(application) -> None:
