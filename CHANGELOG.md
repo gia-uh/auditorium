@@ -36,7 +36,9 @@
   D6: one `seek(t)`, every animation paused, `getAnimations()`, undo and
   replay forward after a rewind, anchors read before written.
 - **Every command takes a project folder.** `run`, `preview`, `render` and
-  `export` read the folder; hot reload watches all of it except `dist/`. The
+  `export` read the folder and write into its `dist/` by default (`render` to
+  `dist/NAME.mp4`). Hot reload watches the folder except `dist/`, version
+  control, caches and editor swap files. The
   preview and presenter views embed the project's own page and drive it.
   `render --size` and `export --size` default to the format's stage size.
 - **`export` writes PNG stills only**, named `beat-01.png` (or per press with

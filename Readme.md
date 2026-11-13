@@ -25,9 +25,14 @@ frame by frame and exports stills.
 </main>
 ```
 
+Version 5 is not on PyPI yet: `pip install auditorium` still installs 4.x,
+the Python API this replaces. Until 5.0 is released, run it from a checkout,
+which also has the examples:
+
 ```bash
-pip install auditorium
-auditorium run examples/talk
+git clone https://github.com/gia-uh/auditorium && cd auditorium
+uv sync && uv run playwright install chromium
+uv run auditorium run examples/talk
 ```
 
 Version 5 replaced the Python authoring API (`Deck`, `@deck.scene`,
@@ -134,13 +139,15 @@ state equals a fresh one and the renderer, which only travels forward, agrees.
 ## 🎬 Rendering and stills
 
 ```bash
-# Render to video, frame by frame, at the format's stage size
-auditorium render examples/motion -o motion.mp4 --fps 30
+# Render to video, frame by frame, at the format's stage size:
+# writes examples/motion/dist/motion.mp4
+auditorium render examples/motion --fps 30
 
 # Render a frame range, to fan several out in parallel
 auditorium render examples/motion --from 0 --to 300 -o part1.mp4
 
-# Each beat at its end state as PNG (or each press, with --steps)
+# Each beat at its end state as PNG (or each press, with --steps),
+# into examples/talk/dist/
 auditorium export examples/talk -f png
 ```
 
@@ -148,6 +155,10 @@ A render is deterministic: two renders of the same project are byte-identical.
 The first `<audio>` in the page is mixed in at its `data-in`.
 
 ## 🌍 Self-hosting a relay
+
+A relay gives a remote audience a URL. Until it can carry a project folder
+(#104), its viewer page answers 501 and `auditorium run --public` refuses to
+start; the relay itself still runs:
 
 ```bash
 auditorium relay                    # run directly
