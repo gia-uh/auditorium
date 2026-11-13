@@ -62,8 +62,10 @@ static/engine.js                               seek(t): the only runtime
   pure function of the published duration and stops, seeks Chromium to each
   one, screenshots, and encodes with ffmpeg. **The exporter** (`exporter.py`)
   seeks to each beat's end state and saves PNG stills.
-- **The relay** (`relay.py`) is a WebSocket proxy for `--public`. It is
-  independent of the engine.
+- **The relay** (`relay.py`) gives `--public` a URL. It forwards the presenter's
+  commands to viewers and fetches every file a viewer asks for from the
+  presenter's machine over the same socket, so it holds no copy of the project
+  and hot reload reaches a remote audience. It is independent of the engine.
 
 ## Rules and their reasons
 

@@ -47,6 +47,14 @@
 - **The 14 bundled themes are served at `/_auditorium/themes/NAME.css`** for a
   project to link, retargeted from `#slide-root` to `.aud`. Porting them to
   the 5.0 variables is #84.
+- **`run --public` relays a project folder.** The relay fetches every file a
+  viewer asks for from the presenter's machine over the presenter's socket, and
+  rewrites the runtime's `/_auditorium/` paths and the page's socket path under
+  `/r/NAME/`. `--public` implies `--presenter`. The presenter view, the
+  preview and dotfiles are not served through the relay. Speaker notes live in
+  `index.html`, so anyone with the URL can read them. A viewer who joins late is sent to
+  where the room is, instead of replaying every command since the start. The
+  relay must run 5.0 too: a 4.x relay cannot carry a folder.
 - **`AUDITORIUM_CHROMIUM`** now also chooses the browser for `render` and
   `export`, not only the tests.
 - Type on a stage is sized from the stage: the root font is 3 % of its short
@@ -60,8 +68,6 @@
 - `--theme` and `--transition`, and the themes' `--aud-transition` variables:
   a project's look is its own `theme.css`.
 - The `examples` extra and the `markdown` dependency.
-- `run --public` exits with an error, and the relay viewer page answers 501,
-  until relaying a project folder lands (#104).
 
 ## 4.0.0
 
