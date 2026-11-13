@@ -1,4 +1,4 @@
-"""Test-support helpers. Not imported by the runtime."""
+"""Which Chromium the test suite, render and export launch."""
 from __future__ import annotations
 
 import os

@@ -9,11 +9,11 @@
     --aud-block-gap: 0.7em;
     --aud-font-size: calc(min(100vw, 100vh * 16 / 9) * 0.018);
 }
-#slide-root .aud-slide-title { font-size: 1.5em; }
-#slide-root .aud-slide-subtitle { font-size: 1.05em; }
-#slide-root h1 { font-size: 1.5em; }
-#slide-root h2 { font-size: 1.2em; }
-#slide-root h3 { font-size: 1.05em; }
-#slide-root pre { padding: 0.6em 0.9em; font-size: 0.85em; }
-#slide-root .aud-block { padding: 0.5em 0.8em; }
+.aud .aud-slide-title { font-size: 1.5em; }
+.aud .aud-slide-subtitle { font-size: 1.05em; }
+.aud h1 { font-size: 1.5em; }
+.aud h2 { font-size: 1.2em; }
+.aud h3 { font-size: 1.05em; }
+.aud pre { padding: 0.6em 0.9em; font-size: 0.85em; }
+.aud .aud-block { padding: 0.5em 0.8em; }
 :root { --aud-transition: aud-fade; }

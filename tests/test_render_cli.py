@@ -29,7 +29,7 @@ def test_record_is_gone():
 def test_render_writes_a_file(tmp_path):
     out = tmp_path / "out.mp4"
     result = runner.invoke(app, [
-        "render", "examples/demo.py", "-o", str(out),
+        "render", "examples/talk", "-o", str(out),
         "--fps", "5", "--size", "320x240", "--to", "10",
     ])
     assert result.exit_code == 0, result.stdout

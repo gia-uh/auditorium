@@ -7,102 +7,63 @@ AUDIENCE where the feature's value lives: a presenter view that moves only
 itself is the shipped bug, not the fix.
 """
 import asyncio
-import threading
 
-import pytest_asyncio
-import uvicorn
+import pytest
 
-from auditorium.deck import Deck
-from auditorium.server import create_app
+from auditorium.server import create_app, serve_in_thread
+from conftest import write_project
 
-
-def _deck():
-    deck = Deck("Talk")
-
-    @deck.slide(title="Opening")
-    async def opening(ctx):
-        """Welcome them, then **pause** for effect."""
-        await ctx.title("Opening")
-        await ctx.step()
-        await ctx.md("and more")
-
-    @deck.slide(title="Middle")
-    async def middle(ctx):
-        """The middle bit."""
-        await ctx.title("Middle")
-
-    @deck.slide(title="Closing")
-    async def closing(ctx):
-        await ctx.title("Closing")
-
-    return deck
+BODY = """
+<section data-beat="Opening">
+  <h1>Opening</h1>
+  <p data-step="1">and more</p>
+  <aside class="notes">Welcome them, then <strong>pause</strong> for effect.</aside>
+</section>
+<section data-beat="Middle">
+  <h1>Middle</h1>
+  <aside class="notes">The middle bit.</aside>
+</section>
+<section data-beat="Closing"><h1>Closing</h1></section>
+"""
 
 
-def _serve(app):
-    config = uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning")
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    return server, thread
-
-
-@pytest_asyncio.fixture
-async def presenter_server():
+@pytest.fixture
+def presenter_server(tmp_path):
     """A server with shared navigation on, on an ephemeral port."""
-    server, thread = _serve(create_app(_deck(), presenter_mode=True))
-    deadline = 10.0
-    while not server.started:
-        await asyncio.sleep(0.05)
-        deadline -= 0.05
-        if deadline <= 0:
-            server.should_exit = True
-            raise RuntimeError("uvicorn did not start within 10s")
-    port = server.servers[0].sockets[0].getsockname()[1]
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=5)
+    served = serve_in_thread(create_app(write_project(tmp_path / "p", BODY, fmt="deck"), presenter_mode=True))
+    yield served.url
+    served.stop()
 
 
-@pytest_asyncio.fixture
-async def plain_server():
-    server, thread = _serve(create_app(_deck()))
-    deadline = 10.0
-    while not server.started:
-        await asyncio.sleep(0.05)
-        deadline -= 0.05
-        if deadline <= 0:
-            server.should_exit = True
-            raise RuntimeError("uvicorn did not start within 10s")
-    port = server.servers[0].sockets[0].getsockname()[1]
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=5)
+@pytest.fixture
+def plain_server(tmp_path):
+    served = serve_in_thread(create_app(write_project(tmp_path / "p", BODY, fmt="deck")))
+    yield served.url
+    served.stop()
 
 
 async def _open_presenter(page, url):
     await page.goto(url + "/presenter")
-    await page.wait_for_function(
-        "() => window.__auditorium_ready === true", timeout=10000
-    )
+    await page.wait_for_function("() => window.__auditorium_presenter.ready === true", timeout=10000)
 
 
 async def _open_audience(context, url):
     page = await context.new_page()
     await page.goto(url)
-    await page.wait_for_function(
-        "() => window.__auditorium_ready === true", timeout=10000
-    )
+    await page.wait_for_function("() => window.auditorium && window.auditorium.built", timeout=10000)
     return page
 
 
 async def _t(page):
-    return await page.evaluate("() => window.AuditoriumEngine.currentTime")
+    return await page.evaluate(
+        "() => window.__auditorium_presenter ? window.__auditorium_presenter.state().t : window.auditorium.t"
+    )
 
 
 async def test_the_presenter_mirrors_the_stage(browser_page, presenter_server):
     await _open_presenter(browser_page, presenter_server)
-    text = await browser_page.text_content("#slide-root")
-    assert "Opening" in text
+    frame = browser_page.frame_locator("#stage-frame")
+    assert "Opening" in await frame.locator("section[data-beat=Opening] h1").text_content()
 
 
 async def test_notes_come_from_the_current_scene_marker(browser_page, presenter_server):
@@ -119,7 +80,7 @@ async def test_the_next_preview_names_the_following_scene(browser_page, presente
 async def test_the_last_scene_says_it_is_last(browser_page, presenter_server):
     await _open_presenter(browser_page, presenter_server)
     await browser_page.evaluate(
-        "() => window.__auditorium_presenter.seekTo(window.__auditorium_duration)"
+        "() => window.__auditorium_presenter.seekTo(document.getElementById('stage-frame').contentWindow.auditorium.duration)"
     )
     assert "Last" in await browser_page.text_content("#next-title")
 
@@ -127,7 +88,7 @@ async def test_the_last_scene_says_it_is_last(browser_page, presenter_server):
 async def test_a_scene_without_notes_says_so(browser_page, presenter_server):
     await _open_presenter(browser_page, presenter_server)
     await browser_page.evaluate(
-        "() => window.__auditorium_presenter.seekTo(window.__auditorium_duration)"
+        "() => window.__auditorium_presenter.seekTo(document.getElementById('stage-frame').contentWindow.auditorium.duration)"
     )
     assert "No notes" in await browser_page.text_content("#notes")
 
@@ -147,7 +108,7 @@ async def test_advancing_the_presenter_advances_the_audience(
 
     await browser_page.evaluate("() => window.__auditorium_presenter.next()")
     await audience.wait_for_function(
-        "(t) => window.AuditoriumEngine.currentTime > t", arg=before, timeout=10000
+        "(t) => window.auditorium.t > t", arg=before, timeout=10000
     )
     assert await _t(audience) > before
 
@@ -179,13 +140,13 @@ async def test_a_late_audience_tab_catches_up_to_the_presenter(
     # browser stalls in a backgrounded tab -- so under full-suite load the
     # presenter sat at 0 and this test failed for a reason that had nothing
     # to do with late joining. What is under test is catch-up, not playback.
-    await browser_page.evaluate("() => window.__auditorium_presenter.seekTo(1200)")
+    await browser_page.evaluate("() => window.__auditorium_presenter.seekTo(2)")
     presenter_t = await _t(browser_page)
-    assert presenter_t == 1200
+    assert presenter_t == 2
 
     late = await _open_audience(browser_page.context, presenter_server)
     await late.wait_for_function(
-        "(t) => window.AuditoriumEngine.currentTime >= t",
+        "(t) => window.auditorium.t >= t",
         arg=presenter_t, timeout=10000,
     )
 

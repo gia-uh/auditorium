@@ -1,32 +1,29 @@
-"""The FastAPI app: compiles the deck and serves it. Playback happens in the browser.
+"""The FastAPI app: serves a project folder. Playback happens in the browser.
 
-The server serves the three shells and ``/timeline.json``, watches the source
-file, and relays presenter commands. It keeps no playback position, because every
-client holds the timeline and seeks itself (D2). The WebSocket carries only a
-``hello``/``hello_ack`` handshake, a ``reload`` push when the source changes, and,
-in presenter mode, ``cmd`` messages relaying the presenter's intent to audience
-sockets. The 3.x per-mutation ack protocol is gone, and ``tests/test_server.py``
-keeps it from coming back.
+A project is a folder whose ``index.html`` loads ``auditorium.js`` from
+``/_auditorium/``, the runtime this server serves from the package. The page builds
+its own timeline from its DOM, so the server compiles nothing: it serves the
+folder, the runtime and the preview and presenter shells, pushes ``reload`` when a
+file in the folder changes, and in presenter mode relays the presenter's intent
+to audience sockets. It keeps no playback position (D2). The WebSocket carries a
+``hello``/``hello_ack`` handshake, ``reload`` and ``cmd`` only;
+``tests/test_server.py`` keeps the 3.x per-mutation protocol from coming back.
 """
 from __future__ import annotations
 
 import asyncio
 import json
+import threading
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from auditorium.compile import compile_deck
-
-if TYPE_CHECKING:
-    from auditorium.deck import Deck
-
 STATIC_DIR = Path(__file__).parent / "static"
+RUNTIME_PATH = "/_auditorium"
 
 
 @dataclass
@@ -74,9 +71,10 @@ class Presentation:
         return bool(self.audience_clients) or self.presenter_ws is not None
 
 
-def create_app(deck: Deck | None = None, presenter_mode: bool = False) -> FastAPI:
+def create_app(project: Path | None = None, presenter_mode: bool = False) -> FastAPI:
+    """Serve ``project`` (a folder holding index.html), or nothing but the runtime."""
     app = FastAPI()
-    app.state.deck = deck
+    app.state.project = Path(project).resolve() if project is not None else None
     app.state.presenter_mode = presenter_mode
     # In presenter mode: one shared Presentation for all tabs
     # In independent mode: one Presentation per tab, stored in a dict
@@ -93,45 +91,35 @@ def create_app(deck: Deck | None = None, presenter_mode: bool = False) -> FastAP
 
     @app.get("/")
     async def index() -> HTMLResponse:
-        html = (STATIC_DIR / "index.html").read_text()
-        overrides = deck.theme_style_block() if deck else ""
-        html = html.replace("<!--AUDITORIUM_THEME_OVERRIDES-->", overrides)
-        # Injected into the shell rather than sent over the socket, because
-        # the audience has to decide whether to autoplay at load time. Waiting
-        # for hello_ack would race it: in shared mode an autoplaying audience
-        # and a presenter starting at zero drift apart immediately.
+        if app.state.project is None:
+            return HTMLResponse("No project.", status_code=404)
+        html = (app.state.project / "index.html").read_text()
+        # Injected into the page rather than sent over the socket, because the
+        # audience has to decide whether to autoplay at load time. Waiting for
+        # hello_ack would race it: in shared mode an autoplaying audience and a
+        # presenter starting at zero drift apart immediately. Its presence also
+        # tells the runtime it is served live, so it opens the socket; a file
+        # opened from disk or a bundle has no meta and navigates alone.
         mode = "true" if app.state.presenter_mode else "false"
-        html = html.replace(
-            "<!--AUDITORIUM_MODE-->",
-            f'<meta name="auditorium-presenter-mode" content="{mode}">',
-        )
-        return HTMLResponse(html)
+        meta = f'<meta name="auditorium-presenter-mode" content="{mode}">'
+        if "</head>" in html:
+            html = html.replace("</head>", meta + "\n</head>", 1)
+        else:
+            html = meta + html
+        return HTMLResponse(html, headers={"Cache-Control": "no-store"})
 
     @app.get("/preview")
     async def preview_page() -> HTMLResponse:
         """The authoring surface. Needs no mode flag, unlike /presenter:
         previewing is never shared, so there is no session it can be wrong for.
         """
-        html = (STATIC_DIR / "preview.html").read_text()
-        overrides = deck.theme_style_block() if deck else ""
-        return HTMLResponse(html.replace("<!--AUDITORIUM_THEME_OVERRIDES-->", overrides))
+        return HTMLResponse((STATIC_DIR / "preview.html").read_text())
 
     @app.get("/presenter")
     async def presenter_page() -> HTMLResponse:
         if not app.state.presenter_mode:
             return HTMLResponse("Presenter mode not enabled. Start with --presenter.", status_code=403)
-        html = (STATIC_DIR / "presenter.html").read_text()
-        return HTMLResponse(html)
-
-    @app.get("/timeline.json")
-    async def timeline_json() -> JSONResponse:
-        if app.state.deck is None:
-            return JSONResponse({"version": 1, "meta": {}, "nodes": [],
-                                 "ops": [], "tracks": [], "beats": [], "audio": []})
-        timeline = await compile_deck(app.state.deck)
-        return JSONResponse(timeline.to_dict())
-
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+        return HTMLResponse((STATIC_DIR / "presenter.html").read_text())
 
     @app.websocket("/ws")
     async def websocket_endpoint(ws: WebSocket) -> None:
@@ -162,6 +150,10 @@ def create_app(deck: Deck | None = None, presenter_mode: bool = False) -> FastAP
         except (WebSocketDisconnect, asyncio.CancelledError):
             pass
 
+    app.mount(RUNTIME_PATH, StaticFiles(directory=str(STATIC_DIR)), name="runtime")
+    if app.state.project is not None:
+        # Last, so the routes above win over a file of the same name.
+        app.mount("/", StaticFiles(directory=str(app.state.project)), name="project")
     return app
 
 
@@ -238,11 +230,50 @@ async def _handle_shared_session(app: FastAPI, ws: WebSocket, hello: dict, role:
                 pres.audience_clients.remove(ws)
 
 
-async def reload_deck(app: FastAPI, new_deck) -> None:
-    """Hot-reload: swap the deck and tell clients to refetch the timeline."""
-    app.state.deck = new_deck
+async def reload_project(app: FastAPI) -> None:
+    """Hot reload: tell every client the folder changed. Each one reloads itself."""
     all_pres = list(app.state.sessions.values())
     if app.state.shared_pres:
         all_pres.append(app.state.shared_pres)
     for pres in all_pres:
         await pres.send({"type": "reload"})
+
+
+@dataclass
+class Served:
+    """A server running on a background thread, for render, export and tests."""
+
+    server: object
+    thread: threading.Thread
+    port: int
+
+    @property
+    def url(self) -> str:
+        return f"http://127.0.0.1:{self.port}"
+
+    def stop(self) -> None:
+        self.server.should_exit = True
+        self.thread.join(timeout=5)
+
+
+def serve_in_thread(app: FastAPI, port: int = 0, timeout: float = 10.0) -> Served:
+    """Start ``app`` with uvicorn on a daemon thread and wait until it listens.
+
+    Port 0 asks the OS for a free port; ``Served.port`` is the one it got.
+    """
+    import time
+
+    import uvicorn
+
+    config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning")
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+    deadline = time.monotonic() + timeout
+    while not server.started:
+        if time.monotonic() > deadline or not thread.is_alive():
+            server.should_exit = True
+            raise RuntimeError(f"uvicorn did not start within {timeout:.0f}s")
+        time.sleep(0.02)
+    bound = server.servers[0].sockets[0].getsockname()[1]
+    return Served(server=server, thread=thread, port=bound)

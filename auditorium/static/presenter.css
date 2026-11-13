@@ -1,32 +1,82 @@
-/* The presenter view's own chrome. Kept out of theme.css so a deck's theme
-   can never restyle the notes pane -- and so these rules can override the
-   3.x #slide-pane sizing that predates the timeline. */
+/* The presenter view's own chrome. A shell, not a stage: the slide itself is
+   the project's page in an iframe, so a project's theme can never restyle the
+   notes pane and the pane can never restyle the slide. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body.aud-presenter {
-    display: block;
+    overflow: hidden;
+    background: #f9fafb;
+    color: #111827;
+}
+
+#presenter-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
     overflow: hidden;
 }
 
 #slide-pane {
     position: relative;
+    flex: 2;
+    border-right: 1px solid #e5e7eb;
     overflow: hidden;
+    background: #1f2937;
 }
 
-/* Fixed logical size, scaled by transform. Two reasons, the same as the
-   preview's: resizing the box would reflow rem-sized type and mirror a
-   layout the audience is not seeing, and the transform gives the chrome
-   slots their containing block so they stay inside the mirror instead of
-   escaping to the presenter's own viewport. */
-#presenter-stage {
-    position: relative;
-    width: 1920px;
-    height: 1080px;
+/* The project's page at its stage size, scaled by transform. Resizing the
+   frame would reflow rem-sized type and mirror a layout the audience is not
+   seeing. */
+#stage-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 0;
     transform-origin: top left;
-    background: var(--aud-slide-bg, #fff);
 }
 
-#presenter-stage #slide-root {
-    width: 1920px;
-    height: 1080px;
-    transform: none;
+#info-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    font-family: Georgia, serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    overflow-y: auto;
 }
+
+#notes {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+}
+
+#notes h1, #notes h2, #notes h3 { font-weight: 600; }
+
+#next-preview {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+    color: #6b7280;
+}
+
+#next-title { font-weight: 600; margin-bottom: 0.25rem; }
+#next-excerpt { font-style: italic; font-size: 0.9rem; }
+
+#presenter-footer {
+    display: flex;
+    justify-content: space-between;
+    font-family: monospace;
+    font-size: 0.875rem;
+    color: #9ca3af;
+}
+
+#connection-status { position: fixed; bottom: 1rem; left: 1rem; }
+.aud-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.aud-dot-connected { background: #22c55e; }
+.aud-dot-disconnected { background: #ef4444; }
+.aud-dot-connecting { background: #f97316; }

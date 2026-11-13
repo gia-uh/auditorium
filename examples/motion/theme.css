@@ -1,0 +1,10 @@
+/* The gallery's palette. Variables only. */
+:root {
+  --aud-slide-bg: #10131a;
+  --aud-fg: #eceae6;
+  --aud-muted: #9a958d;
+  --aud-accent: #f7c873;
+  --aud-rule: #343a46;
+}
+.aud { color: var(--aud-fg); }
+.aud .bar { height: 24px; background: var(--aud-accent); border-radius: 12px; }

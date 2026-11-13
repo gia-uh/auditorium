@@ -1,48 +1,38 @@
+"""Every example is a project that builds, and the motion gallery moves."""
 from pathlib import Path
 
 import pytest
 
-from auditorium.cli import _load_deck
-from auditorium.compile import compile_deck
+from auditorium.render import published_timeline
 
 EXAMPLES = Path(__file__).parent.parent / "examples"
 
 
-def example_decks():
-    return sorted(EXAMPLES.glob("*.py")) + sorted(EXAMPLES.glob("showcase/*.py"))
+def example_projects():
+    return sorted(p.parent for p in EXAMPLES.glob("*/index.html"))
 
 
-@pytest.mark.parametrize("path", example_decks(), ids=lambda p: p.name)
-async def test_every_example_deck_compiles(path):
-    """Every shipped deck must survive the move to the scene engine."""
-    try:
-        deck = _load_deck(path)
-    except ModuleNotFoundError as exc:
-        # Skip, do not pass: some examples need the `examples` extra, and a
-        # silent pass here would hide a genuinely broken deck on any machine
-        # that happens not to have the optional dependency installed.
-        pytest.skip(f"optional dependency not installed: {exc.name}")
-    timeline = await compile_deck(deck)
-    assert timeline.duration_ms >= 0
-    assert timeline.ops, f"{path.name} compiled to an empty timeline"
+def test_the_python_examples_are_gone():
+    """5.0 has no Python authoring; an example deck.py would teach the old API."""
+    assert not list(EXAMPLES.rglob("*.py"))
 
 
-async def test_the_demo_actually_animates():
-    """demo.py is the living documentation, and it has to MOVE.
-
-    The deck it replaced was 25 shim slides of step() reveals and 4 scenes:
-    on screen it was a slideshow that faded, which is the opposite of what
-    4.0 is for. These assertions are about motion specifically, so the demo
-    cannot quietly decay back into a bullet tour.
-    """
-    source = (EXAMPLES / "demo.py").read_text()
-    assert "@deck.slide" not in source, "the demo is scenes, not slides"
-    assert "@deck.scene" in source
-    for primitive in ("s.play(", "move_by(", "draw_on()", "lag=", "s.draw(", "ease="):
-        assert primitive in source, f"the demo no longer exercises {primitive}"
+@pytest.mark.parametrize("path", example_projects(), ids=lambda p: p.name)
+async def test_every_example_builds_a_timeline(path):
+    published = await published_timeline(path)
+    assert published["beats"], f"{path.name} built no beats"
+    assert published["duration"] > 0
 
 
-async def test_the_demo_is_mostly_motion():
-    """More animation calls than static shows -- a floor, not a formality."""
-    source = (EXAMPLES / "demo.py").read_text()
-    assert source.count("animate.") >= 12
+async def test_the_motion_gallery_uses_every_motion():
+    """examples/motion is the motion library's living documentation: every
+    entrance and idle the runtime knows appears in it."""
+    import re
+
+    runtime = (EXAMPLES.parent / "auditorium" / "static" / "auditorium.js").read_text()
+    block = runtime[runtime.index("export const ENTRANCES"):runtime.index("// ---- build")]
+    names = set(re.findall(r'^\s+"?([a-z-]+)"?:\s+\{ dur', block, re.MULTILINE))
+    assert {"fade", "rise", "words", "count", "float", "ken-burns"} <= names
+    page = (EXAMPLES / "motion" / "index.html").read_text()
+    for name in names:
+        assert re.search(rf'data-(enter|exit|idle)="{name}"', page), f"the gallery does not show {name}"

@@ -4,59 +4,24 @@ Scrubber, frame stepping, loop-a-range, and a hot reload that holds position.
 Every assertion here goes through the real page in a real browser, because the
 whole value of a preview is that it shows what the renderer will produce.
 """
-import asyncio
-import threading
+import pytest
 
-import pytest_asyncio
-import uvicorn
+from auditorium.server import create_app, serve_in_thread
+from conftest import write_project
 
-from auditorium.deck import Deck
-from auditorium.server import create_app
+BODY = """<section data-beat="one" data-d="3">
+  <p id="mover" data-enter="rise" data-dur="1.5">first</p>
+  <p data-in="1.6" data-enter="fade">second</p>
+</section>"""
 
-
-def _deck():
-    deck = Deck("Preview")
-
-    @deck.scene
-    async def one(s):
-        h = await s.show("<p id='mover'>first</p>")
-        await s.play(h.animate.fade_in(), run_time=0.5)
-        await s.play(h.animate.move_by(300, 0), run_time=1.0)
-        await s.beat()
-        h2 = await s.show("<p>second</p>")
-        await s.play(h2.animate.fade_in(), run_time=0.5)
-
-    return deck
+STAGE = "document.getElementById('stage-frame').contentWindow"
 
 
-@pytest_asyncio.fixture
-async def live_server():
-    """A uvicorn server on an ephemeral port, with a bounded startup wait.
-
-    Same shape as tests/test_present_client.py, and for the same two reasons:
-    a fixed port makes the second test in the file hang on a socket the first
-    has not released, and an unbounded wait turns a startup failure into a
-    hang rather than a red test.
-    """
-    config = uvicorn.Config(
-        create_app(_deck()), host="127.0.0.1", port=0, log_level="warning"
-    )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-
-    deadline = 10.0
-    while not server.started:
-        await asyncio.sleep(0.05)
-        deadline -= 0.05
-        if deadline <= 0:
-            server.should_exit = True
-            raise RuntimeError("uvicorn did not start within 10s")
-
-    port = server.servers[0].sockets[0].getsockname()[1]
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=5)
+@pytest.fixture
+def live_server(tmp_path):
+    served = serve_in_thread(create_app(write_project(tmp_path / "p", BODY)))
+    yield served.url
+    served.stop()
 
 
 async def _ready(page, url):
@@ -67,7 +32,7 @@ async def _ready(page, url):
     """
     await page.goto(url + "/preview")
     await page.wait_for_function(
-        "() => window.__auditorium_ready === true", timeout=10000
+        "() => window.__auditorium_preview && window.__auditorium_preview.ready === true", timeout=10000
     )
 
 
@@ -81,7 +46,7 @@ async def test_the_scrubber_spans_the_whole_timeline(browser_page, live_server):
         "() => { const s = document.getElementById('scrub');"
         " return [Number(s.min), Number(s.max)]; }"
     )
-    duration = await browser_page.evaluate("() => window.__auditorium_duration")
+    duration = await browser_page.evaluate("() => " + STAGE + ".auditorium.duration")
     assert span == [0, duration]
     assert duration > 0
 
@@ -100,7 +65,7 @@ async def test_dragging_the_scrubber_seeks_the_stage(browser_page, live_server):
         "() => { const s = document.getElementById('scrub');"
         " s.value = 700; s.dispatchEvent(new Event('input')); }"
     )
-    assert await browser_page.evaluate("() => window.AuditoriumEngine.currentTime") == 700
+    assert await browser_page.evaluate("() => " + STAGE + ".auditorium.t") == 700
 
 
 async def test_the_frame_readout_matches_the_timeline_position(browser_page, live_server):
@@ -141,9 +106,10 @@ async def test_step_backward_lands_on_the_same_state_as_seeking_there_fresh(
         await browser_page.keyboard.press("Period")
     await browser_page.keyboard.press("Comma")
     stepped = await browser_page.evaluate(
-        "() => [document.getElementById('slide-root').innerHTML,"
-        " getComputedStyle(document.getElementById('mover')).transform,"
-        " getComputedStyle(document.getElementById('mover')).opacity]"
+        "() => { const w = " + STAGE + "; const d = w.document;"
+        " const m = d.getElementById('mover');"
+        " return [d.querySelector('main').innerHTML, w.getComputedStyle(m).transform,"
+        " w.getComputedStyle(m).opacity]; }"
     )
     stepped_t = (await _state(browser_page))["t"]
 
@@ -154,9 +120,10 @@ async def test_step_backward_lands_on_the_same_state_as_seeking_there_fresh(
         stepped_t,
     )
     fresh = await browser_page.evaluate(
-        "() => [document.getElementById('slide-root').innerHTML,"
-        " getComputedStyle(document.getElementById('mover')).transform,"
-        " getComputedStyle(document.getElementById('mover')).opacity]"
+        "() => { const w = " + STAGE + "; const d = w.document;"
+        " const m = d.getElementById('mover');"
+        " return [d.querySelector('main').innerHTML, w.getComputedStyle(m).transform,"
+        " w.getComputedStyle(m).opacity]; }"
     )
     assert stepped == fresh
 
@@ -192,7 +159,7 @@ async def test_hot_reload_holds_the_current_position(browser_page, live_server):
     await browser_page.wait_for_function(
         "() => window.__auditorium_preview.state().reloads === 1", timeout=10000
     )
-    assert await browser_page.evaluate("() => window.AuditoriumEngine.currentTime") == 900
+    assert await browser_page.evaluate("() => " + STAGE + ".auditorium.t") == 900
 
 
 async def test_the_preview_route_needs_no_presenter_mode(browser_page, live_server):

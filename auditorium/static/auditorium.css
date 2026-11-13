@@ -1,10 +1,14 @@
-/* Auditorium: academic-serif theme — fully self-contained, no CDN */
+/* auditorium.css: the stylesheet every project loads next to auditorium.js.
+   Base typography (the 4.x academic-serif theme), the stage, the grid and the
+   visibility rules the runtime's ops toggle. Fully self-contained, no CDN:
+   font URLs are relative to this file, so they resolve wherever it is served
+   or inlined. */
 
 /* ---- Fonts ---- */
 
 @font-face {
     font-family: 'Playfair Display';
-    src: url('/static/fonts/playfair-display-latin.woff2') format('woff2');
+    src: url('fonts/playfair-display-latin.woff2') format('woff2');
     font-weight: 400 700;
     font-style: normal;
     font-display: block;
@@ -12,13 +16,13 @@
 
 @font-face {
     font-family: 'Source Serif 4';
-    src: url('/static/fonts/source-serif-4-latin.woff2') format('woff2');
+    src: url('fonts/source-serif-4-latin.woff2') format('woff2');
     font-weight: 300 600;
     font-style: normal;
     font-display: block;
 }
 
-/* ---- Theme knobs (override via Deck(margin=..., extra_css=...) or :root override) ---- */
+/* ---- Theme knobs (a project's theme.css overrides them on :root) ---- */
 
 :root {
     --aud-slide-padding: 3rem 5rem;
@@ -27,11 +31,9 @@
     --aud-block-gap: 1.1em;
     --aud-line-height: 1.7;
     --aud-aspect-ratio: 16 / 9;
-    /* Base font size scales with the slide's actual rendered size (bounded by
-       the 16:9 aspect ratio inside the viewport). The live --aud-font-scale
-       multiplier is driven by Ctrl+A / Ctrl+D / Ctrl+0 in the client. */
-    --aud-font-size: calc(min(100vw, 100vh * 16 / 9) * 0.022);
-    --aud-font-scale: 1;
+    --aud-grid-columns: 12;
+    --aud-grid-margin: 120px;
+    --aud-grid-gutter: 32px;
     --aud-letterbox-bg: #f4f4f3;
     --aud-slide-bg: #ffffff;
 }
@@ -57,103 +59,103 @@ body {
     height: 100vh;
 }
 
-/* ---- Slide root: 16:9 frame letterboxed in the viewport ---- */
+/* ---- The stage ----
+ * A fixed-size box (the format's size, set by the runtime as --aud-stage-w
+ * and --aud-stage-h) scaled to the window by a transform. Resizing the box
+ * instead would reflow rem-sized type into a layout no render produces.
+ * Type is sized from the stage, never the viewport, for the same reason.
+ */
 
-#slide-root {
-    aspect-ratio: var(--aud-aspect-ratio);
-    width: min(100vw, calc(100vh * 16 / 9));
-    height: min(100vh, calc(100vw * 9 / 16));
+/* Themes size type in rem, so on a stage the root font follows the stage:
+   32.4 px on a 1080-pixel short side. Left to the browser's 16 px, a heading
+   at 3rem came out smaller than the body text beside it. */
+html {
+    --aud-stage-w: 1920px;
+    --aud-stage-h: 1080px;
+}
+html.aud-staged { font-size: calc(min(var(--aud-stage-w), var(--aud-stage-h)) * 0.03); }
+
+.aud {
+    --aud-font-size: 1.3rem;
+    position: relative;
     background: var(--aud-slide-bg);
+    font-size: var(--aud-font-size);
+    line-height: var(--aud-line-height);
+}
+
+.aud-staged body { display: block; }
+
+.aud-staged .aud {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--aud-stage-w);
+    height: var(--aud-stage-h);
+    transform-origin: 0 0;
+    overflow: hidden;
+}
+
+/* A beat is one section. In a staged format they stack on the stage and the
+   runtime puts one on at a time; before the runtime has built, the first
+   shows, so a file opened without the runtime still reads. */
+.aud-staged .aud > section {
+    position: absolute;
+    inset: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: var(--aud-slide-padding);
-    font-size: var(--aud-font-size);
-    line-height: var(--aud-line-height);
     gap: var(--aud-block-gap);
-    overflow: hidden;
 }
+.aud-built .aud > section:not(.aud-on) { display: none; }
+.aud-built .aud [data-aud-t]:not(.aud-on) { visibility: hidden; }
 
-/* Each `.md()` call produces a wrapping <div> that becomes a flex item.
-   Shrink to content so centering works naturally, and let its inner content
-   determine the visible width. */
-#slide-root > div,
-#slide-root [id^="cols-"] > div > div,
-#slide-root [id^="rows-"] > div > div {
-    max-width: var(--aud-content-max-width);
-}
+/* A page flows at any width and scrolls. */
+html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 
-/* ---- Slide transitions ----
- * Themes opt in by setting --aud-transition to a named animation
- * (aud-fade, aud-slide-left, aud-slide-up, aud-zoom, or any keyframe of
- * their own). Default is "none" — no transition. The client toggles
- * .aud-slide-enter on #slide-root after each "clear" event; the reflow
- * dance in the JS guarantees the animation re-fires on every slide.
+/* Speaker notes are for the presenter view, never the stage. */
+.aud aside.notes { display: none; }
+
+/* ---- The grid ----
+ * data-col and data-row place a block on the format's twelve columns; the
+ * runtime copies them to grid-column and grid-row.
  */
-
-:root { --aud-transition: none; --aud-transition-duration: 0.32s; }
-
-#slide-root.aud-slide-enter {
-    animation-name: var(--aud-transition);
-    animation-duration: var(--aud-transition-duration);
-    animation-timing-function: ease-out;
-    animation-fill-mode: both;
+.aud .grid {
+    display: grid;
+    grid-template-columns: repeat(var(--aud-grid-columns), 1fr);
+    column-gap: var(--aud-grid-gutter);
+    row-gap: var(--aud-block-gap);
+    width: 100%;
+    padding: 0 var(--aud-grid-margin);
+    align-items: center;
 }
+.aud .grid > * { grid-column: 1 / -1; min-width: 0; }
 
-@keyframes aud-fade {
-    from { opacity: 0; }
-    to   { opacity: 1; }
+/* ---- Components the examples use; the library proper lands with #86 ---- */
+.aud .stat { display: flex; flex-direction: column; align-items: center; }
+.aud .stat b { font-size: 2.5em; line-height: 1.1; color: var(--aud-accent, currentColor); }
+.aud .stat span { color: var(--aud-muted, #6b7280); }
+.aud .card {
+    padding: 1.2em 1.6em;
+    border: 2px solid var(--aud-rule, #d1d5db);
+    border-radius: 12px;
+    text-align: center;
 }
-@keyframes aud-slide-left {
-    from { transform: translateX(3vw); opacity: 0; }
-    to   { transform: translateX(0);   opacity: 1; }
-}
-@keyframes aud-slide-up {
-    from { transform: translateY(2vh); opacity: 0; }
-    to   { transform: translateY(0);   opacity: 1; }
-}
-@keyframes aud-zoom {
-    from { transform: scale(0.97); opacity: 0; }
-    to   { transform: scale(1);    opacity: 1; }
-}
+.aud .accent-fill { fill: var(--aud-accent, currentColor); }
+.aud .aud-word { display: inline-block; }
+.aud svg { overflow: visible; }
 
-/* ---- Theme chrome slots ----
- * Empty fixed-position regions themes can fill via ::before / ::after content.
- * Pointer-events are disabled so the chrome never intercepts clicks.
- */
-
-.aud-chrome {
-    position: fixed;
+/* The anchored-line overlay: covers its section, never takes a click. Its
+   user units are its own CSS pixels; the engine converts screen rects into
+   them through getScreenCTM(), so no viewBox is set. */
+.aud .aud-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
-    z-index: 5;
-}
-.aud-chrome-header { top: 0; left: 0; right: 0; }
-.aud-chrome-footer { bottom: 0; left: 0; right: 0; }
-.aud-chrome-left   { top: 0; bottom: 0; left: 0; width: auto; }
-.aud-chrome-right  { top: 0; bottom: 0; right: 0; width: auto; }
-
-/* ---- Slide indicator ---- */
-
-#slide-indicator {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    font-size: 0.875rem;
-    color: var(--aud-muted, #9ca3af);
-    font-family: monospace;
-    opacity: 0.5;
-    /* No animation, and no transition either.
-       Persistent chrome must be statically styled. seek() pins EVERY
-       animation on the page to timeline time, so an entrance animation here
-       sits at its first keyframe whenever t=0 -- the indicator vanished from
-       frame 0 of every render. (A bare `transition:` is separately banned:
-       CSSTransitions leave getAnimations() on completion, so backward seeks
-       past them silently no-op. Smoothing the hover is not worth either.) */
-}
-
-#slide-indicator:hover {
-    opacity: 1;
+    z-index: 4;
 }
 
 /* ---- Connection status ---- */
@@ -190,26 +192,26 @@ body {
 
 /* ---- Typography ---- */
 
-#slide-root h1,
-#slide-root h2,
-#slide-root h3 {
+.aud h1,
+.aud h2,
+.aud h3 {
     font-family: 'Playfair Display', Georgia, serif;
     font-weight: 600;
     text-align: center;
 }
 
-#slide-root h1 { font-size: 3rem; letter-spacing: -0.01em; }
-#slide-root h2 { font-size: 2.25rem; letter-spacing: -0.005em; }
-#slide-root h3 { font-size: 1.6rem; }
+.aud h1 { font-size: 3rem; letter-spacing: -0.01em; }
+.aud h2 { font-size: 2.25rem; letter-spacing: -0.005em; }
+.aud h3 { font-size: 1.6rem; }
 
-#slide-root p {
+.aud p {
     max-width: var(--aud-content-max-width);
 }
 
 /* Lists: visual block centered on the slide (or aligned to start in column
    regions), bullets line up vertically inside, text left-aligned. */
-#slide-root ul,
-#slide-root ol {
+.aud ul,
+.aud ol {
     display: inline-block;
     text-align: left;
     padding-left: var(--aud-list-bullet-indent);
@@ -217,23 +219,23 @@ body {
     list-style-position: outside;
 }
 
-#slide-root li {
+.aud li {
     padding-left: 0.25em;
     margin-bottom: 0.2em;
 }
 
-#slide-root li:last-child {
+.aud li:last-child {
     margin-bottom: 0;
 }
 
-#slide-root li::marker {
+.aud li::marker {
     color: var(--aud-muted, #6b7280);
 }
 
-#slide-root ul ul,
-#slide-root ol ol,
-#slide-root ul ol,
-#slide-root ol ul {
+.aud ul ul,
+.aud ol ol,
+.aud ul ol,
+.aud ol ul {
     display: block;
     margin-top: 0.2em;
     padding-left: var(--aud-list-bullet-indent);
@@ -241,7 +243,7 @@ body {
 
 /* Tables: booktabs-style — toprule + midrule (around the header) + bottomrule.
    No vertical lines. Generous column gap and vertical breathing. */
-#slide-root table {
+.aud table {
     border-collapse: collapse;
     margin: 0 auto;
     max-width: 100%;
@@ -250,8 +252,8 @@ body {
     border-bottom: 2.5px solid #000;
 }
 
-#slide-root th,
-#slide-root td {
+.aud th,
+.aud td {
     padding: 0.55em 1.4em;
     text-align: left;
     vertical-align: top;
@@ -259,46 +261,46 @@ body {
 }
 
 /* Rules tightly extend to content edges — first/last cells skip side gap. */
-#slide-root th:first-child,
-#slide-root td:first-child {
+.aud th:first-child,
+.aud td:first-child {
     padding-left: 0;
 }
 
-#slide-root th:last-child,
-#slide-root td:last-child {
+.aud th:last-child,
+.aud td:last-child {
     padding-right: 0;
 }
 
 /* Midrule sits below the header. The toprule (table border-top) already
    acts as the upper edge of the header band, framing the header row. */
-#slide-root thead tr {
+.aud thead tr {
     border-bottom: 1.5px solid #000;
 }
 
-#slide-root th {
+.aud th {
     font-weight: 600;
     padding-top: 0.55em;
     padding-bottom: 0.55em;
 }
 
-#slide-root tbody tr:first-child td {
+.aud tbody tr:first-child td {
     padding-top: 0.75em;
 }
 
-#slide-root tbody tr:last-child td {
+.aud tbody tr:last-child td {
     padding-bottom: 0.75em;
 }
 
 /* ---- Code ---- */
 
-#slide-root code {
+.aud code {
     font-size: 0.85em;
     background: #f5f5f5;
     padding: 0.15em 0.4em;
     border-radius: 0.25em;
 }
 
-#slide-root pre {
+.aud pre {
     background: #f8f8f8;
     border-radius: 0.5em;
     padding: 1.25em;
@@ -308,7 +310,7 @@ body {
     width: 100%;
 }
 
-#slide-root pre code {
+.aud pre code {
     background: none;
     padding: 0;
     font-size: 0.8em;
@@ -318,7 +320,7 @@ body {
 /* Sizes are in em so they scale with --aud-font-size, matching the
    viewport-proportional theme. */
 
-#slide-root .aud-slide-title {
+.aud .aud-slide-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-weight: 600;
     font-size: 2em;
@@ -327,7 +329,7 @@ body {
     text-align: center;
 }
 
-#slide-root .aud-slide-subtitle {
+.aud .aud-slide-subtitle {
     font-family: 'Source Serif 4', Georgia, serif;
     font-weight: 400;
     font-style: italic;
@@ -341,7 +343,7 @@ body {
  * Used for slide-level chapter breaks: large centered title, optional
  * number above. Themes can hook .aud-section-divider for custom decoration. */
 
-#slide-root .aud-section-divider {
+.aud .aud-section-divider {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -351,7 +353,7 @@ body {
     width: 100%;
 }
 
-#slide-root .aud-section-number {
+.aud .aud-section-number {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 1.1em;
     font-weight: 400;
@@ -360,7 +362,7 @@ body {
     text-transform: uppercase;
 }
 
-#slide-root .aud-section-title {
+.aud .aud-section-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 3.2em;
     font-weight: 700;
@@ -370,7 +372,7 @@ body {
 
 /* ---- Information / academic blocks ---- */
 
-#slide-root .aud-block {
+.aud .aud-block {
     width: 100%;
     max-width: var(--aud-content-max-width);
     border-radius: 0.4em;
@@ -380,7 +382,7 @@ body {
     text-align: left;
 }
 
-#slide-root .aud-block-title {
+.aud .aud-block-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-weight: 600;
     font-size: 0.9em;
@@ -388,14 +390,14 @@ body {
     border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-#slide-root .aud-block-body {
+.aud .aud-block-body {
     padding: 0.6em 0.9em;
     font-size: 0.85em;
 }
 
-#slide-root .aud-block-body p:last-child,
-#slide-root .aud-block-body ul:last-child,
-#slide-root .aud-block-body ol:last-child {
+.aud .aud-block-body p:last-child,
+.aud .aud-block-body ul:last-child,
+.aud .aud-block-body ol:last-child {
     margin-bottom: 0;
 }
 
@@ -445,111 +447,12 @@ body {
 
 /* ---- Blockquotes ---- */
 
-#slide-root blockquote {
+.aud blockquote {
     border-left: 4px solid #d1d5db;
     padding-left: 1em;
     margin-bottom: 0.75em;
     color: var(--aud-muted, #6b7280);
     font-style: italic;
-}
-
-/* ---- Animations ---- */
-
-.aud-enter {
-    animation: audEnter 0.3s ease both;
-}
-
-@keyframes audEnter {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* ---- Layout utility classes ---- */
-
-/* Applied by JS on clear/reset to restore default centered mode.
-   Width/height come from the #slide-root id-level rules (16:9 framed). */
-.aud-slide-root {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--aud-slide-padding);
-}
-
-/* Applied when a top-level layout (rows/columns) is used — overrides centering */
-#slide-root.aud-layout-mode {
-    justify-content: flex-start;
-}
-
-/* ---- Presenter view ---- */
-
-#presenter-container {
-    display: flex;
-    width: 100vw;
-    height: 100vh;
-    overflow: hidden;
-}
-
-#slide-pane {
-    flex: 2;
-    border-right: 1px solid #e5e7eb;
-    overflow: hidden;
-}
-
-#slide-pane #slide-root {
-    transform: scale(0.75);
-    transform-origin: top left;
-    width: 133.33%;
-    height: 133.33%;
-}
-
-#info-pane {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 1.5rem;
-    font-family: 'Source Serif 4', Georgia, serif;
-    font-size: 1rem;
-    line-height: 1.6;
-    overflow-y: auto;
-}
-
-#notes {
-    flex: 1;
-    overflow-y: auto;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 1rem;
-}
-
-#notes h1, #notes h2, #notes h3 {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-weight: 600;
-}
-
-#next-preview {
-    padding-bottom: 1rem;
-    border-bottom: 1px solid #e5e7eb;
-    margin-bottom: 1rem;
-    color: var(--aud-muted, #6b7280);
-}
-
-#next-title {
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-}
-
-#next-excerpt {
-    font-style: italic;
-    font-size: 0.9rem;
-}
-
-#presenter-footer {
-    display: flex;
-    justify-content: space-between;
-    font-family: monospace;
-    font-size: 0.875rem;
-    color: var(--aud-muted, #9ca3af);
 }
 
 /* ---- Geometry palette ----
@@ -578,19 +481,19 @@ body {
  * neighbours, and it is usually the single most important thing on the slide.
  */
 
-#slide-root .katex-display {
+.aud .katex-display {
     margin: 0.9em 0;
     /* Display maths sets its own generous leading; inheriting the body's makes
        fractions and sums collide with the lines above and below. */
     line-height: 1.2;
 }
 
-#slide-root .katex {
+.aud .katex {
     /* Slightly larger than surrounding prose: KaTeX's default optical size is
        tuned for web body text, which reads small against slide typography. */
     font-size: 1.08em;
 }
 
-#slide-root .katex-display > .katex {
+.aud .katex-display > .katex {
     font-size: 1.35em;
 }

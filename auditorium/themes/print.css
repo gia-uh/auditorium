@@ -12,30 +12,30 @@
     --aud-code-bg: #f5f5f5;
 }
 body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
-#slide-root {
+.aud {
     background: var(--aud-slide-bg);
     color: var(--aud-fg);
     box-shadow: none;
 }
-#slide-root a { color: var(--aud-fg); text-decoration: underline; }
-#slide-root hr { border-color: var(--aud-rule); }
-#slide-root code, #slide-root pre {
+.aud a { color: var(--aud-fg); text-decoration: underline; }
+.aud hr { border-color: var(--aud-rule); }
+.aud code, .aud pre {
     background: var(--aud-code-bg);
     color: var(--aud-fg);
     border: 1px solid var(--aud-rule);
 }
-#slide-root blockquote {
+.aud blockquote {
     border-left: 3px solid var(--aud-fg);
     color: var(--aud-muted);
 }
-#slide-root table th, #slide-root table td {
+.aud table th, .aud table td {
     border-color: var(--aud-rule);
 }
-#slide-root .aud-block {
+.aud .aud-block {
     background: transparent;
     border: 1px solid var(--aud-rule);
 }
-#slide-root .aud-slide-title { text-shadow: none; }
+.aud .aud-slide-title { text-shadow: none; }
 :root { --aud-transition: none; }
 
 /* ---- Geometry palette ----

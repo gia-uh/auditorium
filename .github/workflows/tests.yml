@@ -16,17 +16,14 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with: { enable-cache: true }
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg
-      # The examples extra brings tesserax, which one example deck imports.
-      - run: uv sync --locked --extra examples
+      - run: uv sync --locked
       - run: uv run playwright install --with-deps chromium
-      # The encode, audio and tesserax tests skip rather than fail when these are
-      # missing, so a run without them would be green and prove less. Fail here
-      # instead.
+      # The encode and audio tests skip rather than fail when these are missing,
+      # so a run without them would be green and prove less. Fail here instead.
       - name: Preconditions for the skippable tests
         run: |
           ffmpeg -version | head -1
           ffprobe -version | head -1
-          uv run python -c "import tesserax"
       - run: make lint
       - run: make docs
       - run: make test

@@ -3,14 +3,14 @@
  * proportions, sidebar chrome with deck title vertical-rotated on the
  * right edge. */
 
-body, #slide-root {
+body, .aud {
     font-family: "Inter", "Helvetica Neue", system-ui, sans-serif;
 }
 :root {
     --aud-content-max-width: 64rem;
     --aud-block-gap: 0.9em;
 }
-#slide-root .aud-slide-title {
+.aud .aud-slide-title {
     font-family: "Playfair Display", "Times New Roman", serif;
     font-size: 2.6em;
     font-weight: 700;
@@ -19,7 +19,7 @@ body, #slide-root {
     align-self: flex-start;
     letter-spacing: -0.02em;
 }
-#slide-root .aud-slide-subtitle {
+.aud .aud-slide-subtitle {
     font-family: "Playfair Display", "Times New Roman", serif;
     font-style: italic;
     font-weight: 400;
@@ -27,7 +27,7 @@ body, #slide-root {
     align-self: flex-start;
     opacity: 0.7;
 }
-#slide-root h2 {
+.aud h2 {
     font-family: "Playfair Display", "Times New Roman", serif;
     text-transform: uppercase;
     font-size: 0.9em;
@@ -35,11 +35,11 @@ body, #slide-root {
     border-bottom: 2px solid currentColor;
     padding-bottom: 0.3em;
 }
-#slide-root strong {
+.aud strong {
     font-family: "Playfair Display", "Times New Roman", serif;
     font-weight: 700;
 }
-#slide-root blockquote {
+.aud blockquote {
     font-family: "Playfair Display", "Times New Roman", serif;
     font-style: italic;
     font-size: 1.3em;

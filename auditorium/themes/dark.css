@@ -12,24 +12,24 @@
     --aud-code-bg: #1c2026;
 }
 body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
-#slide-root {
+.aud {
     background: var(--aud-slide-bg);
     color: var(--aud-fg);
 }
-#slide-root a { color: var(--aud-accent); }
-#slide-root hr { border-color: var(--aud-rule); }
-#slide-root code, #slide-root pre {
+.aud a { color: var(--aud-accent); }
+.aud hr { border-color: var(--aud-rule); }
+.aud code, .aud pre {
     background: var(--aud-code-bg);
     color: var(--aud-fg);
 }
-#slide-root blockquote {
+.aud blockquote {
     border-left-color: var(--aud-accent);
     color: var(--aud-muted);
 }
-#slide-root table th, #slide-root table td {
+.aud table th, .aud table td {
     border-color: var(--aud-rule);
 }
-#slide-root .aud-block {
+.aud .aud-block {
     background: rgba(255, 255, 255, 0.03);
     border-color: var(--aud-rule);
 }

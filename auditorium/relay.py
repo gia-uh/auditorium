@@ -100,18 +100,14 @@ def create_relay_app() -> FastAPI:
                 "<h1>Session not found</h1><p>This presentation has ended or doesn't exist.</p>",
                 status_code=404,
             )
-        # Serve the bundled index.html with ws_path pointing to the relay
-        from auditorium.server import STATIC_DIR
-
-        html = (STATIC_DIR / "index.html").read_text()
-        # Inject the ws_path so the client connects to the relay, not localhost
-        # We do this by adding a meta tag the JS can read
-        ws_path = f"/r/{session_id}/ws"
-        html = html.replace(
-            "<head>",
-            f'<head><meta name="auditorium-ws-path" content="{ws_path}">',
+        # The 4.x viewer was a shell that fetched a compiled timeline. In 5.0
+        # the stage is the project's own index.html and its files, which live
+        # on the presenter's machine; carrying them through the relay is #104.
+        return HTMLResponse(
+            "<h1>Not available yet</h1><p>Relaying a project folder lands with "
+            "auditorium run --public (#104).</p>",
+            status_code=501,
         )
-        return HTMLResponse(html)
 
     @app.websocket("/r/{session_id}/ws")
     async def viewer_ws_endpoint(ws: WebSocket, session_id: str) -> None:
@@ -142,11 +138,5 @@ def create_relay_app() -> FastAPI:
         finally:
             if ws in session.viewer_clients:
                 session.viewer_clients.remove(ws)
-
-    # Serve static assets for the viewer page
-    from auditorium.server import STATIC_DIR
-    from fastapi.staticfiles import StaticFiles
-
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     return app

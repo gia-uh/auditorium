@@ -39,7 +39,6 @@ version = "1!4.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
-    { name = "markdown" },
     { name = "rich" },
     { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
@@ -49,10 +48,6 @@ dependencies = [
 dev = [
     { name = "pytest" },
     { name = "ruff" },
-    { name = "tesserax" },
-]
-examples = [
-    { name = "tesserax" },
 ]
 record = [
     { name = "playwright" },
@@ -71,18 +66,15 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.110" },
-    { name = "markdown", specifier = ">=3.6" },
     { name = "playwright", marker = "extra == 'record'", specifier = ">=1.62" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
-    { name = "tesserax", marker = "extra == 'dev'", specifier = ">=0.11" },
-    { name = "tesserax", marker = "extra == 'examples'", specifier = ">=0.11" },
     { name = "tqdm", marker = "extra == 'record'", specifier = ">=4.67.3" },
     { name = "typer", specifier = ">=0.12" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.29" },
 ]
-provides-extras = ["record", "examples", "dev"]
+provides-extras = ["record", "dev"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -268,15 +260,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/72/34/14ca021ce8e5dfedc35312d08ba8bf51fdd999c576889fc2c24cb97f4f10/iniconfig-2.3.0.tar.gz", hash = "sha256:c76315c77db068650d49c5b56314774a7804df16fee4402c1f19d6d15d8c4730", size = 20503, upload-time = "2025-10-18T21:55:43.219Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl", hash = "sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12", size = 7484, upload-time = "2025-10-18T21:55:41.639Z" },
-]
-
-[[package]]
-name = "markdown"
-version = "3.10.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/2b/f4/69fa6ed85ae003c2378ffa8f6d2e3234662abd02c10d216c0ba96081a238/markdown-3.10.2.tar.gz", hash = "sha256:994d51325d25ad8aa7ce4ebaec003febcce822c3f8c911e3b17c52f7f589f950", size = 368805, upload-time = "2026-02-09T14:57:26.942Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/de/1f/77fa3081e4f66ca3576c896ae5d31c3002ac6607f9747d2e3aa49227e464/markdown-3.10.2-py3-none-any.whl", hash = "sha256:e91464b71ae3ee7afd3017d9f358ef0baf158fd9a298db92f1d4761133824c36", size = 108180, upload-time = "2026-02-09T14:57:25.787Z" },
 ]
 
 [[package]]
@@ -590,15 +573,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/48/bb/3d8757f21e9a53d9035c9eb039a777047139a16bfdbedfc7a58241c3d914/starlette-1.10.0.tar.gz", hash = "sha256:b8399098d4c1e3522734f7235dc79b1fc967f96cf139c81e0fa30479e0685f9b", size = 2734356, upload-time = "2026-10-24T15:04:12.342Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/88/2e/947cfe02def9371c07cd5bf5b6b61c829e9aecb9904db02a66cfafbc1eec/starlette-1.10.0-py3-none-any.whl", hash = "sha256:478c0ab3b4ced6e82719849c118fa406f0278a3499c1a898cd15cd31bdc38ce4", size = 80571, upload-time = "2026-10-24T15:04:10.371Z" },
-]
-
-[[package]]
-name = "tesserax"
-version = "0.11.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/61/f9/386371525bb1632c85a0ba1ecdd11a54900579bd80b280b98f911bd6901f/tesserax-0.11.0.tar.gz", hash = "sha256:6752e17ef54eb7ff63265492b2f463258569211ab839886da13625ea22fc6fdf", size = 209801, upload-time = "2026-03-30T15:53:45.927Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/a5/aa22e2e8a3621246c1d692aa2bb534b1626343e1dbea545896b83edd3aa4/tesserax-0.11.0-py3-none-any.whl", hash = "sha256:1f71c56684d68b332e2cd766eb6d8bcf62125fdaebbd9d531dd874f3201771a6", size = 55258, upload-time = "2026-03-30T15:53:44.708Z" },
 ]
 
 [[package]]

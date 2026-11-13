@@ -18,3 +18,27 @@ async def browser_page():
         yield page
         await context.close()
         await browser.close()
+
+
+PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+  {head}
+</head>
+<body>
+<main class="aud" data-format="{fmt}">
+{body}
+</main>
+</body>
+</html>
+"""
+
+
+def write_project(folder, body, fmt="explainer", head=""):
+    """Write a one-file project: an index.html around ``body`` (its sections)."""
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "index.html").write_text(PAGE.format(body=body, fmt=fmt, head=head))
+    return folder
