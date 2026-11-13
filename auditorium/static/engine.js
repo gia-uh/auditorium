@@ -88,15 +88,15 @@ export const AuditoriumEngine = {
 
   _attachTracks() {
     // Each track becomes one paused animation positioned on the GLOBAL
-    // timeline via delay, with fill:both so it holds its start value before
-    // it begins and its end value after it finishes. That is what lets a
+    // timeline via delay, with fill:both (an exit: forwards only) so it holds
+    // its start value before it begins and its end value after it finishes. That is what lets a
     // single `currentTime = t` place every animation correctly.
     for (const track of this._tl.tracks) {
       const anim = track.el.animate(track.keyframes, {
         delay: track.start,
         duration: Math.max(1, track.end - track.start),
         easing: track.easing || "linear",
-        fill: "both",
+        fill: track.fill || "both",
         iterations: track.iterations || 1,
         direction: track.direction || "normal",
         // Transforms compose: an entrance's translate and an idle's float

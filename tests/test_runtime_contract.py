@@ -70,6 +70,26 @@ async def test_an_exit_without_data_out_ends_with_its_beat(browser_page, served)
     assert await opacity(browser_page, "#exit-end") < 0.05
 
 
+@pytest.mark.parametrize("sel", ["#both-fade", "#both-rise", "#end-exit-fade"])
+async def test_an_element_with_an_exit_still_fades_in(browser_page, served, sel):
+    """The exit is a second animation on the same element. Before it starts it
+    must not hold its own first value (opacity 1) over the entrance, or the
+    element pops in at full opacity."""
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 500)
+    assert await opacity(browser_page, sel) == pytest.approx(0.0, abs=0.01)
+    await seek(browser_page, 650)
+    assert 0.05 < await opacity(browser_page, sel) < 0.95
+    await seek(browser_page, 2000)
+    assert await opacity(browser_page, sel) == pytest.approx(1.0)
+
+
+async def test_an_entered_element_still_fades_out(browser_page, served):
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 3250)
+    assert 0.05 < await opacity(browser_page, "#both-fade") < 0.95
+
+
 # ---- data-idle -----------------------------------------------------------------
 
 
@@ -112,6 +132,18 @@ async def test_flip_turns_from_edge_on_to_flat(browser_page, served):
     assert 0.05 < (await matrix(browser_page, "#flipper"))["m22"] < 0.95
     await seek(browser_page, 600)
     assert (await matrix(browser_page, "#flipper"))["m22"] == pytest.approx(1.0, abs=0.001)
+
+
+async def test_pop_scales_up_from_sixty_percent(browser_page, served):
+    """scale 0.6 to 1 over 450 ms on an overshooting curve, fading in."""
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 0)
+    assert (await matrix(browser_page, "#popper"))["a"] == pytest.approx(0.6, abs=0.001)
+    assert await opacity(browser_page, "#popper") == pytest.approx(0.0, abs=0.01)
+    await seek(browser_page, 200)
+    assert (await matrix(browser_page, "#popper"))["a"] > 0.9
+    await seek(browser_page, 450)
+    assert (await matrix(browser_page, "#popper"))["a"] == pytest.approx(1.0, abs=0.001)
 
 
 async def test_grow_scales_from_its_left_edge(browser_page, served):

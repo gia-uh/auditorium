@@ -46,6 +46,18 @@ def _project(path: Path) -> Path:
     return folder
 
 
+def _size(value: str | None) -> tuple[int, int] | None:
+    """Parse --size, or None for the format's stage; a bad value is a usage error."""
+    if value is None:
+        return None
+    from auditorium.render import parse_size
+
+    try:
+        return parse_size(value)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--size") from exc
+
+
 def _print_banner(
     folder: Path, host: str, port: int, presenter: bool = False, landing: str = "/"
 ) -> None:
@@ -159,7 +171,7 @@ def preview(
 @app.command()
 def render(
     project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
-    output: Path = typer.Option(Path("out.mp4"), "-o", "--output", help="Output file"),
+    output: Path = typer.Option(None, "-o", "--output", help="Output file (default: dist/NAME.mp4, or dist/frames/ for png-sequence)"),
     fps: int = typer.Option(30, "--fps", help="Frames per second"),
     size: str = typer.Option(None, "--size", help="WIDTHxHEIGHT or a preset: 1080p, 720p, vertical, square (default: the format's stage)"),
     fmt: str = typer.Option("mp4", "--format", help="mp4, webm, or png-sequence"),
@@ -168,15 +180,12 @@ def render(
     to_frame: int | None = typer.Option(None, "--to", help="Stop before this frame"),
 ) -> None:
     """Render a project to video by stepping frames deterministically."""
-    from auditorium.render import parse_size, render_video
+    from auditorium.render import render_video
 
     folder = _project(project)
-    dims = None
-    if size is not None:
-        try:
-            dims = parse_size(size)
-        except ValueError as exc:
-            raise typer.BadParameter(str(exc)) from exc
+    dims = _size(size)
+    if output is None:
+        output = folder / "dist" / ("frames" if fmt == "png-sequence" else f"{folder.name}.{fmt}")
 
     asyncio.run(render_video(
         folder, output, fps=fps, size=dims, audio=audio, fmt=fmt,
@@ -194,14 +203,12 @@ def export(
     steps: bool = typer.Option(False, "-s", "--steps", help="One image per press instead of per beat"),
 ) -> None:
     """Export each beat at its end state as a PNG."""
-    from auditorium.render import parse_size
-
     folder = _project(project)
     if fmt != "png":
         # html and pdf come with bundle (#103); say so instead of guessing.
         console.print(f"[red]Error:[/] format [bold]'{fmt}'[/] is not available yet. Use png.")
         raise typer.Exit(1)
-    dims = parse_size(size) if size else None
+    dims = _size(size)
     from auditorium.exporter import export_png
 
     written = asyncio.run(export_png(folder, output or folder / "dist", size=dims, steps=steps))
@@ -334,23 +341,32 @@ def _start_relay_bridge(relay_host: str, local_port: int, name: str | None = Non
     thread.start()
 
 
-def _setup_watcher(application, folder: Path) -> None:
-    """Watch the project folder and tell every client to reload on a change.
+def watch_filter(folder: Path):
+    """Which changes in a project folder reload its pages.
 
-    ``dist/`` is ignored: bundle, render and export write there, and a write
+    watchfiles' DefaultFilter (no .git, caches or editor swap files), and
+    nothing under ``dist/``: bundle, render and export write there, and a write
     that reloads the page it is capturing would never finish.
     """
+    from watchfiles import DefaultFilter
+
+    default = DefaultFilter()
+    dist = Path(folder).resolve() / "dist"
+
+    def _filter(change, path: str) -> bool:
+        return default(change, path) and not Path(path).resolve().is_relative_to(dist)
+
+    return _filter
+
+
+def _setup_watcher(application, folder: Path) -> None:
+    """Watch the project folder and tell every client to reload on a change."""
     import threading
 
     from watchfiles import watch as watch_files
 
-    dist = folder / "dist"
-
-    def _filter(_change, path: str) -> bool:
-        return not Path(path).is_relative_to(dist)
-
     def _watch():
-        for _changes in watch_files(folder, watch_filter=_filter):
+        for _changes in watch_files(folder, watch_filter=watch_filter(folder)):
             console.print("[yellow]⟳[/] Change detected, reloading...")
             loop = getattr(application.state, "loop", None)
             if loop and loop.is_running():

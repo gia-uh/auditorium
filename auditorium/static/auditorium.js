@@ -132,7 +132,13 @@ function motion(timeline, el, name, start, dur, ease, reverse) {
   const push = (target, keyframes, composite, s, d, extra = {}) => {
     timeline.tracks.push({
       el: target, keyframes: reverse ? keyframes.slice().reverse() : keyframes,
-      start: s, end: s + d, easing: ease, composite, ...extra,
+      start: s, end: s + d, easing: ease, composite,
+      // An exit is a second animation on an element that usually has an
+      // entrance too, and comes later in composite order. Filling backwards
+      // it would hold its first value (opacity 1) over the whole entrance,
+      // so the element would pop in. It only holds its end.
+      fill: reverse ? "forwards" : "both",
+      ...extra,
     });
   };
   if (spec.effects === "draw") {
