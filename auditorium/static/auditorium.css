@@ -689,7 +689,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 .aud .stat span { color: var(--aud-muted, #6b7280); }
 
 /* logo: an <img>, or a labelled box marked data-placeholder until the real
-   file arrives (the check fails while the mark remains). */
+   file arrives (the check, #80, is to flag the mark while it remains). */
 .aud .logo { height: 2.6em; width: auto; max-width: 8em; object-fit: contain; }
 .aud span.logo {
     display: inline-flex;

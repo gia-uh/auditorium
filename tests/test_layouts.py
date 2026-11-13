@@ -125,6 +125,28 @@ def test_help_lists_and_prints_the_topics():
     missing = runner.invoke(app, ["help", "layuots"])
     assert missing.exit_code == 1
     assert "layouts" in missing.output  # the nearest valid name
+    unknown = runner.invoke(app, ["help", "zzzz"])
+    assert unknown.exit_code == 1
+    assert "no help topic 'zzzz'" in unknown.output
+    assert "Did you mean" not in unknown.output
+
+
+def test_help_reads_only_its_own_topics():
+    """A topic name becomes a file path; one that climbs out of the package
+    must not print whatever Markdown sits there."""
+    result = CliRunner().invoke(app, ["help", "../../Readme"])
+    assert result.exit_code == 1
+    assert "Auditorium" not in result.output
+
+
+def icon_names_in_help():
+    text = topic_path("components").read_text()
+    line = re.search(r"^Icons: (.*?)\. An icon", text, re.MULTILINE | re.DOTALL).group(1)
+    return sorted(n.strip() for n in line.replace("\n", " ").split(","))
+
+
+def test_the_help_lists_exactly_the_icons_the_stylesheet_draws():
+    assert icon_names_in_help() == sorted(set(re.findall(r"\.icon-([a-z]+)\s*\{", CSS)))
 
 
 # ---- in Chromium, per format -----------------------------------------------
@@ -170,7 +192,7 @@ SAFE_VARS = """() => {
 }"""
 
 
-@pytest.mark.parametrize("fmt", ["deck", "square", "portrait", "short"])
+@pytest.mark.parametrize("fmt", list(SAFE))
 @pytest.mark.parametrize("topic", TOPICS)
 async def test_every_snippet_fits_the_safe_area(browser_page, served, tmp_path, topic, fmt):
     """Each layout knows the format's safe area: dropped into any staged
@@ -207,3 +229,106 @@ async def test_every_snippet_reflows_on_a_phone_page(browser_page, served, tmp_p
     lefts = await browser_page.evaluate(
         "() => [...document.querySelectorAll('.card, .stat')].map(e => Math.round(e.getBoundingClientRect().left))")
     assert lefts and len(set(lefts)) == 1, f"side by side on a phone: {sorted(set(lefts))}"
+
+
+# ---- what each format sets, measured -----------------------------------------
+
+async def open_snippets(page, served, folder, fmt, size, head=""):
+    body = "\n".join(snippets("layouts") + snippets("components"))
+    write_project(folder, body, fmt=fmt, head=head)
+    write_assets(folder, body)
+    await page.set_viewport_size({"width": size[0], "height": size[1]})
+    await page.goto(served(folder) + "/?embed")
+    await page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
+
+
+# Read at the end of each beat it names: the computed sizes and the geometry a
+# format's variables decide.
+MEASURE = """() => {
+  const a = window.auditorium;
+  const at = (id) => { a.goto(id); return document.querySelector(`section[data-beat="${id}"]`); };
+  const px = (el) => parseFloat(getComputedStyle(el).fontSize);
+  const lefts = (els) => new Set([...els].map(e => Math.round(e.getBoundingClientRect().left))).size;
+  const m = {};
+  let s = at('title');
+  m.display = px(s.querySelector('h1'));
+  m.body = px(s);
+  m.small = px(s.querySelector('.kicker'));
+  m.cards = lefts(at('cards').querySelectorAll('.card'));
+  m.columns = lefts(at('columns').querySelectorAll(':scope > div'));
+  s = at('chart');
+  m.bars = [...s.querySelectorAll('.bar')].map(b => [
+    parseFloat(b.style.getPropertyValue('--v')), b.querySelector('i').getBoundingClientRect().width]);
+  m.dots = lefts(at('dots').querySelectorAll('.dots > i'));
+  const ph = at('partners').querySelector('span.logo[data-placeholder]');
+  const cs = getComputedStyle(ph), r = ph.getBoundingClientRect();
+  m.placeholder = [cs.borderTopStyle, parseFloat(cs.borderTopWidth), r.width > 0 && r.height > 0];
+  return m;
+}"""
+
+# Type scale in rem: display, body, small. The root is 3 % of the stage's short
+# side (1080 px in every staged format), 16 px on a page.
+TYPE = {"deck": (3.2, 1.3, 0.85), "square": (2.8, 1.25, 0.85), "portrait": (2.8, 1.25, 0.85),
+        "short": (3.0, 1.35, 0.95), "story": (3.0, 1.35, 0.95), "page": (2.5, 1.1, 0.875)}
+# Cards side by side, and columns side by side.
+SIDE_BY_SIDE = {"deck": (3, 2), "square": (2, 2), "portrait": (2, 1), "short": (1, 1),
+                "story": (1, 1), "page": (3, 2)}
+
+
+@pytest.mark.parametrize("fmt", list(TYPE))
+async def test_each_format_sets_its_type_scale_and_columns(browser_page, served, tmp_path, fmt):
+    """The variables a format sets reach the layouts: type sizes, how many
+    cards and columns sit side by side, and the components that read them."""
+    size = STAGE.get(fmt, (1440, 900))
+    await open_snippets(browser_page, served, tmp_path / fmt, fmt, size)
+    m = await browser_page.evaluate(MEASURE)
+    root = 16 if fmt == "page" else 1080 * 0.03
+    display, body, small = TYPE[fmt]
+    assert m["display"] == pytest.approx(display * root, abs=0.05)
+    assert m["body"] == pytest.approx(body * root, abs=0.05)
+    assert m["small"] == pytest.approx(small * root, abs=0.05)
+    assert (m["cards"], m["columns"]) == SIDE_BY_SIDE[fmt]
+    # A bar is as long as its --v says, relative to the longest.
+    (v0, w0), *rest = m["bars"]
+    for v, w in rest:
+        assert w / w0 == pytest.approx(v / v0, abs=0.01)
+    assert m["dots"] == 10  # ten to a row by default
+    style, width, shown = m["placeholder"]
+    assert (style, shown) == ("dashed", True) and width >= 1
+
+
+async def test_icons_are_drawn(browser_page, served, tmp_path):
+    """Each icon the help lists resolves to a mask, so it shows as a glyph."""
+    await open_snippets(browser_page, served, tmp_path / "icons", "deck", STAGE["deck"])
+    masks = await browser_page.evaluate("""(names) => names.map(n => {
+        const i = document.createElement('i');
+        i.className = 'icon icon-' + n;
+        document.querySelector('main.aud section').appendChild(i);
+        return [n, getComputedStyle(i).maskImage];
+    })""", icon_names_in_help())
+    assert len(masks) == 12
+    assert [n for n, mask in masks if not mask.startswith('url("data:image/svg+xml')] == []
+
+
+@pytest.mark.parametrize("theme", ["light", "dark"])
+async def test_figures_take_the_theme_colours(browser_page, served, tmp_path, theme):
+    """fill-* and stroke-* paint a shape in the theme's own palette, so the
+    same figure redraws under another theme."""
+    folder = tmp_path / theme
+    folder.mkdir()
+    (folder / "theme.css").write_text((ROOT / "auditorium" / "themes" / f"{theme}.css").read_text())
+    await open_snippets(browser_page, served, folder, "deck", STAGE["deck"],
+                        head='<link rel="stylesheet" href="theme.css">')
+    pairs = await browser_page.evaluate("""() => {
+        const section = document.querySelector('section[data-beat="palette"]');
+        const probe = (v) => { const d = document.createElement('div');
+            d.style.color = `var(${v})`; section.appendChild(d); return getComputedStyle(d).color; };
+        const paint = (sel, prop) => getComputedStyle(section.querySelector(sel))[prop];
+        return { fill1: [paint('.fill-1', 'fill'), probe('--aud-geom-1')],
+                 accent: [paint('.fill-accent', 'fill'), probe('--aud-accent')],
+                 muted: [paint('.stroke-muted', 'stroke'), probe('--aud-geom-muted')] };
+    }""")
+    for shape, (painted, palette) in pairs.items():
+        assert painted == palette, shape
+    expected = {"light": "rgb(79, 70, 229)", "dark": "rgb(247, 200, 115)"}[theme]
+    assert pairs["accent"][1] == expected  # the theme loaded, not the defaults

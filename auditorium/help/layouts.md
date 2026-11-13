@@ -11,8 +11,8 @@ With no layout class a beat is a centred column, and `<div class="grid">` with
 | layout | for |
 |---|---|
 | title | the opening: kicker, heading, subtitle |
-| statement | one sentence, as large as fits; `<em>` is the accent |
-| cards | three or four ideas side by side, each in a box |
+| statement | one short sentence at display size; `<em>` is the accent |
+| cards | up to three ideas side by side, each in a box |
 | stats | numbers with labels, counting up |
 | columns | two blocks side by side (stacked on tall formats) |
 | figure | an inline SVG drawing with a caption |

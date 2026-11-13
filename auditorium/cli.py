@@ -229,15 +229,15 @@ def help_(
             print(f"{name:<{width}}  {summary}")
         print(f"{len(known)} topics; auditorium help TOPIC prints one")
         return
-    path = topic_path(topic)
-    if not path.is_file():
+    # Only a listed topic: the name becomes a path, and "../x" must not.
+    if topic not in topics():
         guess = nearest(topic)
         hint = f" Did you mean '{guess}'?" if guess else ""
         print(f"error: no help topic '{topic}'.{hint} auditorium help lists them.")
         raise typer.Exit(1)
     # Plain print, not the rich console: snippets hold [brackets] and markup
     # rich would eat, and an agent reads the bytes as written.
-    print(path.read_text(), end="")
+    print(topic_path(topic).read_text(), end="")
 
 
 def _start_live_status(application) -> None:

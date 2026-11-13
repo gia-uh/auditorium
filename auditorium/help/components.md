@@ -90,7 +90,8 @@ sit in the second of two columns.
 
 A template marks a logo it cannot know with `data-placeholder`; replace the
 `<span>` with `<img class="logo" src="assets/NAME.png" alt="NAME">` once the
-file is in assets/. The check fails while a placeholder remains.
+file is in assets/. `auditorium check` will flag a remaining placeholder once
+it exists (#80).
 
 ```html
 <section data-beat="partners" class="logos">
