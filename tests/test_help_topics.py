@@ -17,12 +17,20 @@ from auditorium.help import topic_path, topics
 from auditorium.templates import templates
 
 from conftest import write_project
-from test_layouts import SAFE, STAGE, classes_in, write_assets
+from test_layouts import OUTSIDE, SAFE, STAGE, classes_in, write_assets
 from test_templates import known_class
 
 ROOT = Path(__file__).parent.parent
 RUNTIME = (ROOT / "auditorium" / "static" / "auditorium.js").read_text()
 NEW = ["start", "formats", "attributes", "templates"]
+
+# test_layouts' safe-area probe, except the anchored-line overlay's own box: it
+# covers its section by design, as the layer lines are drawn in. The lines in
+# it are still measured.
+OUTSIDE_CONTENT = OUTSIDE.replace(
+    "if (el.closest('aside.notes')) continue;",
+    "if (el.closest('aside.notes') || el.classList.contains('aud-overlay')) continue;")
+assert OUTSIDE_CONTENT != OUTSIDE
 
 
 def text(topic):
@@ -127,6 +135,15 @@ def test_attributes_teaches_every_attribute_the_runtime_reads():
     assert runtime_attributes() - taught == set()
 
 
+def test_templates_lists_every_bundled_theme():
+    """An agent with only a shell cannot list /_auditorium/themes/."""
+    from auditorium.templates import themes
+
+    line = re.search(r"^Themes: (.*?)\.$", text("templates"), re.MULTILINE | re.DOTALL)
+    assert line, "no 'Themes: ...' line"
+    assert sorted(n.strip() for n in line.group(1).replace("\n", " ").split(",")) == themes()
+
+
 def test_templates_names_every_template_and_its_formats():
     body = text("templates")
     for name, meta in templates().items():
@@ -167,3 +184,6 @@ async def test_every_snippet_builds(browser_page, served, tmp_path, topic, snipp
     await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
     assert errors == []
     assert await browser_page.evaluate("() => window.auditorium.beats.length") >= 1
+    # As help layouts and components: on a stage, every box stays in the safe area.
+    if fmt in SAFE:
+        assert await browser_page.evaluate(OUTSIDE_CONTENT, list(SAFE[fmt])) == []

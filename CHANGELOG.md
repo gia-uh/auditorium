@@ -85,7 +85,9 @@
   in them into each staged format and checks it against the safe area.
 - **`auditorium template list|show|new`** starts a project from a template:
   `auditorium template new talk my-talk [--format F] [--theme NAME]` copies
-  the template into a new folder, links a bundled theme if asked, and writes
+  the template into a new folder, links a bundled theme if asked (and then
+  leaves `theme.css` with the template's palette commented out, so the theme's
+  colours show), and writes
   `auditorium.toml` and `README.md` saying what it came from. It never writes
   into a folder that holds files. The first templates are `talk` (deck) and
   `poster` (square, portrait, story); each marks what to replace with
@@ -96,7 +98,8 @@
   `templates`**, and `--all` to print every topic. Tests tie each topic to
   the code: every command a topic names exists, every format's stage and safe
   area match the runtime, every attribute the runtime reads is taught, every
-  template is listed, and every HTML snippet builds in Chromium.
+  template and bundled theme is listed, and every HTML snippet builds in
+  Chromium and stays inside its format's safe area.
 
 ### Removed
 

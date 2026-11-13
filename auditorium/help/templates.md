@@ -11,8 +11,15 @@ DIR` copies it, and the folder is then yours.
 | poster | square, portrait, story | one image: an announcement, an event, a result |
 
 The first format listed is the default; `--format` picks another, and the
-template refuses one it does not make. `--theme NAME` links a bundled theme
-(dark, light, academic, ...: the `.css` files under `/_auditorium/themes/`).
+template refuses one it does not make.
+
+`--theme NAME` links a bundled theme and leaves the project's `theme.css`
+with no variable in force (the template's palette stays there as a comment),
+so the theme decides the colours. Set a variable in `theme.css` to override
+one.
+
+Themes: academic, comic, compact, dark, light, magazine, minimalist, mono,
+neon, pastel, print, simple, solarized, terminal.
 
 ## Near misses
 
