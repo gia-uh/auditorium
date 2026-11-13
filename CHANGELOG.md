@@ -6,27 +6,50 @@
 
 - **Authoring is HTML.** A project is a folder with an `index.html` that loads
   `/_auditorium/auditorium.js` and `auditorium.css`. Time lives in attributes:
-  `data-format`, `data-beat`, `data-d`, `data-step`, `data-in`, `data-out`,
-  `data-enter`, `data-exit`, `data-idle`, `data-col`, `data-row`, and
-  `data-from`/`data-to` on SVG lines for anchors. At load the runtime walks the
-  DOM into the ops and tracks 4.x compiled in Python and publishes
-  `window.auditorium` (`format`, `stage`, `grid`, `beats`, `stops`, `duration`,
-  `audio`, `seek`, `goto`, `track`, `rng`). The engine keeps D2 to D6: one
-  `seek(t)`, every animation paused, `getAnimations()`, replay forward after a
-  rewind, anchors read before written.
+  - `data-format` on `<main class="aud">`: `deck`, `explainer`, `short`,
+    `story`, `square`, `portrait` or `page` (no stage).
+  - `data-beat` and `data-d` on each `<section>`; `data-step` for presses in
+    a deck.
+  - `data-in` and `data-out`, in seconds from the beat's start (from the
+    step's start in a deck).
+  - `data-enter`, `data-exit` (`fade rise pop flip grow draw words count`) and
+    `data-idle` (`float tilt pulse ken-burns`), with `data-dur` and
+    `data-ease` to override a motion's default duration and easing.
+  - `data-col` and `data-row` on the twelve-column `.grid`.
+  - `data-from` and `data-to` (`id:side`) on an SVG line for anchors.
+  - `data-cue` is recognised but does not resolve yet: the element enters at
+    its step's start and the page logs a warning, until narration cues (#73).
+  - `<aside class="notes">` in a section holds speaker notes for the
+    presenter view.
+  - `<audio data-in data-gain data-duck>` declares audio.
+- **The runtime builds the timeline from the DOM** and publishes
+  `window.auditorium`: `format`, `stage`, `grid`, `beats`, `stops`,
+  `duration`, `audio`, `seek(t)` and `goto(beat, step)`, with times in integer
+  milliseconds. `auditorium.track(fn, {beat, from, to})` calls `fn(seconds)` on
+  every seek, clamped to its range (a beat by id or index; with `to` it
+  lengthens an untimed beat); an adapter `{duration, seekFrame}` gets frames at
+  30 fps. `auditorium.rng(seed)` replaces `Math.random`. The engine keeps D2 to
+  D6: one `seek(t)`, every animation paused, `getAnimations()`, undo and
+  replay forward after a rewind, anchors read before written.
 - **Every command takes a project folder.** `run`, `preview`, `render` and
   `export` read the folder; hot reload watches all of it except `dist/`. The
   preview and presenter views embed the project's own page and drive it.
-  `render` defaults to the format's stage size.
-- **`export` writes PNG stills** named `beat-01.png` (or per press with
-  `--steps`). HTML and PDF come with `bundle` (#103).
+  `render --size` and `export --size` default to the format's stage size.
+- **`export` writes PNG stills only**, named `beat-01.png` (or per press with
+  `--steps`). `export html` is gone until `bundle` lands (#103), which also
+  brings `export pdf`.
+- **`AUDITORIUM_CHROMIUM`** now also chooses the browser for `render` and
+  `export`, not only the tests.
+- Type on a stage is sized from the stage: the root font is 3 % of its short
+  side, so the themes' `rem` sizes scale with it.
 
 ### Removed
 
 - The Python authoring API: `Deck`, `@deck.scene`, `@deck.slide`, nodes,
   layouts, the compiler and the Python `Timeline`. 4.x stays on PyPI for
   existing `deck.py` decks.
-- `--theme` and `--transition`: a project's look is its own `theme.css`.
+- `--theme` and `--transition`, and the themes' `--aud-transition` variables:
+  a project's look is its own `theme.css`.
 - The `examples` extra and the `markdown` dependency.
 - The relay viewer page answers 501 until relaying a project folder lands
   with `run --public` (#104).

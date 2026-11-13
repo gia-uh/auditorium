@@ -37,8 +37,13 @@ static/engine.js                               seek(t): the only runtime
 
 - **Authoring** is the project folder. `index.html` loads the runtime from
   `/_auditorium/`, the path the server serves from the package.
-- **The build** (`auditorium/static/auditorium.js`) reads attributes and nothing
-  else: no layout, no computed style. Each `<section>` is a beat; `data-in`,
+- **The build** (`auditorium/static/auditorium.js`) reads attributes, plus the
+  starting number of a `count` element's text; it reads no layout and no
+  computed style. It changes the DOM once, and only to prepare motions: it
+  marks timed elements, splits `words` text into spans, sets `pathLength` and
+  `stroke-dasharray` for `draw`, sets `transform-origin` for `grow`, and copies
+  `data-col`/`data-row` to `grid-column`/`grid-row`. Every change after that is
+  an op the engine applies and undoes. Each `<section>` is a beat; `data-in`,
   `data-out`, `data-step` and the motion names become ops and tracks; a deck's
   presses become stops, the pause points navigation moves between. The timeline
   holds element references and never leaves the page; what tools need is
