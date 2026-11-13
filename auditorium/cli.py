@@ -76,12 +76,17 @@ def run(
     port: int = typer.Option(8000, help="Port to bind to"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser automatically"),
     presenter: bool = typer.Option(False, "-p", "--presenter", help="Also open presenter view"),
-    public: bool = typer.Option(False, "--public", help="Share via relay for remote viewers"),
+    public: bool = typer.Option(False, "--public", help="Share via relay for remote viewers (not available yet, #104)"),
     relay_host: str = typer.Option("vps.apiad.net:4243", "--relay", help="Relay server host:port"),
     public_name: str = typer.Option(None, "--name", help="Custom name for the public URL (e.g. --name my-talk)"),
     watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch the folder and hot-reload"),
 ) -> None:
     """Present a project live."""
+    if public:
+        # A relayed audience now needs the project's files, which the relay
+        # does not carry yet. Refuse rather than hand out a URL that answers 501.
+        console.print("[red]Error:[/] --public is not available yet: relaying a project folder lands with #104.")
+        raise typer.Exit(1)
     _serve(
         _project(project), host, port, open_browser, watch,
         presenter=presenter, public=public, relay_host=relay_host,

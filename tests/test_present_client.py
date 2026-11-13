@@ -6,7 +6,7 @@ from conftest import write_project
 
 BODY = """
 <section data-beat="a">
-  <p id="first" data-enter="fade" data-dur="0.5">first</p>
+  <p id="first" data-enter="fade" data-dur="3">first</p>
   <p id="second" data-step="1" data-enter="fade" data-dur="0.5">second</p>
 </section>
 <section data-beat="b">
@@ -48,7 +48,7 @@ async def _settle_at_first_stop(page):
     """
     await page.wait_for_function(
         "() => !window.auditorium.playing && window.auditorium.t === window.auditorium.stops[0].t",
-        timeout=10000,
+        timeout=20000,
     )
 
 
@@ -72,6 +72,10 @@ async def test_space_during_playback_skips_to_the_stop_not_past_it(browser_page,
     """Mid-segment space is a skip, not an advance. Two gestures share one key,
     and conflating them would make an impatient first press blow through a reveal."""
     await _ready(browser_page, live_server)
+    # The opening entrance lasts 3 s, so on a loaded host the press still lands
+    # mid-segment; waiting for playback first rules out pressing before it starts.
+    await browser_page.wait_for_function("() => window.auditorium.playing")
+    assert await browser_page.evaluate("() => window.auditorium.t < window.auditorium.stops[0].t")
     await browser_page.keyboard.press(" ")
     await _settle_at_first_stop(browser_page)
     assert not await _shown(browser_page, "second")

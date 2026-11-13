@@ -159,11 +159,14 @@ function motion(timeline, el, name, start, dur, ease, reverse) {
     if (reverse) { push(el, O, "replace", start, dur); return start + dur; }
     const targets = el.matches("[data-to]") ? [el] : Array.from(el.querySelectorAll("[data-to]"));
     for (const target of targets) {
-      const from = parseFloat(target.textContent) || 0;
+      const original = target.textContent;
+      const from = parseFloat(original) || 0;
       const to = parseFloat(target.getAttribute("data-to"));
       const format = countFormatter(target.getAttribute("data-to"));
       const easeOut = (u) => 1 - (1 - u) ** 3;
       timeline.tweens.push((t) => {
+        // Before it starts the target shows what the author wrote.
+        if (t < start) { target.textContent = original; return; }
         const u = Math.min(1, Math.max(0, (t - start) / dur));
         target.textContent = format(from + (to - from) * easeOut(u));
       });
@@ -252,6 +255,7 @@ export function build(root, { tracked = [] } = {}) {
     let segStart = start;
     const stepEnds = [];
     const pendingHides = [];
+    const endExits = [];
     byStep.forEach((els, step) => {
       let segEnd = segStart;
       for (const el of els) {
@@ -280,6 +284,10 @@ export function build(root, { tracked = [] } = {}) {
           }
           pendingHides.push({ t: goneAt, el });
           shownUntil = Math.max(shownUntil, goneAt);
+        } else if (exit && ENTRANCES[exit]) {
+          // No data-out means the whole beat, so the exit ends with it. Its
+          // start depends on the beat's length, known once every step is laid.
+          endExits.push({ el, exit, ease });
         }
         segEnd = Math.max(segEnd, shownUntil);
       }
@@ -303,6 +311,16 @@ export function build(root, { tracked = [] } = {}) {
     // A beat with data-d in a deck is a slide that holds that long.
     const length = d !== null ? Math.max(d, end - start) : end - start;
 
+    // Exits without data-out end at the beat's end. Only a beat with data-d
+    // has an end of its own; in a deck the end is where the presenter
+    // pauses, so an exit there needs data-out.
+    if (d !== null) {
+      for (const { el, exit, ease: e } of endExits) {
+        const dur = el.hasAttribute("data-dur") ? ms(el.getAttribute("data-dur")) : ENTRANCES[exit].dur;
+        motion(timeline, el, exit, start + length - dur, dur, e || ENTRANCES[exit].ease, true);
+      }
+    }
+
     // Idles run from the element's entrance to the end of the beat.
     for (const el of section.querySelectorAll("[data-idle]")) {
       const name = el.getAttribute("data-idle");
@@ -311,10 +329,13 @@ export function build(root, { tracked = [] } = {}) {
       idle(timeline, el, name, entered ? entered.t : start, start + length);
     }
 
-    // Anchored lines: SVG elements with data-from / data-to ("id:side"). The
-    // instanceof skips the count motion's data-to, which is on HTML.
+    // Anchored lines: SVG elements with data-from / data-to ("id:side"). A
+    // count target also carries data-to, but a number, on HTML or in an SVG
+    // <text>; a number is never an anchor.
     for (const line of section.querySelectorAll("[data-from], [data-to]")) {
       if (!(line instanceof SVGElement)) continue;
+      const toValue = line.getAttribute("data-to");
+      if (!line.hasAttribute("data-from") && !isNaN(Number(toValue))) continue;
       timeline.anchors.push({
         el: line,
         from: parseAnchor(line.getAttribute("data-from")),
@@ -342,7 +363,10 @@ export function build(root, { tracked = [] } = {}) {
     if (exclusive && index < sections.length - 1) timeline.ops.push({ t: next, el: section, on: false });
 
     if (timedBeat) {
-      timeline.stops.push({ t: beatEnd, hold_ms: 0 });
+      // The beat's last frame, not beatEnd: at beatEnd the next beat is
+      // already on stage, so navigation would pause on its first frame.
+      const last = index === sections.length - 1;
+      timeline.stops.push({ t: last ? beatEnd : beatEnd - 1, hold_ms: 0 });
     } else {
       stepEnds.forEach((s, i) => {
         // The last step's stop is the beat's end, stretched by data-d if any.
@@ -472,10 +496,7 @@ const api = {
     const b = typeof beat === "number" ? api.beats[beat] : api.beats.find((x) => x.id === beat);
     if (!b) return;
     const i = step === undefined ? b.stops.length - 1 : Math.min(step, b.stops.length - 1);
-    // A timed beat's stop is where the next one begins: one ms earlier is its end state.
-    const at = b.stops[i] === b.t + b.d && api.format && FORMATS[api.format] && FORMATS[api.format].timed
-      ? b.t + b.d - 1 : b.stops[i];
-    player.seekTo(at);
+    player.seekTo(b.stops[i]);
   },
   /** Register fn(seconds) driven by seek. `{beat, from, to}` in seconds; with a
    *  beat they count from its start. An adapter {duration, seekFrame} also works. */

@@ -58,6 +58,18 @@ async def test_a_rewind_across_an_exit_restores_it(browser_page, served):
     assert rewound == fresh
 
 
+async def test_an_exit_without_data_out_ends_with_its_beat(browser_page, served):
+    """No data-out means the whole beat, so a 500 ms exit runs over the last
+    500 ms of the 4 s beat instead of being dropped."""
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 3400)
+    assert await opacity(browser_page, "#exit-end") == pytest.approx(1.0)
+    await seek(browser_page, 3750)
+    assert 0.05 < await opacity(browser_page, "#exit-end") < 0.95
+    await seek(browser_page, 3999)
+    assert await opacity(browser_page, "#exit-end") < 0.05
+
+
 # ---- data-idle -----------------------------------------------------------------
 
 
@@ -105,6 +117,27 @@ async def test_count_ends_on_its_target_with_its_decimals(browser_page, served):
     await seek(browser_page, 3999)
     assert await js(browser_page, "() => document.getElementById('count-int').textContent") == "200"
     assert await js(browser_page, "() => document.getElementById('count-dec').textContent") == "0.01"
+
+
+async def test_count_shows_the_authored_text_before_it_starts(browser_page, served):
+    """Before its entrance a counter reads what the author wrote ("0"), not the
+    start value reformatted with the target's decimals ("0.0")."""
+    await load(browser_page, served(MOTIONS))
+    text = "() => document.getElementById('count-late').textContent"
+    await seek(browser_page, 500)
+    assert await js(browser_page, text) == "0"
+    await seek(browser_page, 3999)
+    assert await js(browser_page, text) == "0.5"
+    await seek(browser_page, 500)
+    assert await js(browser_page, text) == "0", "a rewind left the counted value behind"
+
+
+async def test_count_works_on_svg_text(browser_page, served):
+    """An SVG <text> count target carries a numeric data-to; it counts, and is
+    not mistaken for an anchored line."""
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 3999)
+    assert await js(browser_page, "() => document.getElementById('svg-count').textContent") == "50"
 
 
 async def test_draw_runs_the_dash_offset_from_one_to_zero(browser_page, served):
@@ -258,3 +291,17 @@ async def test_the_root_font_follows_the_stage(browser_page, served, tmp_path):
         await load(browser_page, served(project), size=size)
         px = await js(browser_page, "() => getComputedStyle(document.documentElement).fontSize")
         assert px == "32.4px"
+
+
+async def test_a_timed_page_opened_directly_pauses_at_the_beats_end(browser_page, served):
+    """Navigation in a timed format stops on the beat's last frame. Stopping at
+    its end time would show the next beat's first frame instead."""
+    url = served(PROJECTS / "timed")
+    await browser_page.set_viewport_size({"width": 1080, "height": 1920})
+    await browser_page.goto(url + "/")
+    await browser_page.wait_for_function(
+        "() => window.auditorium && window.auditorium.built && !window.auditorium.playing"
+        " && window.auditorium.t === window.auditorium.stops[0].t", timeout=20000)
+    assert await js(browser_page, "() => window.auditorium.t") == 4499
+    assert await visible(browser_page, "#first-title") is True
+    assert await visible(browser_page, "#second-title") is False

@@ -34,3 +34,11 @@ def test_render_writes_a_file(tmp_path):
     ])
     assert result.exit_code == 0, result.stdout
     assert out.exists() and out.stat().st_size > 0
+
+
+def test_run_public_refuses_until_the_relay_carries_a_project():
+    """The relay viewer answers 501 until #104; --public must say so and exit
+    non-zero rather than print a URL that does not work."""
+    result = runner.invoke(app, ["run", "examples/talk", "--public", "--no-open"])
+    assert result.exit_code == 1
+    assert "#104" in result.stdout
