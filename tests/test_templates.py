@@ -75,6 +75,23 @@ def test_every_class_and_motion_a_template_uses_exists(name, part):
     assert used - motion_names() == set()
 
 
+def test_every_template_file_ships():
+    """Hatch leaves gitignored files out of the wheel, and a blanket *.html
+    rule once hid every template page from git and the package while the
+    tests passed on the files left on disk."""
+    import shutil
+    import subprocess
+
+    if shutil.which("git") is None or not (ROOT / ".git").exists():
+        pytest.skip("not a git checkout")
+    paths = [str(p.relative_to(ROOT)) for p in TEMPLATES.rglob("*")
+             if p.is_file() and "__pycache__" not in p.parts]
+    assert any(p.endswith("example/index.html") for p in paths)
+    ignored = subprocess.run(["git", "check-ignore", "--no-index", *paths], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split()
+    assert ignored == []
+
+
 # ---- list and show ------------------------------------------------------------
 
 
@@ -150,10 +167,35 @@ def test_new_links_a_bundled_theme(tmp_path):
     assert tomllib.loads((dest / "auditorium.toml").read_text())["theme"] == "dark"
 
 
-def test_new_refuses_an_unknown_theme(tmp_path):
+@pytest.mark.parametrize("name", sorted(templates()))
+async def test_a_linked_theme_sets_the_palette(browser_page, served, tmp_path, name):
+    """--theme dark must look dark: the project's theme.css loads after the
+    bundled theme, so a palette left in it would win over the theme's."""
+    dest = tmp_path / name
+    assert run("new", name, str(dest), "--theme", "dark").exit_code == 0
+    dark = (ROOT / "auditorium" / "themes" / "dark.css").read_text()
+    want = re.search(r"--aud-slide-bg:\s*([^;]+);", dark).group(1).strip()
+    await browser_page.goto(served(dest) + "/?embed")
+    await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
+    got = await browser_page.evaluate(
+        "() => getComputedStyle(document.querySelector('main.aud')).getPropertyValue('--aud-slide-bg').trim()")
+    assert got == want
+
+
+def test_new_refuses_a_misspelt_theme_with_the_nearest(tmp_path):
     result = run("new", "talk", str(tmp_path / "t"), "--theme", "drak")
     assert result.exit_code == 1
-    assert "dark" in result.output
+    assert "no theme 'drak'" in result.output and "Did you mean 'dark'?" in result.output
+    assert not (tmp_path / "t").exists()
+
+
+def test_new_refuses_an_unknown_theme_with_the_list(tmp_path):
+    from auditorium.templates import themes
+
+    result = run("new", "talk", str(tmp_path / "t"), "--theme", "zzzz")
+    assert result.exit_code == 1
+    assert "Did you mean" not in result.output
+    assert all(t in result.output for t in themes())
     assert not (tmp_path / "t").exists()
 
 

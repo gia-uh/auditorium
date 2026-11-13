@@ -106,6 +106,19 @@ def new(name: str, dest: Path, fmt: str | None = None, theme: str | None = None)
         page = page.replace('  <link rel="stylesheet" href="theme.css">',
                             f'  {link}\n  <link rel="stylesheet" href="theme.css">', 1)
     index.write_text(page)
+    if theme:
+        # theme.css loads after the theme, so a palette left in it would win
+        # and --theme would change nothing visible. Keep the template's
+        # palette as a comment, and no variable in force.
+        css = dest / "theme.css"
+        palette = re.findall(r"^\s*(--aud-[\w-]+:[^;]+;)", css.read_text(), re.MULTILINE)
+        kept = "".join(f"     {line}\n" for line in palette)
+        css.write_text(
+            f"/* The palette comes from the bundled theme {theme}, linked in index.html\n"
+            "   before this file. A variable set below overrides the theme's.\n"
+            f"   The template's own palette, if you want it back:\n{kept}*/\n"
+            ":root {\n}\n"
+        )
 
     lang = re.search(r'<html lang="([^"]+)"', page)
     ver = version("auditorium")
