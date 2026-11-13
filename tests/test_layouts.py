@@ -292,6 +292,32 @@ MEASURE = """() => {
   m.bars = [...s.querySelectorAll('.bar')].map(b => [
     parseFloat(b.style.getPropertyValue('--v')), b.querySelector('i').getBoundingClientRect().width]);
   m.dots = lefts(at('dots').querySelectorAll('.dots > i'));
+  // --per-row overrides the ten.
+  s = at('dots');
+  const few = document.createElement('div');
+  few.className = 'dots';
+  few.style.setProperty('--per-row', '4');
+  few.innerHTML = '<i></i>'.repeat(8);
+  s.appendChild(few);
+  m.dotsPerRow = lefts(few.querySelectorAll('i'));
+  s = at('statement');
+  m.statement = px(s.querySelector('p'));
+  m.emStyle = getComputedStyle(s.querySelector('em')).fontStyle;
+  m.heading = px(at('cards').querySelector('h2'));
+  // A figure clips its drawing to the viewBox: a shape drawn past it is not
+  // there to hit (hit-testing follows the clip).
+  const svg = at('figure').querySelector('figure > svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  const box = svg.getBoundingClientRect();
+  // A point 20 px left of the svg's box, inside the safe margin, in the svg's
+  // own units: a small square drawn there lies past the viewBox.
+  const x = box.left - 20, y = box.top + box.height / 2;
+  const p = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM().inverse());
+  const out = document.createElementNS(ns, 'rect');
+  for (const [k, v] of Object.entries({x: p.x - 5, y: p.y - 5, width: 10, height: 10})) out.setAttribute(k, v);
+  svg.appendChild(out);
+  m.figureClip = [x > 0, document.elementFromPoint(x, y) === out];
+  out.remove();
   // No snippet ships a placeholder, so make the one a template would.
   s = at('logos');
   const ph = document.createElement('span');
@@ -308,6 +334,8 @@ MEASURE = """() => {
 # side (1080 px in every staged format), 16 px on a page.
 TYPE = {"deck": (3.2, 1.3, 0.85), "square": (2.8, 1.25, 0.85), "portrait": (2.8, 1.25, 0.85),
         "short": (3.0, 1.35, 0.95), "story": (3.0, 1.35, 0.95), "page": (2.5, 1.1, 0.875)}
+# The title scale, for a layout's heading.
+TITLE = {"deck": 2.2, "square": 2.0, "portrait": 2.0, "short": 2.2, "story": 2.2, "page": 1.75}
 # Cards (and stats) side by side, and columns side by side.
 SIDE_BY_SIDE = {"deck": (3, 2), "square": (2, 2), "portrait": (2, 1), "short": (1, 1),
                 "story": (1, 1), "page": (3, 2)}
@@ -325,6 +353,11 @@ async def test_each_format_sets_its_type_scale_and_columns(browser_page, served,
     assert m["display"] == pytest.approx(display * root, abs=0.05)
     assert m["body"] == pytest.approx(body * root, abs=0.05)
     assert m["small"] == pytest.approx(small * root, abs=0.05)
+    assert m["statement"] == pytest.approx(display * root, abs=0.05)
+    assert m["heading"] == pytest.approx(TITLE[fmt] * root, abs=0.05)
+    assert m["emStyle"] == "normal"
+    assert m["figureClip"] == [True, False]  # on screen, past the viewBox, and clipped
+    assert m["dotsPerRow"] == 4
     assert (m["cards"], m["columns"]) == SIDE_BY_SIDE[fmt]
     assert m["stats"] == m["cards"]
     assert m["cardsHeading"] == [0, True]
@@ -368,7 +401,9 @@ async def test_figures_take_the_theme_colours(browser_page, served, tmp_path, th
         const probe = (v) => { const d = document.createElement('div');
             d.style.color = `var(${v})`; section.appendChild(d); return getComputedStyle(d).color; };
         const paint = (sel, prop) => getComputedStyle(section.querySelector(sel))[prop];
-        return { fill1: [paint('.fill-1', 'fill'), probe('--aud-geom-1')],
+        const em = getComputedStyle(document.querySelector('section[data-beat="statement"] em')).color;
+        return { em: [em, probe('--aud-accent')],
+                 fill1: [paint('.fill-1', 'fill'), probe('--aud-geom-1')],
                  accent: [paint('.fill-accent', 'fill'), probe('--aud-accent')],
                  muted: [paint('.stroke-muted', 'stroke'), probe('--aud-geom-muted')] };
     }""")

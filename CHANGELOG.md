@@ -62,7 +62,9 @@
   photo, `bars`, `dots` and twelve `icon-*` glyphs. Inline SVG follows the
   theme through `currentColor` and the `fill-*` and `stroke-*` classes. An
   `<svg>` directly inside a `<figure>` clips to its viewBox, so a stroke or
-  marker drawn past it no longer shows.
+  marker drawn past it no longer shows. Existing `.card` and `.stat` change
+  look with the library: cards are padded 1.1em 1.4em (was 1.2em 1.6em) on a
+  3 % tint of the ink, and stat numbers are set in Playfair Display.
 - **Each format sets its safe area and type scale** as variables on
   `<main class="aud">`: `--aud-safe-top|right|bottom|left` (the spec's
   placeholder insets until #83 measures them), `--aud-inset`, `--aud-cols`,

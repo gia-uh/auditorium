@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import signal
+import sys
 from pathlib import Path
 
 import typer
@@ -233,7 +234,7 @@ def help_(
     if topic not in topics():
         guess = nearest(topic)
         hint = f" Did you mean '{guess}'?" if guess else ""
-        print(f"error: no help topic '{topic}'.{hint} auditorium help lists them.")
+        print(f"error: no help topic '{topic}'.{hint} auditorium help lists them.", file=sys.stderr)
         raise typer.Exit(1)
     # Plain print, not the rich console: snippets hold [brackets] and markup
     # rich would eat, and an agent reads the bytes as written.
