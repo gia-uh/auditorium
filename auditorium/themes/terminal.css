@@ -2,11 +2,11 @@
  * Monospaced everything, prompt-style hooks. Pairs hilariously well with
  * the `mono` color theme. */
 
-body, #slide-root,
-#slide-root h1, #slide-root h2, #slide-root h3,
-#slide-root .aud-slide-title, #slide-root .aud-slide-subtitle,
-#slide-root code, #slide-root pre,
-#slide-root p, #slide-root li {
+body, .aud,
+.aud h1, .aud h2, .aud h3,
+.aud .aud-slide-title, .aud .aud-slide-subtitle,
+.aud code, .aud pre,
+.aud p, .aud li {
     font-family: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     font-weight: 400;
     letter-spacing: 0;
@@ -15,19 +15,19 @@ body, #slide-root,
     --aud-slide-padding: 2.5rem 4rem;
     --aud-line-height: 1.5;
 }
-#slide-root .aud-slide-title::before { content: "$ "; opacity: 0.5; }
-#slide-root .aud-slide-subtitle::before { content: "# "; opacity: 0.5; }
-#slide-root h2::before { content: "## "; opacity: 0.5; }
-#slide-root h3::before { content: "### "; opacity: 0.5; }
-#slide-root ul > li::marker { content: "* "; }
-#slide-root ol > li::marker { content: counter(list-item) ". "; }
-#slide-root strong { font-weight: 700; }
-#slide-root code, #slide-root pre {
+.aud .aud-slide-title::before { content: "$ "; opacity: 0.5; }
+.aud .aud-slide-subtitle::before { content: "# "; opacity: 0.5; }
+.aud h2::before { content: "## "; opacity: 0.5; }
+.aud h3::before { content: "### "; opacity: 0.5; }
+.aud ul > li::marker { content: "* "; }
+.aud ol > li::marker { content: counter(list-item) ". "; }
+.aud strong { font-weight: 700; }
+.aud code, .aud pre {
     border: 1px solid currentColor;
     padding: 0.1em 0.3em;
 }
-#slide-root pre { padding: 0.6em 0.9em; }
-#slide-root .aud-block {
+.aud pre { padding: 0.6em 0.9em; }
+.aud .aud-block {
     border-radius: 0;
     border-width: 0 0 0 0.4em;
 }
@@ -49,4 +49,3 @@ body, #slide-root,
     animation: aud-terminal-blink 1s steps(2, end) infinite;
 }
 @keyframes aud-terminal-blink { 50% { opacity: 0; } }
-:root { --aud-transition: aud-slide-left; --aud-transition-duration: 0.2s; }

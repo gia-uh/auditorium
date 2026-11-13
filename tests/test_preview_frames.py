@@ -6,113 +6,121 @@ implementations drift, and this drift would be invisible -- the preview would
 simply quote a number the rendered file does not have. So the agreement is
 asserted mechanically rather than trusted.
 """
-import json
 from pathlib import Path
 
 import pytest
 
-from auditorium.compile import compile_deck
-from auditorium.deck import Deck
-from auditorium.render import frame_count, render_schedule
+from auditorium.render import frame_count, published_timeline, render_schedule
+from conftest import write_project
 
 CLIENT = Path(__file__).parent.parent / "auditorium" / "static" / "client.js"
+TALK = Path(__file__).parent.parent / "examples" / "talk"
 
 
-def _slide_deck():
-    """A shim deck: every beat holds 1.5s, so render frames exceed timeline frames."""
-    deck = Deck("Slides")
+@pytest.fixture(scope="module")
+def deck_timeline():
+    """A presented deck: every stop holds 1.5 s, so render frames exceed timeline frames."""
+    import asyncio
 
-    @deck.slide
-    async def a(ctx):
-        await ctx.title("one")
-        await ctx.step()
-        await ctx.md("more")
-
-    @deck.slide
-    async def b(ctx):
-        await ctx.title("two")
-        await ctx.step()
-        await ctx.md("more")
-
-    return deck
+    return asyncio.run(published_timeline(TALK))
 
 
-def _scene_deck():
-    """A scene deck: beats hold nothing, so the two counts coincide."""
-    deck = Deck("Scenes")
-
-    @deck.scene
-    async def s(ctx):
-        h = await ctx.show("<p>x</p>")
-        await ctx.play(h.animate.fade_in(), run_time=0.5)
-        await ctx.beat()
-        await ctx.wait(1.0)
-
-    return deck
+@pytest.fixture
+def timed_project(tmp_path):
+    """A timed format: stops hold nothing, so the two counts coincide."""
+    return write_project(tmp_path / "p", """
+<section data-beat="a" data-d="1.2"><p data-enter="fade">x</p></section>
+<section data-beat="b" data-d="0.8"><p>y</p></section>""")
 
 
-async def _js_counts(page, timeline_dict, fps):
+async def _js_counts(page, published, fps):
     """Load client.js in a real browser and ask the player for its counts."""
     src = CLIENT.read_text()
     await page.set_content("<!DOCTYPE html><html><body></body></html>")
     await page.add_script_tag(content=src.replace("export function", "function"))
     return await page.evaluate(
-        """([tl, fps]) => {
+        """([pub, fps]) => {
             const engine = { load() {}, seek() {}, get currentTime() { return 0; } };
             const p = createPlayer({ engine });
-            tl.meta = Object.assign({}, tl.meta, { fps });
-            p.load(tl);
-            const at = tl.beats.map(b => p.renderFrameOf(b.t));
+            p.load({ stops: pub.stops, duration: pub.duration, fps });
+            const n = Math.trunc(p.duration * fps / 1000);
+            const at = [];
+            for (let i = 0; i < n; i++) at.push(p.renderFrameOf(Math.trunc(i * 1000 / fps)));
             return { count: p.renderFrameCount(), at };
         }""",
-        [json.loads(json.dumps(timeline_dict)), fps],
+        [published, fps],
     )
 
 
 @pytest.mark.parametrize("fps", [24, 30, 60])
-async def test_the_preview_frame_count_matches_a_render_of_a_slide_deck(browser_page, fps):
-    tl = await compile_deck(_slide_deck())
-    js = await _js_counts(browser_page, tl.to_dict(), fps)
-    assert js["count"] == frame_count(tl, fps)
+async def test_the_preview_frame_count_matches_a_render_of_a_deck(browser_page, deck_timeline, fps):
+    js = await _js_counts(browser_page, deck_timeline, fps)
+    assert js["count"] == frame_count(deck_timeline["duration"], deck_timeline["stops"], fps)
     # And the difference is real, not a coincidence of both being timeline
-    # frames: a shim deck's beats each add 1.5s of dwell.
-    assert js["count"] > int(tl.duration_ms * fps / 1000)
+    # frames: a deck's stops each add 1.5 s of dwell.
+    assert js["count"] > int(deck_timeline["duration"] * fps / 1000)
 
 
 @pytest.mark.parametrize("fps", [24, 30, 60])
-async def test_the_two_counts_coincide_for_a_scene_deck(browser_page, fps):
-    tl = await compile_deck(_scene_deck())
-    js = await _js_counts(browser_page, tl.to_dict(), fps)
-    assert js["count"] == frame_count(tl, fps)
+async def test_the_two_counts_coincide_for_a_timed_format(browser_page, timed_project, fps):
+    published = await published_timeline(timed_project)
+    js = await _js_counts(browser_page, published, fps)
+    assert js["count"] == frame_count(published["duration"], published["stops"], fps)
+    assert js["count"] == int(published["duration"] * fps / 1000)
 
 
-async def test_every_frame_time_maps_to_the_frame_that_shows_it(browser_page):
+async def test_every_frame_time_maps_to_the_frame_that_shows_it(browser_page, deck_timeline):
     """Not just the total: the mapping has to point at the right frame.
 
-    Stated over frame times rather than beat times, because a beat's dwell is
-    emitted on the first frame at-or-after it -- a beat at t=1ms is dwelt on
-    by the frame at t=33ms, so "the frame index of the beat's millisecond" is
-    not a well-defined thing to assert.
+    Stated over frame times rather than stop times, because a stop's dwell is
+    emitted on the first frame at-or-after it, so "the frame index of the
+    stop's millisecond" is not a well-defined thing to assert.
     """
     fps = 30
-    tl = await compile_deck(_slide_deck())
-    schedule = render_schedule(tl, fps)
-    src = CLIENT.read_text()
-    await browser_page.set_content("<!DOCTYPE html><html><body></body></html>")
-    await browser_page.add_script_tag(content=src.replace("export function", "function"))
-    reported = await browser_page.evaluate(
-        """([tl, fps]) => {
-            const engine = { load() {}, seek() {}, get currentTime() { return 0; } };
-            const p = createPlayer({ engine });
-            tl.meta = Object.assign({}, tl.meta, { fps });
-            p.load(tl);
-            const n = Math.trunc(p.duration * fps / 1000);
-            const out = [];
-            for (let i = 0; i < n; i++) out.push(p.renderFrameOf(Math.trunc(i * 1000 / fps)));
-            return out;
-        }""",
-        [json.loads(json.dumps(tl.to_dict())), fps],
-    )
+    schedule = render_schedule(deck_timeline["duration"], deck_timeline["stops"], fps)
+    reported = (await _js_counts(browser_page, deck_timeline, fps))["at"]
     assert len(reported) > 1
     for i, index in enumerate(reported):
         assert schedule[index] == int(i * 1000 / fps)
+
+
+async def test_the_end_of_a_deck_maps_to_its_dwell(browser_page, deck_timeline):
+    """The preview's frame for t = duration is the render's first frame at the
+    end, and the render rests on the last slide for its hold."""
+    fps = 30
+    schedule = render_schedule(deck_timeline["duration"], deck_timeline["stops"], fps)
+    src = CLIENT.read_text()
+    await browser_page.set_content("<!DOCTYPE html><html><body></body></html>")
+    await browser_page.add_script_tag(content=src.replace("export function", "function"))
+    index = await browser_page.evaluate(
+        """([pub, fps]) => {
+            const engine = { load() {}, seek() {}, get currentTime() { return 0; } };
+            const p = createPlayer({ engine });
+            p.load({ stops: pub.stops, duration: pub.duration, fps });
+            return p.renderFrameOf(pub.duration);
+        }""",
+        [deck_timeline, fps],
+    )
+    assert schedule[index] == deck_timeline["duration"]
+    assert schedule.count(deck_timeline["duration"]) == int(1500 * fps / 1000)
+
+
+@pytest.mark.parametrize("fps", [24, 30, 60])
+async def test_every_stop_maps_to_its_first_held_frame(browser_page, deck_timeline, fps):
+    """At a stop the preview reports the render frame where its dwell begins,
+    and that frame shows the stop's own time."""
+    schedule = render_schedule(deck_timeline["duration"], deck_timeline["stops"], fps)
+    src = CLIENT.read_text()
+    await browser_page.set_content("<!DOCTYPE html><html><body></body></html>")
+    await browser_page.add_script_tag(content=src.replace("export function", "function"))
+    indices = await browser_page.evaluate(
+        """([pub, fps]) => {
+            const engine = { load() {}, seek() {}, get currentTime() { return 0; } };
+            const p = createPlayer({ engine });
+            p.load({ stops: pub.stops, duration: pub.duration, fps });
+            return pub.stops.map(s => p.renderFrameOf(s.t));
+        }""",
+        [deck_timeline, fps],
+    )
+    for stop, index in zip(deck_timeline["stops"], indices):
+        assert schedule[index] == stop["t"], stop

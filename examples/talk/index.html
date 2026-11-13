@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gradient descent, one step at a time</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+  <script type="module" src="script.js"></script>
+</head>
+<body>
+<main class="aud" data-format="deck">
+
+  <section data-beat="title">
+    <div class="grid">
+      <h1 data-col="1/13" data-enter="rise">Gradient descent, one step at a time</h1>
+      <p data-col="1/13" data-in="0.4" data-enter="fade">A talk in plain HTML, timed by attributes</p>
+    </div>
+    <aside class="notes">Open with the picture of a ball rolling downhill.</aside>
+  </section>
+
+  <section data-beat="idea">
+    <div class="grid">
+      <h2 data-col="1/13">The idea</h2>
+      <ol data-col="1/13">
+        <li data-step="1" data-enter="rise">Measure the slope where you stand</li>
+        <li data-step="2" data-enter="rise">Take a small step downhill</li>
+        <li data-step="3" data-enter="rise">Repeat until the ground is flat</li>
+      </ol>
+    </div>
+    <aside class="notes">Three presses, one line each.</aside>
+  </section>
+
+  <section data-beat="rule">
+    <div class="grid">
+      <h2 data-col="1/13">The update rule</h2>
+      <div class="math" data-col="1/13" data-enter="fade">\theta_{t+1} = \theta_t - \eta \, \nabla f(\theta_t)</div>
+      <div class="stat" data-col="1/7" data-step="1" data-enter="count">
+        <b data-to="0.01">0</b><span>learning rate</span></div>
+      <div class="stat" data-col="7/13" data-step="1" data-in="0.3" data-enter="count">
+        <b data-to="200">0</b><span>steps</span></div>
+    </div>
+  </section>
+
+  <section data-beat="code">
+    <div class="grid">
+      <h2 data-col="1/13">In code</h2>
+      <pre data-col="1/13" data-lang="python" data-enter="fade"><code>for step in range(200):
+    theta = theta - lr * grad(f, theta)</code></pre>
+    </div>
+  </section>
+
+  <section data-beat="descent">
+    <div class="grid">
+      <h2 data-col="1/13">Watching it descend</h2>
+      <svg id="valley" data-col="1/13" viewBox="0 0 1600 600" width="1600" height="600">
+        <path data-enter="draw" d="M 100 80 Q 800 1000 1500 80" fill="none" stroke="currentColor" stroke-width="6"/>
+        <circle id="ball" cx="200" cy="200" r="24" class="accent-fill"/>
+      </svg>
+    </div>
+    <aside class="notes">The ball is driven by script.js through auditorium.track().</aside>
+  </section>
+
+  <section data-beat="anchors">
+    <div class="grid two">
+      <div id="loss" class="card" data-col="1/5" data-enter="pop">loss</div>
+      <div id="grad" class="card" data-col="9/13" data-step="1" data-enter="pop">gradient</div>
+    </div>
+    <svg class="aud-overlay">
+      <line data-from="loss:right" data-to="grad:left" data-step="1" data-enter="draw" stroke="currentColor" stroke-width="4"/>
+    </svg>
+  </section>
+
+  <section data-beat="end">
+    <div class="grid">
+      <h1 data-col="1/13" data-enter="words">Small steps, flat ground</h1>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

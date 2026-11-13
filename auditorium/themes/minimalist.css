@@ -1,7 +1,7 @@
 /* Auditorium theme: minimalist (layout axis)
  * Aggressive whitespace, thin sans, hairline rules. Less is more. */
 
-body, #slide-root {
+body, .aud {
     font-family: "Inter", "Helvetica Neue", system-ui, sans-serif;
     font-weight: 300;
 }
@@ -11,29 +11,28 @@ body, #slide-root {
     --aud-line-height: 1.6;
     --aud-block-gap: 1.4em;
 }
-#slide-root h1, #slide-root h2, #slide-root h3,
-#slide-root .aud-slide-title {
+.aud h1, .aud h2, .aud h3,
+.aud .aud-slide-title {
     font-weight: 200;
     letter-spacing: -0.02em;
 }
-#slide-root .aud-slide-title { font-size: 1.8em; }
-#slide-root .aud-slide-subtitle {
+.aud .aud-slide-title { font-size: 1.8em; }
+.aud .aud-slide-subtitle {
     font-weight: 300;
     /* 0.5 stacked on an already-muted colour is legible on white and
        invisible on a dark ground. The colour carries the muting now. */
     opacity: 0.78;
     letter-spacing: 0.02em;
 }
-#slide-root strong { font-weight: 500; }
-#slide-root hr {
+.aud strong { font-weight: 500; }
+.aud hr {
     border: none;
     border-top: 1px solid currentColor;
     opacity: 0.15;
     margin: 1em 0;
 }
-#slide-root .aud-block {
+.aud .aud-block {
     border-left-width: 1px;
     padding: 0.4em 0.8em;
     background: transparent;
 }
-:root { --aud-transition: aud-fade; }

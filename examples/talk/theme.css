@@ -1,0 +1,8 @@
+/* The talk's palette and type. Variables only: layout and motion come from
+   auditorium.css. */
+:root {
+  --aud-slide-bg: #fbfaf7;
+  --aud-fg: #1d1d1f;
+  --aud-muted: #6b6b70;
+  --aud-accent: #c2410c;
+}

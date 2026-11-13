@@ -163,4 +163,11 @@ demo_deck.pdf
 # rule above would drop them from the wheel -- and a missing preview.html is a
 # 500 on /preview that nothing in the test suite would notice.
 !auditorium/static/*.html
+
+# In 5.0 an index.html is the source a project is written in, so the examples
+# and the test fixture projects are tracked. What a project builds lands in
+# its dist/, which is output.
+!examples/**/*.html
+!tests/fixtures/**/*.html
+dist/
 !tests/fixtures/*.html

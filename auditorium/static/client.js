@@ -1,36 +1,11 @@
-// What every client surface shares: fetching the timeline, decorating appended
-// content, beat arithmetic, and a requestAnimationFrame clock that drives
-// seek().
+// What every surface shares: beat arithmetic, a requestAnimationFrame clock
+// that drives seek(), the render frame readout, and the server socket.
 //
-// Three surfaces consume this — the audience view, the preview client, and the
-// presenter view. They exist as separate pages because their jobs differ (D8),
-// but a second implementation of "what does the deck look like at t" is exactly
-// the drift D2 forbids. So the only thing a page may add is chrome.
-
-/** Register the KaTeX + highlight.js decoration hook.
- *
- * An append hook rather than a per-frame pass: both mutate innerHTML, so
- * re-running them on every seek would re-highlight already-marked code and
- * cost time inside the render loop.
- */
-export function installDecoration(engine) {
-  engine.onAppend = function (el) {
-    if (typeof renderMathInElement === "function") {
-      renderMathInElement(el, {
-        delimiters: [
-          { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false },
-        ],
-        throwOnError: false,
-      });
-    }
-    if (typeof hljs !== "undefined") {
-      el.querySelectorAll("pre code").forEach(function (block) {
-        hljs.highlightElement(block);
-      });
-    }
-  };
-}
+// auditorium.js uses this inside the author's page; the preview and presenter
+// shells drive that page through window.auditorium. They exist as separate
+// pages because their jobs differ (D8), but a second implementation of "what
+// does the page look like at t" is exactly the drift D2 forbids. So the only
+// thing a shell may add is chrome.
 
 /** A player over one engine: position, playback, and beat navigation.
  *
@@ -52,26 +27,21 @@ export function createPlayer({ engine, onFrame }) {
       return engine.currentTime;
     },
 
+    /** Load a timeline: `stops` are the pause points ({t, hold_ms}), `markers`
+     *  the beats ({t, title, notes_html}). The renderer drives the page
+     *  through window.auditorium.seek, which is seekTo here, never through
+     *  engine.seek directly: seek alone skips onFrame, which freezes the slide
+     *  indicator at whatever it read on load. That is how one wrong page
+     *  number got burned into all 63 exported stills in 4.0. */
     load(tl) {
-      this.beats = (tl.beats || []).map((b) => b.t);
-      this.beatHolds = (tl.beats || []).filter((b) => b.hold_ms > 0);
+      this.beats = (tl.stops || []).map((b) => b.t);
+      this.beatHolds = (tl.stops || []).filter((b) => b.hold_ms > 0);
       this.markers = tl.markers || [];
-      this.duration = (tl.meta && tl.meta.duration_ms) || 0;
-      this.fps = (tl.meta && tl.meta.fps) || 30;
+      this.duration = tl.duration || 0;
+      this.fps = tl.fps || 30;
       engine.load(tl);
       engine.seek(0);
       if (onFrame) onFrame(this);
-      window.__auditorium_duration = this.duration;
-      // The renderer and the exporter drive the deck through this, never
-      // through engine.seek directly: seek alone skips onFrame, which freezes
-      // the slide indicator at whatever it read on load. That is how one wrong
-      // page number got burned into all 63 exported stills.
-      window.__auditoriumShow = (t) => this.seekTo(t);
-      window.__auditorium_ready = true;
-    },
-
-    async fetchAndLoad(url = "/timeline.json") {
-      this.load(await (await fetch(url)).json());
     },
 
     seekTo(t) {
@@ -89,7 +59,7 @@ export function createPlayer({ engine, onFrame }) {
      * `onArrive` lets a caller chain — the preview client uses it to wrap a
      * loop back to its in-point. The clock is performance.now(), which is
      * fine because nothing in the render path calls this: the renderer drives
-     * window.__auditoriumShow frame by frame and never reads a wall clock.
+     * window.auditorium.seek frame by frame and never reads a wall clock.
      */
     playTo(target, onArrive) {
       this.playing = true;
@@ -123,8 +93,8 @@ export function createPlayer({ engine, onFrame }) {
 
     prevBeat(from) {
       let target = 0;
-      // `from - 1` and not `from`: beat() advances the clock by exactly 1ms,
-      // so sitting exactly on a beat must step to the one before it, not to
+      // `from - 1` and not `from`: the next beat starts 1ms after a stop, so
+      // sitting exactly on a stop must step to the one before it, not to
       // itself.
       for (const b of this.beats) if (b < from - 1) target = b;
       return target;
@@ -133,7 +103,7 @@ export function createPlayer({ engine, onFrame }) {
     /** The output frame index a render would give timeline position `t`.
      *
      * Not simply `t * fps`: beats have no length in the timeline, but a
-     * render dwells on each one for its hold_ms (see render_schedule in
+     * render dwells on each stop for its hold_ms (see render_schedule in
      * render.py). Reporting bare timeline frames would tell an author
      * "frame 137 / 302" for a deck that renders to 2821 frames — a readout
      * that disagrees with both the file they get and the --from/--to range
@@ -144,32 +114,27 @@ export function createPlayer({ engine, onFrame }) {
      * implementations of one rule, so drift has to be caught mechanically.
      */
     renderFrameOf(t) {
-      // Rounded, not truncated. Frame i sits at trunc(i * 1000 / fps), which
-      // is BELOW the exact time, so truncating back gives i-1: at 30fps frame
-      // 1 is 33ms and trunc(33 * 30 / 1000) is 0. Truncation is not its own
-      // inverse, and the whole readout was off by one frame because of it.
-      const i = Math.round(t * this.fps / 1000);
-      // A beat's dwell is emitted AFTER the frame that first reaches it, so
-      // the frame at a beat does not yet carry its own hold -- only beats the
-      // PREVIOUS frame had already reached shift this one.
-      const prev = i > 0 ? Math.trunc((i - 1) * 1000 / this.fps) : -1;
-      let frame = i;
+      // The number of render frames that show a time before t, which is the
+      // index of the first frame showing t or later. A frame i shows
+      // trunc(i * 1000 / fps); for an integer T that is below T exactly when
+      // i * 1000 < T * fps, so ceil(T * fps / 1000) frames do, in integers.
+      const T = Math.ceil(t);
+      const n = Math.trunc(this.duration * this.fps / 1000);
+      let frame = Math.min(n, Math.floor((T * this.fps + 999) / 1000));
+      // A stop's dwell repeats the stop's own time before the first frame
+      // past it, so every stop before t adds its whole dwell. At a stop
+      // itself this lands on the first frame of its dwell.
       for (const b of this.beatHolds) {
-        if (b.t <= prev) frame += Math.trunc(b.hold_ms * this.fps / 1000);
+        if (b.t < t && b.t <= this.duration) frame += Math.trunc(b.hold_ms * this.fps / 1000);
       }
       return frame;
     },
 
     /** How many frames a render of this timeline would produce. */
     renderFrameCount() {
-      const n = Math.trunc(this.duration * this.fps / 1000);
-      // A beat past the last frame time never gets dwelt on, so it must not
-      // be counted. duration_ms includes a trailing beat's hold, which is
-      // exactly when that case arises.
-      const last = n > 0 ? Math.trunc((n - 1) * 1000 / this.fps) : -1;
-      let total = n;
+      let total = Math.trunc(this.duration * this.fps / 1000);
       for (const b of this.beatHolds) {
-        if (b.t <= last) total += Math.trunc(b.hold_ms * this.fps / 1000);
+        if (b.t <= this.duration) total += Math.trunc(b.hold_ms * this.fps / 1000);
       }
       return total;
     },

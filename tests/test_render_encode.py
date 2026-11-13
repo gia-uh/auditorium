@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from auditorium.deck import Deck
+from conftest import write_project
 from auditorium.render import parse_size, render_video
 
 pytestmark = pytest.mark.skipif(
@@ -12,15 +12,10 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _deck():
-    deck = Deck("Video")
-
-    @deck.scene
-    async def one(s):
-        h = await s.show("<p style='font-size:80px'>HELLO</p>")
-        await s.play(h.animate.fade_in(), run_time=0.5)
-
-    return deck
+@pytest.fixture
+def project(tmp_path):
+    return write_project(tmp_path / "p", """<section data-beat="one" data-d="0.5">
+      <p style="font-size:80px" data-enter="fade">HELLO</p></section>""")
 
 
 def _probe(path):
@@ -44,27 +39,27 @@ def test_an_unknown_size_is_rejected():
         parse_size("enormous")
 
 
-async def test_produces_a_playable_mp4(tmp_path):
-    out = await render_video(_deck(), tmp_path / "o.mp4", fps=10, size=(320, 240))
+async def test_produces_a_playable_mp4(project, tmp_path):
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
     assert out.exists() and out.stat().st_size > 0
     probe = _probe(out)
     assert "h264" in probe
     assert "320,240" in probe
 
 
-async def test_the_video_has_the_scheduled_frame_count(tmp_path):
+async def test_the_video_has_the_scheduled_frame_count(project, tmp_path):
     """Asserts on the encoded artifact, not on how many PNGs we wrote."""
-    out = await render_video(_deck(), tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
     assert _probe(out).split(",")[-1] == "5"
 
 
-async def test_two_renders_produce_identical_video_bytes(tmp_path):
-    a = await render_video(_deck(), tmp_path / "a.mp4", fps=10, size=(320, 240))
-    b = await render_video(_deck(), tmp_path / "b.mp4", fps=10, size=(320, 240))
+async def test_two_renders_produce_identical_video_bytes(project, tmp_path):
+    a = await render_video(project, tmp_path / "a.mp4", fps=10, size=(320, 240))
+    b = await render_video(project, tmp_path / "b.mp4", fps=10, size=(320, 240))
     assert a.read_bytes() == b.read_bytes()
 
 
-async def test_png_sequence_format_leaves_frames_on_disk(tmp_path):
-    out = await render_video(_deck(), tmp_path / "seq", fps=10, size=(320, 240),
+async def test_png_sequence_format_leaves_frames_on_disk(project, tmp_path):
+    out = await render_video(project, tmp_path / "seq", fps=10, size=(320, 240),
                              fmt="png-sequence")
     assert len(list(Path(out).glob("*.png"))) == 5

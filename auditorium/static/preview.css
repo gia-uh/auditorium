@@ -1,6 +1,7 @@
-/* The preview client's own chrome. Kept out of theme.css because it belongs
-   to the authoring surface, not to any deck's appearance -- a theme must
-   never be able to restyle the scrubber. */
+/* The preview's own chrome. A shell around the project's page in an iframe,
+   so a project's theme can never restyle the scrubber. */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body.aud-preview {
     display: block;
@@ -14,21 +15,17 @@ body.aud-preview {
     overflow: hidden;
 }
 
-/* Fixed logical size; JS sets the scale to fit. Sized in px rather than vw/vh
-   so the stage is the render target, not the window. */
-#preview-stage {
-    position: relative;
-    width: 1920px;
-    height: 1080px;
+/* The project's page at its stage size; JS sets the scale to fit. Sized in
+   px rather than vw/vh so the stage is the render target, not the window. */
+#stage-frame {
+    position: absolute;
+    top: 0;
+    left: 0;
+    border: 0;
     transform-origin: top left;
-    background: var(--aud-slide-bg, #fff);
 }
 
-/* Inside the preview the stage is the viewport, so the slide fills it rather
-   than letterboxing against the window. */
-#preview-stage #slide-root {
-    width: 1920px;
-    height: 1080px;
+ht: 1080px;
 }
 
 #preview-bar {
@@ -104,3 +101,8 @@ body.aud-preview {
 
 .readout { white-space: nowrap; }
 .readout-dim { color: #6b7280; }
+
+.aud-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+.aud-dot-connected { background: #22c55e; }
+.aud-dot-disconnected { background: #ef4444; }
+.aud-dot-connecting { background: #f97316; }

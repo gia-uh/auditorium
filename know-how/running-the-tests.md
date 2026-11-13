@@ -5,7 +5,7 @@ when: running the test suite on a new machine or worktree, browser tests fail to
 # Running the tests
 
 ```bash
-uv sync --extra examples          # tesserax, for the one example deck that imports it
+uv sync
 uv run playwright install chromium
 make test
 ```
@@ -27,8 +27,9 @@ installs both and fails before the tests if either is missing.
 - **A fresh worktree has the wrong Playwright browser, or none.** Each Playwright
   version pins one Chromium build, so run `playwright install` inside the
   worktree's own environment, not the main checkout's.
-- **`AUDITORIUM_CHROMIUM` overrides the browser** on a host where Playwright cannot
-  download one. Nothing auto-detects a cached build; `auditorium/testing.py`
+- **`AUDITORIUM_CHROMIUM` overrides the browser** for the tests, render and
+  export, on a host where Playwright cannot download one or where installing
+  would delete a build another project needs. Nothing auto-detects a cached build; `auditorium/testing.py`
   explains why.
 - **A test that hangs at 0% CPU may be two sockets on two event loops.** Starlette's
   `TestClient` used without `with` runs every `websocket_connect` on its own

@@ -4,44 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditorium – Preview</title>
-
-    <!-- All assets are local — no outbound requests -->
-    <link rel="stylesheet" href="/static/theme.css">
-    <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
-    <link rel="stylesheet" href="/static/vendor/hljs/styles/github.min.css">
-    <script src="/static/vendor/katex/katex.min.js"></script>
-    <script src="/static/vendor/katex/contrib/auto-render.min.js"></script>
-    <script src="/static/vendor/hljs/highlight.min.js"></script>
-    <link rel="stylesheet" href="/static/svg-layer.css">
-    <!--AUDITORIUM_THEME_OVERRIDES-->
-    <link rel="stylesheet" href="/static/preview.css">
+    <link rel="stylesheet" href="/_auditorium/preview.css">
 </head>
 <body class="aud-preview">
     <div id="preview-viewport">
-        <!-- Fixed logical size, scaled by transform. Resizing the box instead
-             would reflow rem-sized type and show the author a layout the
-             renderer never produces. A transform scales pixels, which is what
-             a preview is for.
-
-             The transform also gives the chrome its containing block: a
-             transformed element contains its position:fixed descendants, so
-             the slots and the indicator stay inside the stage for free. -->
-        <div id="preview-stage">
-            <div id="slide-root" class="aud-slide-root"></div>
-            <div class="aud-chrome aud-chrome-header"></div>
-            <div class="aud-chrome aud-chrome-footer"></div>
-            <div class="aud-chrome aud-chrome-left"></div>
-            <div class="aud-chrome aud-chrome-right"></div>
-            <div id="slide-indicator"></div>
-        <svg id="svg-layer" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <marker id="aud-arrowhead" viewBox="0 0 10 10" refX="9" refY="5"
-                    markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke"/>
-            </marker>
-          </defs>
-        </svg>
-        </div>
+        <!-- The project's own page, embedded: one engine, the author's file,
+             no copy of either. Fixed logical size, scaled by transform, so the
+             author sees the layout the renderer produces. -->
+        <iframe id="stage-frame" src="/?embed" title="stage"></iframe>
     </div>
 
     <div id="preview-bar">
@@ -58,11 +28,9 @@
     </div>
 
     <script type="module">
-    import { AuditoriumEngine } from "/static/engine.js";
-    import { connect, createPlayer, formatTime, installDecoration } from "/static/client.js";
-    window.AuditoriumEngine = AuditoriumEngine;
+    import { connect, formatTime } from "/_auditorium/client.js";
 
-    const stage = document.getElementById('preview-stage');
+    const frame = document.getElementById('stage-frame');
     const viewport = document.getElementById('preview-viewport');
     const scrub = document.getElementById('scrub');
     const ticks = document.getElementById('beat-ticks');
@@ -76,52 +44,45 @@
     const loop = { in: 0, out: 0, enabled: false };
     let loops = 0;      // completed wraps, for tests and for the readout
     let reloads = 0;
-
-    installDecoration(AuditoriumEngine);
+    let aud = null;     // the page's window.auditorium
+    let player = null;  // its player: playback, beats, render frame numbers
 
     // Stepping works in TIMELINE frames: they are what seek(t) addresses, and
     // the index is authoritative with time derived from it, so stepping
     // forward N times lands exactly where seeking to frame N does.
     //
     // The readout instead reports RENDER frames, which additionally count the
-    // dwell a render spends on each beat. The two differ for slide decks (the
-    // shim holds 1.5s per beat) and coincide for scenes. Reporting timeline
-    // frames there would have told an author "frame 137 / 302" about a deck
-    // that renders to 2821 -- and 302 is not a number any --from/--to can use.
+    // dwell a render spends on each stop of a presented deck. Reporting
+    // timeline frames there would tell an author "frame 137 / 302" about a
+    // deck that renders to 2821 -- and 302 is not a number --from/--to can use.
     const frameOf = (t) => Math.round(t * player.fps / 1000);
-    const timeOf = (frame) => Math.round(frame * 1000 / player.fps);
+    const timeOf = (f) => Math.round(f * 1000 / player.fps);
 
-    const player = createPlayer({
-        engine: AuditoriumEngine,
-        onFrame(p) {
-            const t = p.t;
-            const n = p.beatIndex(t) + 1;
-            const total = p.beats.length + 1;
-            const indicator = document.getElementById('slide-indicator');
-            if (indicator) indicator.textContent = n + ' / ' + total;
-            const style = document.documentElement.style;
-            style.setProperty('--aud-slide-number', n);
-            style.setProperty('--aud-slide-total', total);
+    function onFrame(p) {
+        const t = p.t;
+        scrub.value = Math.round(t);
+        timeReadout.textContent = formatTime(t) + ' / ' + formatTime(p.duration);
+        frameReadout.textContent = 'frame ' + p.renderFrameOf(t) + ' / ' + p.renderFrameCount();
+        playpause.textContent = p.playing ? '❚❚' : '▶';
+    }
 
-            scrub.value = Math.round(t);
-            timeReadout.textContent = formatTime(t) + ' / ' + formatTime(p.duration);
-            frameReadout.textContent =
-                'frame ' + p.renderFrameOf(t) + ' / ' + p.renderFrameCount();
-            playpause.textContent = p.playing ? '❚❚' : '▶';
-        },
-    });
+    function stageSize() {
+        return (aud && aud.stage) || { w: 1440, h: 900 };
+    }
 
     function fitStage() {
+        const { w, h } = stageSize();
         const bar = document.getElementById('preview-bar').offsetHeight;
         const availW = window.innerWidth;
         const availH = window.innerHeight - bar;
-        const scale = Math.min(availW / 1920, availH / 1080);
+        const scale = Math.min(availW / w, availH / h);
         // Translate before scale in the composite, so the offsets are in the
         // viewport's own pixels and the letterboxing is even on both sides.
-        const dx = (availW - 1920 * scale) / 2;
-        const dy = (availH - 1080 * scale) / 2;
-        stage.style.transform =
-            'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')';
+        const dx = (availW - w * scale) / 2;
+        const dy = (availH - h * scale) / 2;
+        frame.style.width = w + 'px';
+        frame.style.height = h + 'px';
+        frame.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')';
         viewport.style.height = availH + 'px';
     }
 
@@ -137,7 +98,7 @@
     }
 
     function drawLoopBand() {
-        if (!loop.enabled || !player.duration) {
+        if (!loop.enabled || !player || !player.duration) {
             band.style.display = 'none';
             loopReadout.textContent = 'loop off';
             loopReadout.classList.add('readout-dim');
@@ -146,8 +107,7 @@
         band.style.display = 'block';
         band.style.left = (loop.in / player.duration * 100) + '%';
         band.style.width = ((loop.out - loop.in) / player.duration * 100) + '%';
-        loopReadout.textContent =
-            'loop ' + formatTime(loop.in) + '–' + formatTime(loop.out);
+        loopReadout.textContent = 'loop ' + formatTime(loop.in) + '–' + formatTime(loop.out);
         loopReadout.classList.remove('readout-dim');
     }
 
@@ -174,31 +134,53 @@
 
     function stepFrames(delta) {
         player.pause();
-        const frame = Math.max(0, Math.min(frameOf(player.duration), frameOf(player.t) + delta));
-        player.seekTo(timeOf(frame));
+        const f = Math.max(0, Math.min(frameOf(player.duration), frameOf(player.t) + delta));
+        player.seekTo(timeOf(f));
+    }
+
+    /** Wait for the embedded page to build, then attach to it. */
+    function attach() {
+        return new Promise((resolve) => {
+            const poll = () => {
+                const w = frame.contentWindow;
+                if (w && w.auditorium && w.auditorium.built) {
+                    aud = w.auditorium;
+                    player = aud.player;
+                    aud.onFrame(onFrame);
+                    // Keys pressed while the stage has focus belong to the preview.
+                    w.document.addEventListener('keydown', onKey);
+                    resolve();
+                } else {
+                    requestAnimationFrame(poll);
+                }
+            };
+            poll();
+        });
+    }
+
+    async function setup(held) {
+        await attach();
+        scrub.max = player.duration;
+        drawTicks();
+        drawLoopBand();
+        fitStage();
+        player.seekTo(Math.min(held, player.duration));
     }
 
     async function reload() {
-        const held = player.t;
-        player.pause();
-        await player.fetchAndLoad();
-        drawTicks();
-        scrub.max = player.duration;
+        const held = player ? player.t : 0;
+        if (player) player.pause();
+        aud = player = null;
+        frame.contentWindow.location.reload();
         // Hold t, not node identity. If the edit changed what exists at that
-        // instant the author sees the new scene at the old time, which is the
-        // useful behaviour and the only one a pure timeline can offer.
-        player.seekTo(Math.min(held, player.duration));
+        // instant the author sees the new beat at the old time.
+        await new Promise((r) => frame.addEventListener('load', r, { once: true }));
+        await setup(held);
         reloads += 1;
     }
 
-    scrub.addEventListener('input', () => {
-        player.pause();
-        player.seekTo(Number(scrub.value));
-    });
-    playpause.addEventListener('click', playPause);
-    window.addEventListener('resize', fitStage);
-
-    document.addEventListener('keydown', (e) => {
+    function onKey(e) {
+        if (!player) return;
         if (e.target.tagName === 'INPUT' && e.key !== ' ') return;
         switch (e.key) {
             case ' ': e.preventDefault(); playPause(); break;
@@ -213,9 +195,18 @@
             case 'Home': e.preventDefault(); player.seekTo(0); break;
             case 'End': e.preventDefault(); player.seekTo(player.duration); break;
         }
+    }
+
+    scrub.addEventListener('input', () => {
+        player.pause();
+        player.seekTo(Number(scrub.value));
     });
+    playpause.addEventListener('click', playPause);
+    window.addEventListener('resize', fitStage);
+    document.addEventListener('keydown', onKey);
 
     window.__auditorium_preview = {
+        ready: false,
         state: () => ({
             t: player.t,
             frame: frameOf(player.t),
@@ -241,16 +232,9 @@
         onReload: reload,
     });
 
-    (async function () {
-        await player.fetchAndLoad();
-        scrub.max = player.duration;
-        drawTicks();
-        drawLoopBand();
-        fitStage();
-        // Opens paused at zero. An authoring surface that starts playing
-        // fights the author.
-        player.seekTo(0);
-    })();
+    // Opens paused at zero. An authoring surface that starts playing fights
+    // the author.
+    setup(0).then(() => { window.__auditorium_preview.ready = true; });
     </script>
 </body>
 </html>

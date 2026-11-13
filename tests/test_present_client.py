@@ -1,247 +1,172 @@
-import asyncio
-import threading
+"""The audience page: the project's own index.html served by `auditorium run`."""
+import pytest
 
-import pytest_asyncio
-import uvicorn
+from auditorium.server import create_app, serve_in_thread
+from conftest import write_project
 
-from auditorium.deck import Deck
-from auditorium.server import create_app
-
-
-def _deck():
-    deck = Deck("Live")
-
-    @deck.scene
-    async def one(s):
-        h = await s.show("<p>first</p>")
-        await s.play(h.animate.fade_in(), run_time=0.5)
-        await s.beat()
-        h2 = await s.show("<p>second</p>")
-        await s.play(h2.animate.fade_in(), run_time=0.5)
-
-    return deck
+BODY = """
+<section data-beat="a">
+  <p id="first" data-enter="fade" data-dur="3">first</p>
+  <p id="second" data-step="1" data-enter="fade" data-dur="0.5">second</p>
+</section>
+<section data-beat="b">
+  <p id="third">third</p>
+  <span class="math">e^{i\\pi} + 1 = 0</span>
+  <pre data-lang="python"><code>def f(x):
+    return x</code></pre>
+</section>
+"""
 
 
-@pytest_asyncio.fixture
-async def live_server():
-    """A uvicorn server on an EPHEMERAL port, with a bounded startup wait.
-
-    Both details are load-bearing. A fixed port makes the second test in the
-    file hang forever on `while not server.started`, because the first test's
-    socket has not been released yet; and an unbounded wait turns any startup
-    failure into a hang rather than a failure, which is strictly harder to
-    diagnose than a red test.
-    """
-    config = uvicorn.Config(
-        create_app(_deck()), host="127.0.0.1", port=0, log_level="warning"
-    )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-
-    deadline = 10.0
-    while not server.started:
-        await asyncio.sleep(0.05)
-        deadline -= 0.05
-        if deadline <= 0:
-            server.should_exit = True
-            raise RuntimeError("uvicorn did not start within 10s")
-
-    port = server.servers[0].sockets[0].getsockname()[1]
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=5)
+@pytest.fixture
+def live_server(tmp_path):
+    served = serve_in_thread(create_app(write_project(tmp_path / "p", BODY, fmt="deck")))
+    yield served.url
+    served.stop()
 
 
 async def _ready(page, url):
     await page.goto(url)
-    await page.wait_for_function("() => window.__auditorium_ready === true")
+    await page.wait_for_function("() => window.auditorium && window.auditorium.built")
 
 
-async def _settle_at_first_beat(page):
-    """Wait for the opening segment to finish playing into the first beat.
+async def _shown(page, el_id):
+    return await page.evaluate(
+        """(id) => { const el = document.getElementById(id);
+            const cs = getComputedStyle(el);
+            return el.getClientRects().length > 0 && cs.visibility !== 'hidden'; }""",
+        el_id,
+    )
 
-    Pressing space mid-playback is a different gesture: it skips to the beat
-    rather than past it. Tests that mean "advance from the beat" have to let
-    the segment land first, or they race the animation and assert on a state
-    the user never sees.
+
+async def _settle_at_first_stop(page):
+    """Let the opening segment play into the first stop.
+
+    Pressing space mid-playback is a different gesture: it skips to the stop
+    rather than past it. Tests that mean "advance from the stop" have to let
+    the segment land first, or they race the animation.
     """
     await page.wait_for_function(
-        "() => window.AuditoriumEngine.currentTime >= 500", timeout=10000
+        "() => !window.auditorium.playing && window.auditorium.t === window.auditorium.stops[0].t",
+        timeout=20000,
     )
 
 
-async def test_client_loads_the_timeline_and_renders_the_first_scene(
-    browser_page, live_server
-):
+async def test_the_page_plays_into_its_first_stop(browser_page, live_server):
     await _ready(browser_page, live_server)
-    await browser_page.wait_for_selector("#slide-root >> text=first")
+    await _settle_at_first_stop(browser_page)
+    assert await _shown(browser_page, "first")
+    assert not await _shown(browser_page, "second"), "the step is on screen before its press"
 
 
-async def test_space_advances_past_the_beat(browser_page, live_server):
+async def test_space_advances_past_the_stop(browser_page, live_server):
     await _ready(browser_page, live_server)
-    await browser_page.wait_for_selector("#slide-root >> text=first")
-    await _settle_at_first_beat(browser_page)
-    await browser_page.keyboard.press(" ")
-    await browser_page.wait_for_selector("#slide-root >> text=second")
-
-
-async def test_space_during_playback_skips_to_the_beat_not_past_it(
-    browser_page, live_server
-):
-    """Mid-segment space is a skip, not an advance.
-
-    Two distinct gestures share one key, and conflating them would make a
-    presenter's first impatient keypress blow through a reveal.
-    """
-    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
     await browser_page.keyboard.press(" ")
     await browser_page.wait_for_function(
-        "() => window.AuditoriumEngine.currentTime === 500", timeout=10000
+        "() => getComputedStyle(document.getElementById('second')).visibility === 'visible'"
     )
-    text = await browser_page.evaluate(
-        "() => document.getElementById('slide-root').textContent"
-    )
-    assert "second" not in text
 
 
-async def test_content_after_the_beat_is_not_visible_at_the_beat(
-    browser_page, live_server
-):
-    """The 1ms bump in beat() has to hold end to end, not just in the compiler.
-
-    If it does not, the reveal is on screen before the keypress meant to
-    trigger it, and space appears to do nothing.
-    """
+async def test_space_during_playback_skips_to_the_stop_not_past_it(browser_page, live_server):
+    """Mid-segment space is a skip, not an advance. Two gestures share one key,
+    and conflating them would make an impatient first press blow through a reveal."""
     await _ready(browser_page, live_server)
-    await _settle_at_first_beat(browser_page)
-    text = await browser_page.evaluate(
-        "() => document.getElementById('slide-root').textContent"
-    )
-    assert "first" in text
-    assert "second" not in text
+    # The opening entrance lasts 3 s, so on a loaded host the press still lands
+    # mid-segment; waiting for playback first rules out pressing before it starts.
+    await browser_page.wait_for_function("() => window.auditorium.playing")
+    assert await browser_page.evaluate("() => window.auditorium.t < window.auditorium.stops[0].t")
+    await browser_page.keyboard.press(" ")
+    await _settle_at_first_stop(browser_page)
+    assert not await _shown(browser_page, "second")
 
 
 async def test_backward_navigation_works(browser_page, live_server):
-    """D7 of the 2.0 design rejected this outright. A timeline makes it free."""
     await _ready(browser_page, live_server)
-    await _settle_at_first_beat(browser_page)
+    await _settle_at_first_stop(browser_page)
     await browser_page.keyboard.press(" ")
-    await browser_page.wait_for_selector("#slide-root >> text=second")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
     await browser_page.keyboard.press("ArrowLeft")
-    await browser_page.wait_for_function(
-        "() => !document.getElementById('slide-root').textContent.includes('second')",
-        timeout=10000,
-    )
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[0].t")
+    assert not await _shown(browser_page, "second")
 
 
-async def test_math_and_code_are_still_decorated(browser_page, live_server):
-    """KaTeX and highlight.js survived the client rewrite.
-
-    They lived inside the deleted script block; losing them would break math
-    and code in every deck while the timeline tests all stayed green.
-    """
+async def test_math_and_code_are_decorated(browser_page, live_server):
+    """KaTeX renders <span class="math"> and highlight.js <pre data-lang>,
+    from the vendored copies, with nothing loaded from the network."""
     await _ready(browser_page, live_server)
-    hooked = await browser_page.evaluate(
-        "() => typeof window.AuditoriumEngine.onAppend === 'function'"
-    )
-    assert hooked is True
+    assert await browser_page.evaluate("() => !!document.querySelector('.math .katex')")
+    assert await browser_page.evaluate("() => !!document.querySelector('pre[data-lang] code.hljs')")
 
 
-def _two_scene_deck():
-    deck = Deck("Boundary")
-
-    @deck.scene
-    async def alpha(s):
-        await s.show("<p>ALPHA</p>")
-
-    @deck.scene
-    async def bravo(s):
-        await s.show("<p>BRAVO</p>")
-
-    return deck
-
-
-@pytest_asyncio.fixture
-async def boundary_server():
-    config = uvicorn.Config(
-        create_app(_two_scene_deck()), host="127.0.0.1", port=0, log_level="warning"
-    )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    deadline = 10.0
-    while not server.started:
-        await asyncio.sleep(0.05)
-        deadline -= 0.05
-        if deadline <= 0:
-            server.should_exit = True
-            raise RuntimeError("uvicorn did not start within 10s")
-    port = server.servers[0].sockets[0].getsockname()[1]
-    yield f"http://127.0.0.1:{port}"
-    server.should_exit = True
-    thread.join(timeout=5)
-
-
-async def test_the_stage_actually_clears_in_the_browser(browser_page, boundary_server):
-    """Assert on the DOM, not on the timeline.
-
-    A compile-level test that a clear op EXISTS cannot prove the engine
-    applies it. Without this, a deck renders as every scene piled into one
-    continuous DOM while the compiler tests stay green.
-    """
-    await _ready(browser_page, boundary_server)
-    await browser_page.evaluate("() => window.AuditoriumEngine.seek(0)")
-    text = await browser_page.evaluate(
-        "() => document.getElementById('slide-root').textContent"
-    )
-    assert "ALPHA" in text and "BRAVO" not in text
-
-    await browser_page.evaluate(
-        "() => window.AuditoriumEngine.seek(window.__auditorium_duration)"
-    )
-    text = await browser_page.evaluate(
-        "() => document.getElementById('slide-root').textContent"
-    )
-    assert "BRAVO" in text
-    assert "ALPHA" not in text, "the previous scene was never cleared from the DOM"
-
-
-async def test_the_root_keeps_its_base_class_across_a_rewind(
-    browser_page, boundary_server
-):
-    """reset() must restore the root class, not just empty it.
-
-    Losing it drops the base layout class (content stops centring) and lets
-    aud-layout-mode leak from the first scene that uses columns onward.
-    """
-    await _ready(browser_page, boundary_server)
-    await browser_page.evaluate(
-        "() => window.AuditoriumEngine.seek(window.__auditorium_duration)"
-    )
-    await browser_page.evaluate("() => window.AuditoriumEngine.seek(0)")
-    cls = await browser_page.evaluate(
-        "() => document.getElementById('slide-root').className"
-    )
-    assert "aud-slide-root" in cls
-
-
-async def test_chrome_is_visible_at_time_zero(browser_page, live_server):
-    """Nothing that should be on screen may be invisible at t=0.
-
-    seek() pins EVERY animation on the page to timeline time, including ones
-    on persistent chrome. An entrance animation there sits at its first
-    keyframe whenever t=0, so the slide indicator disappeared from frame 0 of
-    every rendered video and every export -- while all the timeline assertions
-    stayed green, because none of them look at chrome.
-    """
+async def test_only_the_current_beat_is_on_stage(browser_page, live_server):
     await _ready(browser_page, live_server)
-    await browser_page.evaluate("() => window.__auditoriumShow(0)")
-    opacity = await browser_page.evaluate(
-        "() => parseFloat(getComputedStyle(document.getElementById('slide-indicator')).opacity)"
+    await browser_page.evaluate("() => window.auditorium.seek(window.auditorium.duration)")
+    assert await _shown(browser_page, "third")
+    assert not await _shown(browser_page, "first"), "the previous beat stayed on stage"
+    await browser_page.evaluate("() => window.auditorium.seek(0)")
+    assert await _shown(browser_page, "first")
+    assert not await _shown(browser_page, "third")
+
+
+async def test_a_served_page_connects_and_an_embedded_one_does_not(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await browser_page.wait_for_selector("#connection-status .aud-dot-connected")
+    await _ready(browser_page, live_server + "/?embed")
+    assert await browser_page.evaluate("() => !document.getElementById('connection-status')")
+
+
+async def test_arrow_right_advances_past_the_stop(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.keyboard.press("ArrowRight")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
+
+
+async def _tap(page, fraction):
+    await page.evaluate(
+        """(f) => document.dispatchEvent(new PointerEvent('pointerup', {
+               pointerType: 'touch', clientX: window.innerWidth * f, bubbles: true }))""",
+        fraction,
     )
-    assert opacity > 0.1, f"slide indicator is invisible at t=0 (opacity {opacity})"
-    text = await browser_page.evaluate(
-        "() => document.getElementById('slide-indicator').textContent"
+
+
+async def test_a_tap_on_the_right_advances_and_on_the_left_goes_back(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await _tap(browser_page, 0.9)
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
+    await _tap(browser_page, 0.1)
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[0].t")
+
+
+async def test_a_mouse_click_does_not_navigate(browser_page, live_server):
+    """Touch only: a click on a presented slide (a link, a selection) must not
+    advance the talk."""
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.evaluate(
+        """() => document.dispatchEvent(new PointerEvent('pointerup', {
+               pointerType: 'mouse', clientX: window.innerWidth * 0.9, bubbles: true }))"""
     )
-    assert "/" in text, f"indicator has no counter at t=0: {text!r}"
+    await browser_page.wait_for_timeout(300)
+    assert await browser_page.evaluate("() => window.auditorium.t === window.auditorium.stops[0].t")
+
+
+async def test_page_down_and_page_up_navigate_like_the_arrows(browser_page, live_server):
+    """What a presentation clicker sends."""
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.keyboard.press("PageDown")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
+    await browser_page.keyboard.press("PageUp")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[0].t")
+
+
+async def test_end_and_home_jump_to_the_ends(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.keyboard.press("End")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.duration")
+    await browser_page.keyboard.press("Home")
+    await browser_page.wait_for_function("() => window.auditorium.t === 0")

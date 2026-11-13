@@ -1,7 +1,7 @@
 [project]
 name = "auditorium"
 version = "1!4.0.0"
-description = "Python-scripted live slide framework"
+description = "Present, preview and render decks, posters and videos written in HTML"
 authors = [{name = "Alejandro Piad", email = "apiad@apiad.net"}]
 license = {text = "MIT"}
 readme = "Readme.md"
@@ -10,7 +10,6 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "typer>=0.12",
-    "markdown>=3.6",
     "rich>=15.0.0",
 ]
 
@@ -22,13 +21,9 @@ record = [
     "playwright>=1.62",
     "tqdm>=4.67.3",
 ]
-examples = [
-    "tesserax>=0.11",
-]
 dev = [
     "pytest>=8",
     "ruff>=0.4",
-    "tesserax>=0.11",
 ]
 
 [build-system]

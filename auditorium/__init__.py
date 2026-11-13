@@ -1,3 +1,5 @@
-from auditorium.deck import Deck
+"""Auditorium: present, preview and render decks, posters and videos written in HTML.
 
-__all__ = ["Deck"]
+The package is the tool around a project folder; authoring is the folder's
+index.html. See `auditorium --help`.
+"""

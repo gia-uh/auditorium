@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from auditorium import server
-from auditorium.deck import Deck
+from conftest import write_project
 
 
 # Every TestClient is entered with `with`. A bare TestClient gives each
@@ -15,30 +15,40 @@ from auditorium.deck import Deck
 # loop; the `with` block gives the tests the same.
 
 
+_PROJECT = None
+
+
 def make_deck():
-    deck = Deck("Served")
+    """A project folder: index.html plus one asset."""
+    global _PROJECT
+    if _PROJECT is None:
+        import tempfile
+        from pathlib import Path
 
-    @deck.scene
-    async def intro(s):
-        h = await s.show("<p>hi</p>")
-        await s.play(h.animate.fade_in(), run_time=0.5)
-
-    return deck
-
-
-def test_timeline_endpoint_returns_the_compiled_timeline():
-    with TestClient(server.create_app(make_deck())) as client:
-        body = client.get("/timeline.json").json()
-        assert body["meta"]["title"] == "Served"
-        assert body["meta"]["duration_ms"] == 500
-        assert len(body["nodes"]) == 1
+        _PROJECT = write_project(Path(tempfile.mkdtemp(prefix="aud-served-")), """
+<section data-beat="intro" data-d="0.5"><p data-enter="fade">hi</p></section>""")
+        (_PROJECT / "theme.css").write_text(":root { --aud-accent: red; }")
+    return _PROJECT
 
 
-def test_index_still_serves_the_shell_with_theme_overrides():
+def test_index_serves_the_project_page_with_the_mode_injected():
     with TestClient(server.create_app(make_deck())) as client:
         html = client.get("/").text
-        assert "<!--AUDITORIUM_THEME_OVERRIDES-->" not in html
-        assert "slide-root" in html
+        assert 'data-beat="intro"' in html
+        assert '<meta name="auditorium-presenter-mode" content="false">' in html
+
+
+def test_project_files_and_the_runtime_are_served():
+    with TestClient(server.create_app(make_deck())) as client:
+        assert "--aud-accent" in client.get("/theme.css").text
+        assert "window.auditorium" in client.get("/_auditorium/auditorium.js").text
+        assert client.get("/missing.png").status_code == 404
+
+
+def test_there_is_no_timeline_endpoint():
+    """The page builds its timeline from its DOM; the server compiles nothing."""
+    with TestClient(server.create_app(make_deck())) as client:
+        assert client.get("/timeline.json").status_code == 404
 
 
 def test_the_ack_protocol_is_gone():
@@ -123,3 +133,23 @@ def test_a_malformed_frame_does_not_close_the_presentation():
                 p.send_text("{not json")
                 p.send_json({"type": "cmd", "cmd": "seek", "t": 33})
                 assert a.receive_json()["t"] == 33
+
+
+def test_index_html_gets_the_same_injected_mode_as_the_root():
+    """Otherwise /index.html, served as a plain file, would load without the
+    meta and never open its socket or honour presenter mode."""
+    with TestClient(server.create_app(make_deck(), presenter_mode=True)) as client:
+        html = client.get("/index.html").text
+        assert '<meta name="auditorium-presenter-mode" content="true">' in html
+
+
+def test_every_bundled_theme_is_served_to_a_project():
+    """A project links a theme as /_auditorium/themes/NAME.css."""
+    themes = sorted(server.THEMES_DIR.glob("*.css"))
+    assert len(themes) == 14
+    with TestClient(server.create_app(make_deck())) as client:
+        for theme in themes:
+            r = client.get(f"/_auditorium/themes/{theme.name}")
+            assert r.status_code == 200, theme.name
+            assert ".aud" in r.text
+        assert "window.auditorium" in client.get("/_auditorium/auditorium.js").text

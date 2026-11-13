@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+  <script type="module">
+    // Registered before the build: lengthens the "tracked" beat to 3 s.
+    window.seen = [];
+    window.frames = [];
+    auditorium.track((s) => window.seen.push(s), { beat: "tracked", from: 0, to: 3 });
+    auditorium.track({ duration: 2, seekFrame: (f) => window.frames.push(f) }, { beat: "tracked" });
+  </script>
+</head>
+<body>
+<main class="aud" data-format="deck">
+  <section data-beat="stepped">
+    <p id="base">base</p>
+    <p id="late-step" data-step="1" data-in="0.5">half a second into step one</p>
+  </section>
+  <section data-beat="tracked"><p>tracked</p></section>
+  <section data-beat="last"><p>last</p></section>
+</main>
+</body>
+</html>

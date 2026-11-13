@@ -12,25 +12,24 @@
     --aud-code-bg: #f3f4f6;
 }
 body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
-#slide-root {
+.aud {
     background: var(--aud-slide-bg);
     color: var(--aud-fg);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.04);
 }
-#slide-root a { color: var(--aud-accent); }
-#slide-root hr { border-color: var(--aud-rule); }
-#slide-root code, #slide-root pre {
+.aud a { color: var(--aud-accent); }
+.aud hr { border-color: var(--aud-rule); }
+.aud code, .aud pre {
     background: var(--aud-code-bg);
     color: var(--aud-fg);
 }
-#slide-root blockquote {
+.aud blockquote {
     border-left-color: var(--aud-accent);
     color: var(--aud-muted);
 }
-#slide-root table th, #slide-root table td {
+.aud table th, .aud table td {
     border-color: var(--aud-rule);
 }
-:root { --aud-transition: aud-fade; }
 
 /* ---- Geometry palette ----
  * Indigo lead against white, rose as the natural contrast. */

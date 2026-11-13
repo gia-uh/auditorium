@@ -1,16 +1,15 @@
 """The ``auditorium`` command: ``run``, ``preview``, ``render``, ``export``, ``relay``.
 
-``run`` and ``preview`` share ``_serve()`` and differ only in which surface they
-open and whether shared navigation is on. SIGINT is reset to ``SIG_DFL`` before
-uvicorn starts, for a clean shutdown.
+Every command but ``relay`` takes a project: a folder holding index.html (or
+the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
+only in which surface they open and whether shared navigation is on. SIGINT is
+reset to ``SIG_DFL`` before uvicorn starts, for a clean shutdown.
 """
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 import json
 import signal
-import sys
 from pathlib import Path
 
 import typer
@@ -18,12 +17,14 @@ import uvicorn
 
 from auditorium.console import console
 
-app = typer.Typer(name="auditorium", help="Python-scripted live slide framework")
+app = typer.Typer(name="auditorium", help="Present, preview and render HTML decks, posters and videos")
 
 
 def _version_callback(value: bool) -> None:
     if value:
-        console.print("auditorium [bold]1!4.0.0[/]")
+        from importlib.metadata import version
+
+        console.print(f"auditorium [bold]{version('auditorium')}[/]")
         raise typer.Exit()
 
 
@@ -31,74 +32,47 @@ def _version_callback(value: bool) -> None:
 def main(
     version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True),
 ) -> None:
-    """Python-scripted live slide framework."""
+    """Present, preview and render HTML decks, posters and videos."""
     pass
 
 
-def _apply_theme_override(
-    deck,
-    theme: list[str] | None,
-    transition: str | None = None,
-) -> None:
-    """Replace the deck's resolved theme stack and/or transition with CLI values.
-
-    CLI values override the deck's ``theme=`` / ``transition=`` kwargs entirely
-    — so ``--theme dark`` on a deck declared with ``theme=["academic", "neon"]``
-    yields just ``dark``. Pass nothing to keep the deck's defaults.
-    """
-    from auditorium.deck import resolve_themes
-
-    if theme:
-        try:
-            deck.theme_css = resolve_themes(list(theme))
-            deck.themes = list(theme)
-        except ValueError as e:
-            console.print(f"[red]Error:[/] {e}")
-            raise typer.Exit(1) from None
-    if transition is not None:
-        deck.transition = transition
-
-
-def _load_deck(deck_path: Path):
-    """Import a deck.py file and find the Deck instance."""
-    from auditorium.deck import Deck
-
-    module_name = f"_deck_{id(deck_path)}"
-    spec = importlib.util.spec_from_file_location(module_name, deck_path)
-    if spec is None or spec.loader is None:
-        console.print(f"[red]Error:[/] cannot load {deck_path}")
+def _project(path: Path) -> Path:
+    """Resolve a project argument to its folder, or exit with what is missing."""
+    path = path.resolve()
+    folder = path.parent if path.is_file() and path.name == "index.html" else path
+    if not (folder / "index.html").is_file():
+        console.print(f"[red]Error:[/] {folder} has no index.html")
         raise typer.Exit(1)
-    module = importlib.util.module_from_spec(spec)
-    deck_dir = str(deck_path.parent.resolve())
-    if deck_dir not in sys.path:
-        sys.path.insert(0, deck_dir)
-    spec.loader.exec_module(module)
-    for attr in dir(module):
-        obj = getattr(module, attr)
-        if isinstance(obj, Deck):
-            return obj
-    console.print(f"[red]Error:[/] no Deck instance found in {deck_path}")
-    raise typer.Exit(1)
+    return folder
+
+
+def _size(value: str | None) -> tuple[int, int] | None:
+    """Parse --size, or None for the format's stage; a bad value is a usage error."""
+    if value is None:
+        return None
+    from auditorium.render import parse_size
+
+    try:
+        return parse_size(value)
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--size") from exc
 
 
 def _print_banner(
-    deck, host: str, port: int, presenter: bool = False, landing: str = "/"
+    folder: Path, host: str, port: int, presenter: bool = False, landing: str = "/"
 ) -> None:
-    """Print a startup banner with deck info."""
+    """Print a startup banner with the project and its URL."""
     from rich.panel import Panel
     from rich.text import Text
 
     body = Text()
-    body.append("Deck:   ", style="dim")
-    body.append(deck.title, style="bold")
+    body.append("Project: ", style="dim")
+    body.append(folder.name, style="bold")
     body.append("\n")
-    body.append("Slides: ", style="dim")
-    body.append(str(len(deck.slides)))
-    body.append("\n")
-    body.append("URL:    ", style="dim")
+    body.append("URL:     ", style="dim")
     body.append(f"http://{host}:{port}{landing}", style="bold cyan")
     body.append("\n")
-    body.append("Mode:   ", style="dim")
+    body.append("Mode:    ", style="dim")
     if presenter:
         body.append("presenter (shared navigation)", style="yellow")
     else:
@@ -109,39 +83,35 @@ def _print_banner(
 
 @app.command()
 def run(
-    deck_path: Path = typer.Argument(..., help="Path to the deck.py file"),
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
     host: str = typer.Option("127.0.0.1", help="Host to bind to"),
     port: int = typer.Option(8000, help="Port to bind to"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser automatically"),
     presenter: bool = typer.Option(False, "-p", "--presenter", help="Also open presenter view"),
-    public: bool = typer.Option(False, "--public", help="Share via relay for remote viewers"),
+    public: bool = typer.Option(False, "--public", help="Share via relay for remote viewers (not available yet, #104)"),
     relay_host: str = typer.Option("vps.apiad.net:4243", "--relay", help="Relay server host:port"),
     public_name: str = typer.Option(None, "--name", help="Custom name for the public URL (e.g. --name my-talk)"),
-    watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch for file changes and hot-reload"),
-    theme: list[str] = typer.Option(None, "--theme", help="Override the deck theme. Pass multiple times to stack: e.g. --theme academic --theme dark. Each value is a builtin preset name or a path to a .css file."),
-    transition: str = typer.Option(None, "--transition", help="Override the slide transition: fade, slide-left, slide-up, zoom, none (or a custom @keyframes name)."),
+    watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch the folder and hot-reload"),
 ) -> None:
-    """Run a presentation deck."""
-    deck_path = deck_path.resolve()
-    if not deck_path.exists():
-        console.print(f"[red]Error:[/] {deck_path} not found")
+    """Present a project live."""
+    if public:
+        # A relayed audience now needs the project's files, which the relay
+        # does not carry yet. Refuse rather than hand out a URL that answers 501.
+        console.print("[red]Error:[/] --public is not available yet: relaying a project folder lands with #104.")
         raise typer.Exit(1)
-
     _serve(
-        deck_path, host, port, open_browser, watch, theme, transition,
+        _project(project), host, port, open_browser, watch,
         presenter=presenter, public=public, relay_host=relay_host,
         public_name=public_name,
     )
 
 
 def _serve(
-    deck_path: Path,
+    folder: Path,
     host: str,
     port: int,
     open_browser: bool,
     watch: bool,
-    theme: list[str] | None,
-    transition: str | None,
     *,
     presenter: bool = False,
     public: bool = False,
@@ -149,28 +119,26 @@ def _serve(
     public_name: str | None = None,
     landing: str = "/",
 ) -> None:
-    """Compile, serve, and optionally open a deck.
+    """Serve, and optionally open, a project.
 
     Shared by ``run`` and ``preview``: the two differ only in which surface
     they open and whether shared navigation is enabled, so the lifecycle is
     written once rather than kept in step by hand.
     """
-    deck = _load_deck(deck_path)
-    _apply_theme_override(deck, theme, transition)
     from auditorium.server import create_app
 
-    application = create_app(deck, presenter_mode=presenter)
-    _print_banner(deck, host, port, presenter, landing)
+    application = create_app(folder, presenter_mode=presenter)
+    _print_banner(folder, host, port, presenter, landing)
 
     if watch:
-        _setup_watcher(application, deck_path, theme, transition)
+        _setup_watcher(application, folder)
 
     if public:
         _start_relay_bridge(relay_host, port, public_name)
 
     if open_browser:
-        import webbrowser
         import threading
+        import webbrowser
 
         def _open():
             import time
@@ -182,7 +150,7 @@ def _serve(
 
         threading.Thread(target=_open, daemon=True).start()
 
-    _start_live_status(application, deck)
+    _start_live_status(application)
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     uvicorn.run(application, host=host, port=port, log_level="warning")
@@ -190,51 +158,37 @@ def _serve(
 
 @app.command()
 def preview(
-    deck_path: Path = typer.Argument(..., help="Path to the deck.py file"),
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
     host: str = typer.Option("127.0.0.1", help="Host to bind to"),
     port: int = typer.Option(8000, help="Port to bind to"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser automatically"),
-    watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch for file changes and hot-reload"),
-    theme: list[str] = typer.Option(None, "--theme", help="Override the deck theme. Pass multiple times to stack."),
-    transition: str = typer.Option(None, "--transition", help="Override the slide transition."),
+    watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch the folder and hot-reload"),
 ) -> None:
     """Open the authoring preview: scrubber, frame stepping, loop-a-range."""
-    deck_path = deck_path.resolve()
-    if not deck_path.exists():
-        console.print(f"[red]Error:[/] {deck_path} not found")
-        raise typer.Exit(1)
-
-    _serve(
-        deck_path, host, port, open_browser, watch, theme, transition,
-        landing="/preview",
-    )
+    _serve(_project(project), host, port, open_browser, watch, landing="/preview")
 
 
 @app.command()
 def render(
-    deck_path: Path = typer.Argument(..., help="Path to the deck file"),
-    output: Path = typer.Option(Path("out.mp4"), "-o", "--output", help="Output file"),
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
+    output: Path = typer.Option(None, "-o", "--output", help="Output file (default: dist/NAME.mp4, or dist/frames/ for png-sequence)"),
     fps: int = typer.Option(30, "--fps", help="Frames per second"),
-    size: str = typer.Option("1080p", "--size", help="WIDTHxHEIGHT or a preset: 1080p, 720p, vertical, square"),
+    size: str = typer.Option(None, "--size", help="WIDTHxHEIGHT or a preset: 1080p, 720p, vertical, square (default: the format's stage)"),
     fmt: str = typer.Option("mp4", "--format", help="mp4, webm, or png-sequence"),
     audio: Path | None = typer.Option(None, "--audio", help="Audio bed mixed into the render"),
     from_frame: int = typer.Option(0, "--from", help="First frame to render"),
     to_frame: int | None = typer.Option(None, "--to", help="Stop before this frame"),
-    theme: list[str] | None = typer.Option(None, "--theme"),
-    transition: str | None = typer.Option(None, "--transition"),
 ) -> None:
-    """Render a deck to video by stepping frames deterministically."""
-    from auditorium.render import parse_size, render_video
+    """Render a project to video by stepping frames deterministically."""
+    from auditorium.render import render_video
 
-    deck = _load_deck(deck_path)
-    _apply_theme_override(deck, theme, transition)
-    try:
-        width, height = parse_size(size)
-    except ValueError as exc:
-        raise typer.BadParameter(str(exc)) from exc
+    folder = _project(project)
+    dims = _size(size)
+    if output is None:
+        output = folder / "dist" / ("frames" if fmt == "png-sequence" else f"{folder.name}.{fmt}")
 
     asyncio.run(render_video(
-        deck, output, fps=fps, size=(width, height), audio=audio, fmt=fmt,
+        folder, output, fps=fps, size=dims, audio=audio, fmt=fmt,
         start_frame=from_frame, end_frame=to_frame,
     ))
     console.print(f"[green]✓[/] Rendered to [bold]{output}[/]")
@@ -242,55 +196,26 @@ def render(
 
 @app.command()
 def export(
-    deck_path: Path = typer.Argument(..., help="Path to the deck.py file"),
-    fmt: str = typer.Option("html", "-f", "--format", help="Output format: html, png"),
-    output: Path = typer.Option(None, "-o", "--output", help="Output path (default: deck.html or slides/)"),
-    resolution: str = typer.Option("1920x1080", "-r", "--resolution", help="Viewport size, e.g. 1280x720"),
-    step_by_step: bool = typer.Option(False, "-s", "--step-by-step", help="One page/frame per step instead of per slide"),
-    port: int = typer.Option(0, help="Server port (0 = random)"),
-    theme: list[str] = typer.Option(None, "--theme", help="Override the deck theme. Pass multiple times to stack."),
-    transition: str = typer.Option(None, "--transition", help="Override the slide transition: fade, slide-left, slide-up, zoom, none (or a custom @keyframes name)."),
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
+    fmt: str = typer.Option("png", "-f", "--format", help="Output format: png"),
+    output: Path = typer.Option(None, "-o", "--output", help="Output folder (default: dist/)"),
+    size: str = typer.Option(None, "--size", help="WIDTHxHEIGHT or a preset (default: the format's stage)"),
+    steps: bool = typer.Option(False, "-s", "--steps", help="One image per press instead of per beat"),
 ) -> None:
-    """Export a deck to a self-contained HTML bundle or PNG stills."""
-    deck_path = deck_path.resolve()
-    if not deck_path.exists():
-        console.print(f"[red]Error:[/] {deck_path} not found")
+    """Export each beat at its end state as a PNG."""
+    folder = _project(project)
+    if fmt != "png":
+        # html and pdf come with bundle (#103); say so instead of guessing.
+        console.print(f"[red]Error:[/] format [bold]'{fmt}'[/] is not available yet. Use png.")
         raise typer.Exit(1)
+    dims = _size(size)
+    from auditorium.exporter import export_png
 
-    if fmt == "pdf":
-        console.print(
-            "[red]Error:[/] PDF export was removed in 4.0.\n"
-            "A timeline has no canonical instant to print: a scene is a "
-            "continuous function of time, not a page.\n"
-            "Export [bold]png[/] stills and decide yourself what instants "
-            "matter, then assemble them (img2pdf, ImageMagick).\n"
-            "For a document that was always meant to be printed, author it in "
-            "scriptorium instead."
-        )
-        raise typer.Exit(1)
-
-    if fmt not in ("html", "png"):
-        console.print(f"[red]Error:[/] unknown format [bold]'{fmt}'[/]. Use html or png.")
-        raise typer.Exit(1)
-
-    if output is None:
-        stem = deck_path.stem
-        if fmt == "png":
-            output = Path(f"{stem}-slides")
-        else:
-            output = Path(f"{stem}.{fmt}")
-
-    if port == 0:
-        import socket
-        with socket.socket() as s:
-            s.bind(("", 0))
-            port = s.getsockname()[1]
-
-    from auditorium.exporter import export_deck
-    asyncio.run(export_deck(deck_path, output, fmt, resolution, step_by_step, port, theme, transition))
+    written = asyncio.run(export_png(folder, output or folder / "dist", size=dims, steps=steps))
+    console.print(f"[green]✓[/] {len(written)} PNG files in [bold]{output or folder / 'dist'}/[/]")
 
 
-def _start_live_status(application, deck) -> None:
+def _start_live_status(application) -> None:
     """Start a background thread that displays live session status.
 
     Reports connections only. Per-client position used to be here, but the
@@ -306,21 +231,18 @@ def _start_live_status(application, deck) -> None:
         table = Table(show_header=True, header_style="dim", box=None, padding=(0, 1))
         table.add_column("Mode", style="dim", width=12)
         table.add_column("Connections", width=16)
-        table.add_column("Scenes", width=8)
         table.add_column("Presenter", width=14)
-
-        total = len(deck.slides) if deck else 0
 
         if application.state.presenter_mode:
             pres = application.state.shared_pres
             n = len(pres.audience_clients)
             conns = f"{n} tab{'s' if n != 1 else ''}" if n else "[dim]none[/]"
             presenter = "[green]connected[/]" if pres.presenter_ws else "[dim]none[/]"
-            table.add_row("shared", conns, str(total), presenter)
+            table.add_row("shared", conns, presenter)
         else:
             n = len(application.state.sessions)
             conns = f"{n} tab{'s' if n != 1 else ''}" if n else "[dim]none[/]"
-            table.add_row("independent", conns, str(total), "[dim]n/a[/]")
+            table.add_row("independent", conns, "[dim]n/a[/]")
 
         return table
 
@@ -419,36 +341,36 @@ def _start_relay_bridge(relay_host: str, local_port: int, name: str | None = Non
     thread.start()
 
 
-def _setup_watcher(
-    application,
-    deck_path: Path,
-    theme: list[str] | None = None,
-    transition: str | None = None,
-) -> None:
-    """Set up a file watcher that hot-reloads the deck on changes."""
+def watch_filter(folder: Path):
+    """Which changes in a project folder reload its pages.
+
+    watchfiles' DefaultFilter (no .git, caches or editor swap files), and
+    nothing under ``dist/``: bundle, render and export write there, and a write
+    that reloads the page it is capturing would never finish.
+    """
+    from watchfiles import DefaultFilter
+
+    default = DefaultFilter()
+    dist = Path(folder).resolve() / "dist"
+
+    def _filter(change, path: str) -> bool:
+        return default(change, path) and not Path(path).resolve().is_relative_to(dist)
+
+    return _filter
+
+
+def _setup_watcher(application, folder: Path) -> None:
+    """Watch the project folder and tell every client to reload on a change."""
     import threading
+
     from watchfiles import watch as watch_files
 
     def _watch():
-        watch_dir = deck_path.parent
-        for _changes in watch_files(watch_dir, watch_filter=_python_filter):
+        for _changes in watch_files(folder, watch_filter=watch_filter(folder)):
             console.print("[yellow]⟳[/] Change detected, reloading...")
-            try:
-                new_deck = _load_deck(deck_path)
-                _apply_theme_override(new_deck, theme, transition)
-                loop = getattr(application.state, "loop", None)
-                if loop and loop.is_running():
-                    from auditorium.server import reload_deck
-                    asyncio.run_coroutine_threadsafe(
-                        reload_deck(application, new_deck), loop
-                    )
-            except Exception as e:
-                console.print(f"[red]Reload error:[/] {e}")
+            loop = getattr(application.state, "loop", None)
+            if loop and loop.is_running():
+                from auditorium.server import reload_project
+                asyncio.run_coroutine_threadsafe(reload_project(application), loop)
 
-    thread = threading.Thread(target=_watch, daemon=True)
-    thread.start()
-
-
-def _python_filter(change, path: str) -> bool:
-    """Only watch Python files."""
-    return path.endswith(".py")
+    threading.Thread(target=_watch, daemon=True).start()

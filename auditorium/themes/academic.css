@@ -3,19 +3,19 @@
  * (Playfair Display — vendored). Chrome footer carries deck title (left)
  * and slide N / total (right). Subtitle gets a hairline rule. */
 
-body, #slide-root {
+body, .aud {
     font-family: 'Source Serif 4', Georgia, serif;
 }
-#slide-root {
+.aud {
     text-align: left;
 }
-#slide-root h1, #slide-root h2, #slide-root h3,
-#slide-root .aud-slide-title {
+.aud h1, .aud h2, .aud h3,
+.aud .aud-slide-title {
     font-family: 'Playfair Display', Georgia, serif;
     font-weight: 600;
     letter-spacing: -0.005em;
 }
-#slide-root .aud-slide-title {
+.aud .aud-slide-title {
     border-bottom: 1px solid currentColor;
     padding-bottom: 0.2em;
     text-align: left;
@@ -23,14 +23,14 @@ body, #slide-root {
     width: 100%;
     opacity: 0.95;
 }
-#slide-root .aud-slide-subtitle {
+.aud .aud-slide-subtitle {
     font-family: 'Source Serif 4', Georgia, serif;
     font-style: italic;
     opacity: 0.75;
     text-align: left;
     align-self: flex-start;
 }
-#slide-root .aud-block-title {
+.aud .aud-block-title {
     font-style: italic;
     font-weight: 600;
 }
@@ -49,4 +49,3 @@ body, #slide-root {
 }
 .aud-chrome-footer::before { content: var(--aud-deck-title, ""); }
 .aud-chrome-footer::after  { content: var(--aud-slide-number) " / " var(--aud-slide-total); }
-:root { --aud-transition: aud-fade; }

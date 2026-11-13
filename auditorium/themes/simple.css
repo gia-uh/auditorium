@@ -2,16 +2,15 @@
  * Minimal sans-serif baseline. No chrome content. Use as a neutral starting
  * point when stacking with a color theme: e.g. `simple + dark`. */
 
-body, #slide-root {
+body, .aud {
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
-#slide-root h1, #slide-root h2, #slide-root h3,
-#slide-root .aud-slide-title, #slide-root .aud-slide-subtitle {
+.aud h1, .aud h2, .aud h3,
+.aud .aud-slide-title, .aud .aud-slide-subtitle {
     font-family: inherit;
     font-weight: 600;
     letter-spacing: -0.01em;
 }
-#slide-root code, #slide-root pre code {
+.aud code, .aud pre code {
     font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
 }
-:root { --aud-transition: aud-fade; }

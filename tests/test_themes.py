@@ -90,6 +90,6 @@ def test_every_color_theme_defines_the_geometry_palette(path):
 
 def test_the_base_stylesheet_defines_palette_defaults():
     """A layout-only theme stack still has to draw something sensible."""
-    body = strip_comments((STATIC / "theme.css").read_text())
+    body = strip_comments((STATIC / "auditorium.css").read_text())
     missing = [v for v in GEOM_VARS if f"{v}:" not in body]
-    assert not missing, f"theme.css is missing {missing}"
+    assert not missing, f"auditorium.css is missing {missing}"

@@ -1,150 +1,54 @@
-import asyncio
+"""export png: each beat at its end state, through the same seek a render uses."""
+import hashlib
 
 import pytest
 
-from auditorium.exporter import export_deck
+from auditorium.exporter import export_png, still_name
+from conftest import write_project
 
-DECK_SRC = '''
-from auditorium import Deck
-
-deck = Deck("Export")
-
-@deck.scene
-async def alpha(s):
-    await s.show("<p>ALPHA</p>")
-
-@deck.scene
-async def bravo(s):
-    await s.show("<p>BRAVO</p>")
-'''
+BODY = """
+<section data-beat="alpha"><p style="font-size:80px">ALPHA</p>
+  <p data-step="1" style="font-size:80px">MORE</p></section>
+<section data-beat="bravo"><p style="font-size:80px">BRAVO</p></section>
+"""
 
 
 @pytest.fixture
-def deck_file(tmp_path):
-    """export_deck takes a PATH, not a Deck: it loads the module itself."""
-    path = tmp_path / "d.py"
-    path.write_text(DECK_SRC)
-    return path
+def project(tmp_path):
+    return write_project(tmp_path / "p", BODY, fmt="deck")
 
 
-async def test_png_export_writes_one_image_per_beat(deck_file, tmp_path):
-    out = tmp_path / "png"
-    await export_deck(deck_file, out, "png", "320x240", False, 0)
-    pngs = sorted(out.glob("*.png"))
-    assert len(pngs) >= 2
-    assert all(p.stat().st_size > 0 for p in pngs)
+async def test_one_png_per_beat(project, tmp_path):
+    written = await export_png(project, tmp_path / "out", size=(320, 180))
+    assert [p.name for p in written] == ["beat-01.png", "beat-02.png"]
+    assert all(p.stat().st_size > 0 for p in written)
 
 
-async def test_export_completes_without_hanging(deck_file, tmp_path):
-    """The regression this task fixes: export waited forever on
-    window.__auditorium_slide_complete, which the new client never sets.
-    Measured before the fix: TimeoutError after 120s, no output produced."""
-    out = tmp_path / "png2"
-    await asyncio.wait_for(
-        export_deck(deck_file, out, "png", "320x240", False, 0), timeout=90
-    )
+async def test_beats_export_as_different_images(project, tmp_path):
+    """Two beats must not produce byte-identical stills: the seek has to land."""
+    written = await export_png(project, tmp_path / "out", size=(320, 180))
+    assert len({hashlib.sha256(p.read_bytes()).hexdigest() for p in written}) == 2
 
 
-async def test_exported_frames_do_not_all_carry_the_same_page_number(
-    deck_file, tmp_path
-):
-    """Chrome has to advance with the capture, not freeze at its load value.
-
-    Driving AuditoriumEngine.seek() directly skips the client's updateChrome(),
-    which burned a single wrong "2 / 63" into all 63 stills of the demo deck
-    while every other assertion stayed green. Counting files cannot catch this;
-    only looking at what is in them can.
-    """
-
-    out = tmp_path / "png3"
-    await export_deck(deck_file, out, "png", "320x240", False, 0)
-    pngs = sorted(out.glob("*.png"))
-    assert len(pngs) >= 2
-
-    # The indicator is rendered into the image, so compare the images: two
-    # different scenes must not produce byte-identical frames.
-    import hashlib
-    digests = {hashlib.sha256(p.read_bytes()).hexdigest() for p in pngs}
-    assert len(digests) == len(pngs), "captured frames are not all distinct"
+async def test_steps_export_one_png_per_press(project, tmp_path):
+    written = await export_png(project, tmp_path / "out", size=(320, 180), steps=True)
+    assert [p.name for p in written] == [
+        "beat-01-step-0.png", "beat-01-step-1.png", "beat-02-step-0.png"]
+    a, b = (hashlib.sha256(p.read_bytes()).hexdigest() for p in written[:2])
+    assert a != b, "the press did not change the still"
 
 
-async def test_the_export_stylesheet_hides_the_live_connection_dot(browser_page):
-    """A still is not a session; the WebSocket status dot has no meaning in one.
-
-    Asserts the rule actually takes effect in a browser rather than that the
-    string appears in the source -- a source grep survives the bug it was
-    written for the moment the selector changes.
-    """
-    import inspect
-    import re
-
-    import auditorium.exporter as exporter
-
-    src = inspect.getsource(exporter.export_deck)
-    css = re.search(r'DISABLE_ANIM_CSS = """(.*?)"""', src, re.DOTALL).group(1)
-
-    await browser_page.set_content(
-        "<div id='connection-status'>dot</div><div id='other'>x</div>"
-    )
-    await browser_page.add_style_tag(content=css)
-    hidden = await browser_page.evaluate(
-        "() => getComputedStyle(document.getElementById('connection-status')).display"
-    )
-    visible = await browser_page.evaluate(
-        "() => getComputedStyle(document.getElementById('other')).display"
-    )
-    assert hidden == "none"
-    assert visible != "none", "the rule is too broad and hid unrelated elements"
+async def test_a_beat_exports_at_its_end_state(tmp_path):
+    """A still shows every entrance finished, not the beat's first frame."""
+    project = write_project(tmp_path / "p", """
+<section data-beat="one" data-d="2"><p style="font-size:80px" data-in="1" data-enter="fade">LATE</p></section>""",
+        fmt="explainer")
+    blank = write_project(tmp_path / "b", '<section data-beat="one" data-d="2"></section>', fmt="explainer")
+    [still] = await export_png(project, tmp_path / "o1", size=(320, 180))
+    [empty] = await export_png(blank, tmp_path / "o2", size=(320, 180))
+    assert still.stat().st_size > empty.stat().st_size * 1.5
 
 
-SVG_DECK_SRC = '''
-from auditorium import Deck
-from auditorium.nodes import Arrow, Circle
-
-deck = Deck("Geo")
-
-@deck.scene
-async def alpha(s):
-    a = await s.show("<p>A</p>")
-    b = await s.show("<p>B</p>")
-    await s.draw(Arrow(from_=a.bottom, to=b.top, stroke="#c00", width=3))
-    await s.draw(Circle(at=(100, 100), r=20, stroke="#06c"))
-    await s.beat()
-
-@deck.scene
-async def bravo(s):
-    await s.show("<p>BRAVO</p>")
-'''
-
-
-@pytest.fixture
-def svg_deck_file(tmp_path):
-    path = tmp_path / "geo.py"
-    path.write_text(SVG_DECK_SRC)
-    return path
-
-
-async def test_html_export_carries_the_geometry_layer(svg_deck_file, tmp_path):
-    """Geometry lives outside #slide-root, so a naive snapshot loses it.
-
-    The export captured only the slide root, which meant a self-contained
-    bundle silently dropped every arrow, line and circle in the deck -- a
-    whole 4.0 feature missing from the artifact with nothing to notice it.
-    """
-    out = tmp_path / "geo.html"
-    await export_deck(svg_deck_file, out, "html", "1280x720", False, 0)
-    html = out.read_text()
-    assert "<line" in html, "the arrow did not survive the export"
-    assert "<circle" in html, "the circle did not survive the export"
-    # The head marker is referenced by the arrow; without a definition
-    # somewhere in the document the arrow renders headless.
-    assert "aud-arrowhead" in html
-    assert 'viewBox="0 0 1280 720"' in html, "geometry must scale with the slide"
-
-
-async def test_a_scene_without_geometry_gets_no_empty_overlay(svg_deck_file, tmp_path):
-    """The second scene draws nothing; it should not carry a stray <svg>."""
-    out = tmp_path / "geo2.html"
-    await export_deck(svg_deck_file, out, "html", "1280x720", False, 0)
-    html = out.read_text()
-    assert html.count('class="export-svg"') < html.count('class="export-slide')
+def test_still_names():
+    assert still_name(0) == "beat-01.png"
+    assert still_name(9, 2) == "beat-10-step-2.png"

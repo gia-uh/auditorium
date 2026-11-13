@@ -2,29 +2,29 @@
  * Marker-style display, loose bullets, slightly rotated block borders.
  * Best stacked with `neon` or `light` for the full effect. */
 
-body, #slide-root {
+body, .aud {
     font-family: "Comic Sans MS", "Comic Neue", "Marker Felt", "Patrick Hand", cursive, sans-serif;
 }
-#slide-root h1, #slide-root h2, #slide-root h3,
-#slide-root .aud-slide-title, #slide-root .aud-slide-subtitle {
+.aud h1, .aud h2, .aud h3,
+.aud .aud-slide-title, .aud .aud-slide-subtitle {
     font-family: inherit;
     font-weight: 700;
     letter-spacing: 0.01em;
     text-transform: none;
 }
-#slide-root .aud-slide-title { font-size: 2.4em; }
-#slide-root .aud-slide-subtitle { font-size: 1.4em; opacity: 0.8; }
+.aud .aud-slide-title { font-size: 2.4em; }
+.aud .aud-slide-subtitle { font-size: 1.4em; opacity: 0.8; }
 
 /* Marker-style underline on strong text. */
-#slide-root strong {
+.aud strong {
     background: linear-gradient(transparent 60%, var(--aud-accent, #ffe27a) 60%);
     padding: 0 0.1em;
 }
 
 /* Playful bullets. */
-#slide-root ul { list-style: none; padding-left: 1.5em; }
-#slide-root ul > li { position: relative; }
-#slide-root ul > li::before {
+.aud ul { list-style: none; padding-left: 1.5em; }
+.aud ul > li { position: relative; }
+.aud ul > li::before {
     content: "✦";
     position: absolute;
     left: -1.2em;
@@ -32,10 +32,9 @@ body, #slide-root {
 }
 
 /* Slightly rotated block frames — handwritten feel. */
-#slide-root .aud-block {
+.aud .aud-block {
     border-radius: 0.6em;
     border-width: 2px;
     transform: rotate(-0.4deg);
 }
-#slide-root .aud-block:nth-child(even) { transform: rotate(0.4deg); }
-:root { --aud-transition: aud-slide-left; --aud-transition-duration: 0.42s; }
+.aud .aud-block:nth-child(even) { transform: rotate(0.4deg); }

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The motion library</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+  <script type="module" src="script.js"></script>
+</head>
+<body>
+<!-- The motion library's gallery: every entrance, exit and idle the runtime
+     knows, each on a card, timed by attributes alone. Scrub it in
+     `auditorium preview examples/motion`. -->
+<main class="aud" data-format="explainer">
+
+  <section data-beat="entrances" data-d="5">
+    <div class="grid">
+      <h2 data-col="1/13" data-enter="rise">Entrances</h2>
+      <div class="card" data-col="1/4" data-in="0.6" data-enter="fade">fade</div>
+      <div class="card" data-col="4/7" data-in="0.9" data-enter="rise">rise</div>
+      <div class="card" data-col="7/10" data-in="1.2" data-enter="pop">pop</div>
+      <div class="card" data-col="10/13" data-in="1.5" data-enter="flip">flip</div>
+      <div class="bar" data-col="1/13" data-in="1.8" data-enter="grow"></div>
+      <p data-col="1/13" data-in="2.4" data-enter="words">words arrive one at a time, in order</p>
+    </div>
+  </section>
+
+  <section data-beat="numbers-and-lines" data-d="4">
+    <div class="grid">
+      <div class="stat" data-col="1/5" data-enter="count"><b data-to="1311">0</b><span>lines removed</span></div>
+      <div class="stat" data-col="5/9" data-in="0.3" data-enter="count"><b data-to="0.5">0</b><span>seconds</span></div>
+      <svg data-col="9/13" viewBox="0 0 400 300" width="400" height="300">
+        <path data-in="0.5" data-enter="draw" data-dur="1.5" d="M 20 280 C 120 20, 280 20, 380 280"
+              fill="none" stroke="currentColor" stroke-width="8"/>
+      </svg>
+    </div>
+  </section>
+
+  <section data-beat="idles-and-exits" data-d="5">
+    <div class="grid">
+      <div class="card" data-col="1/4" data-idle="float">float</div>
+      <div class="card" data-col="4/7" data-idle="tilt">tilt</div>
+      <div class="card" data-col="7/10" data-idle="pulse">pulse</div>
+      <div class="card" data-col="10/13" data-idle="ken-burns">ken-burns</div>
+      <p data-col="1/13" data-in="0.5" data-out="3.5" data-enter="fade" data-exit="rise">This line leaves at 3.5 s</p>
+    </div>
+  </section>
+
+  <section data-beat="anchors" data-d="4">
+    <div class="grid">
+      <div id="from-box" class="card" data-col="1/4" data-enter="rise">from</div>
+      <div id="to-box" class="card" data-col="10/13" data-idle="float">to</div>
+    </div>
+    <svg class="aud-overlay">
+      <line data-from="from-box:right" data-to="to-box:left" data-in="0.6" data-enter="draw"
+            stroke="currentColor" stroke-width="4"/>
+    </svg>
+  </section>
+
+  <section data-beat="track" data-d="4">
+    <div class="grid">
+      <h2 data-col="1/13">Any function of time</h2>
+      <svg data-col="1/13" viewBox="-300 -300 600 600" width="600" height="600">
+        <circle r="200" fill="none" stroke="currentColor" stroke-opacity="0.3" stroke-width="2"/>
+        <line id="arm" x1="0" y1="0" x2="200" y2="0" stroke="currentColor" stroke-width="6"/>
+        <circle id="tip" cx="200" cy="0" r="16" class="accent-fill"/>
+      </svg>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
