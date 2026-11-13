@@ -90,6 +90,7 @@ def create_app(project: Path | None = None, presenter_mode: bool = False) -> Fas
         app.state.sessions.clear()
 
     @app.get("/")
+    @app.get("/index.html")
     async def index() -> HTMLResponse:
         if app.state.project is None:
             return HTMLResponse("No project.", status_code=404)

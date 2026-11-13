@@ -36,7 +36,6 @@ body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
     border: 1px solid var(--aud-rule);
 }
 .aud .aud-slide-title { text-shadow: none; }
-:root { --aud-transition: none; }
 
 /* ---- Geometry palette ----
  * Chosen to survive a monochrome laser printer, where anything

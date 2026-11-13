@@ -133,3 +133,11 @@ def test_a_malformed_frame_does_not_close_the_presentation():
                 p.send_text("{not json")
                 p.send_json({"type": "cmd", "cmd": "seek", "t": 33})
                 assert a.receive_json()["t"] == 33
+
+
+def test_index_html_gets_the_same_injected_mode_as_the_root():
+    """Otherwise /index.html, served as a plain file, would load without the
+    meta and never open its socket or honour presenter mode."""
+    with TestClient(server.create_app(make_deck(), presenter_mode=True)) as client:
+        html = client.get("/index.html").text
+        assert '<meta name="auditorium-presenter-mode" content="true">' in html

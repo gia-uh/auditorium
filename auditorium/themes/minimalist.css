@@ -36,4 +36,3 @@ body, .aud {
     padding: 0.4em 0.8em;
     background: transparent;
 }
-:root { --aud-transition: aud-fade; }

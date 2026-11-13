@@ -65,4 +65,3 @@ body, .aud {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
 }
-:root { --aud-transition: aud-slide-up; }

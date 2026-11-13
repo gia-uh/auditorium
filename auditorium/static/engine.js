@@ -32,6 +32,9 @@ export const AuditoriumEngine = {
   },
 
   load(timeline) {
+    // Undo the previous timeline's ops first, or its aud-on classes leak
+    // into the new one.
+    this.reset();
     for (const a of this._animations) a.cancel();
     this._animations = [];
     this._tl = timeline;

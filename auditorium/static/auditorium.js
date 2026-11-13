@@ -7,9 +7,10 @@
 // window.auditorium are integer milliseconds, because the engine, the render
 // schedule and every 4.x test count in them.
 //
-// The build reads attributes and nothing else of the author's: no layout, no
-// computed style. What depends on layout (anchors) resolves on every seek in
-// the engine (D6).
+// The build reads attributes (and a count's starting number from its text),
+// never layout or computed style; it changes the DOM once, only to prepare
+// motions (word spans, pathLength, transform-origin, grid placement). What
+// depends on layout (anchors) resolves on every seek in the engine (D6).
 
 import { AuditoriumEngine as engine, ON } from "./engine.js";
 import { connect, createPlayer } from "./client.js";
@@ -491,7 +492,9 @@ const api = {
     });
     if (built) {
       // Registered after the build: bind on the global clock, or to its beat.
-      const b = api.beats.find((x) => x.id === opts.beat);
+      // A beat by id or by index, as the build accepts.
+      const b = typeof opts.beat === "number" ? api.beats[opts.beat]
+        : api.beats.find((x) => x.id === opts.beat);
       entry.from = (b ? b.t : 0) + ms(opts.from || 0);
       entry.to = opts.to === undefined ? null : (b ? b.t : 0) + ms(opts.to);
       player.seekTo(engine.currentTime);

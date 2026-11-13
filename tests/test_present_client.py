@@ -110,3 +110,40 @@ async def test_a_served_page_connects_and_an_embedded_one_does_not(browser_page,
     await browser_page.wait_for_selector("#connection-status .aud-dot-connected")
     await _ready(browser_page, live_server + "/?embed")
     assert await browser_page.evaluate("() => !document.getElementById('connection-status')")
+
+
+async def test_arrow_right_advances_past_the_stop(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.keyboard.press("ArrowRight")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
+
+
+async def _tap(page, fraction):
+    await page.evaluate(
+        """(f) => document.dispatchEvent(new PointerEvent('pointerup', {
+               pointerType: 'touch', clientX: window.innerWidth * f, bubbles: true }))""",
+        fraction,
+    )
+
+
+async def test_a_tap_on_the_right_advances_and_on_the_left_goes_back(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await _tap(browser_page, 0.9)
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
+    await _tap(browser_page, 0.1)
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[0].t")
+
+
+async def test_a_mouse_click_does_not_navigate(browser_page, live_server):
+    """Touch only: a click on a presented slide (a link, a selection) must not
+    advance the talk."""
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.evaluate(
+        """() => document.dispatchEvent(new PointerEvent('pointerup', {
+               pointerType: 'mouse', clientX: window.innerWidth * 0.9, bubbles: true }))"""
+    )
+    await browser_page.wait_for_timeout(300)
+    assert await browser_page.evaluate("() => window.auditorium.t === window.auditorium.stops[0].t")

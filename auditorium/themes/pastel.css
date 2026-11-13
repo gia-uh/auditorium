@@ -41,7 +41,6 @@ body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
     border-color: var(--aud-rule);
     border-radius: 0.6em;
 }
-:root { --aud-transition: aud-zoom; }
 
 /* ---- Geometry palette ----
  * Pastel's accents deepened: the wall colours are too light to

@@ -1,6 +1,9 @@
+from pathlib import Path
+
 import pytest
 import pytest_asyncio
 
+from auditorium.server import create_app, serve_in_thread
 from auditorium.testing import chromium_path
 
 
@@ -42,3 +45,18 @@ def write_project(folder, body, fmt="explainer", head=""):
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "index.html").write_text(PAGE.format(body=body, fmt=fmt, head=head))
     return folder
+
+
+@pytest.fixture
+def served():
+    """Start a server for a folder and return its base URL; stop it afterwards."""
+    handles = []
+
+    def start(folder: Path) -> str:
+        handle = serve_in_thread(create_app(folder))
+        handles.append(handle)
+        return handle.url
+
+    yield start
+    for h in handles:
+        h.stop()

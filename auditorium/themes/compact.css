@@ -16,4 +16,3 @@
 .aud h3 { font-size: 1.05em; }
 .aud pre { padding: 0.6em 0.9em; font-size: 0.85em; }
 .aud .aud-block { padding: 0.5em 0.8em; }
-:root { --aud-transition: aud-fade; }

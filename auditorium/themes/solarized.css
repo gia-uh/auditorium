@@ -39,7 +39,6 @@ body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
     background: rgba(101, 123, 131, 0.05);
     border-color: var(--aud-rule);
 }
-:root { --aud-transition: aud-fade; }
 
 /* ---- Geometry palette ----
  * Solarized's canonical accent ramp, unaltered. */

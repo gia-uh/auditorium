@@ -38,4 +38,3 @@ body, .aud {
     transform: rotate(-0.4deg);
 }
 .aud .aud-block:nth-child(even) { transform: rotate(0.4deg); }
-:root { --aud-transition: aud-slide-left; --aud-transition-duration: 0.42s; }

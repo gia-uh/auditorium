@@ -42,7 +42,6 @@ body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
     border-color: var(--aud-rule);
 }
 .aud .aud-slide-title { text-shadow: none; }
-:root { --aud-transition: aud-fade; }
 
 /* ---- Geometry palette ----
  * Four greys with real luminance gaps. A monochrome figure

@@ -49,4 +49,3 @@ body, .aud,
     animation: aud-terminal-blink 1s steps(2, end) infinite;
 }
 @keyframes aud-terminal-blink { 50% { opacity: 0; } }
-:root { --aud-transition: aud-slide-left; --aud-transition-duration: 0.2s; }

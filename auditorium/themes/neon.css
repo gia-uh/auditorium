@@ -65,7 +65,6 @@ body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
 @keyframes aud-neon-blink {
     50% { opacity: 0; }
 }
-:root { --aud-transition: aud-fade; --aud-transition-duration: 0.55s; }
 
 /* ---- Geometry palette ----
  * The theme's own three accents, in order, plus amber. */

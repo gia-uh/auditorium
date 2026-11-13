@@ -8,26 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from auditorium.server import create_app, serve_in_thread
 
 ROOT = Path(__file__).parent.parent
 TALK = ROOT / "examples" / "talk"
 PROJECTS = Path(__file__).parent / "fixtures" / "projects"
-
-
-@pytest.fixture
-def served():
-    """Start a server for a folder and return its base URL; stop it afterwards."""
-    handles = []
-
-    def start(folder: Path) -> str:
-        handle = serve_in_thread(create_app(folder))
-        handles.append(handle)
-        return handle.url
-
-    yield start
-    for h in handles:
-        h.stop()
 
 
 async def load(page, url, *, size=(1920, 1080)):
@@ -244,15 +228,22 @@ GEOMETRY = """() => {
 }"""
 
 
-async def test_the_talk_seeks_identically_fresh_and_after_a_rewind(browser_page, served):
+@pytest.mark.parametrize("example", ["talk", "motion"])
+async def test_an_example_seeks_identically_fresh_and_after_a_rewind(browser_page, served, example):
     """Each probe reached by a fresh load must equal the same probe reached by
     seeking to the end and rewinding (D5). A fresh load is the independent
-    reference: two forward passes of one engine would agree with a constant."""
-    url = served(TALK)
+    reference: two forward passes of one engine would agree with a constant.
+
+    The talk covers steps, math, code, track() and anchors; the motion gallery
+    covers timed beats, exits, idles, words, count and draw. Probes sit at every
+    stop, just after it, and inside each beat where entrances and exits run."""
+    url = served(ROOT / "examples" / example)
     await load(browser_page, url)
     duration = await browser_page.evaluate("() => window.auditorium.duration")
     stops = await browser_page.evaluate("() => window.auditorium.stops.map(s => s.t)")
-    probes = sorted({0, 300, *stops, *(s + 150 for s in stops if s + 150 < duration), duration})
+    beats = await browser_page.evaluate("() => window.auditorium.beats.map(b => [b.t, b.d])")
+    inside = {t + k for t, d in beats for k in (300, 1200, 2250, 3700) if k < d}
+    probes = sorted({0, *stops, *(s + 150 for s in stops if s + 150 < duration), *inside, duration})
 
     fresh = {}
     for t in probes:

@@ -30,7 +30,6 @@ body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
 .aud table th, .aud table td {
     border-color: var(--aud-rule);
 }
-:root { --aud-transition: aud-fade; }
 
 /* ---- Geometry palette ----
  * Indigo lead against white, rose as the natural contrast. */
