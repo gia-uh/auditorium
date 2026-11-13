@@ -256,3 +256,23 @@ async def test_an_example_seeks_identically_fresh_and_after_a_rewind(browser_pag
     for t in reversed(probes):
         await seek(browser_page, t)
         assert await browser_page.evaluate(GEOMETRY) == fresh[t], f"t={t} differs after a rewind"
+
+
+async def test_a_rendered_hold_shows_its_stop(browser_page, served):
+    """Every frame a render repeats for a stop's hold shows what the stop shows,
+    not the next press or the next slide."""
+    from auditorium.render import render_schedule
+
+    await load(browser_page, served(TALK))
+    duration = await browser_page.evaluate("() => window.auditorium.duration")
+    stops = await browser_page.evaluate("() => window.auditorium.stops")
+    schedule = render_schedule(duration, stops, 30)
+    held = sorted({a for a, b in zip(schedule, schedule[1:]) if a == b})
+    assert len(held) == len(stops)
+    for stop in stops:
+        await seek(browser_page, stop["t"])
+        expected = await browser_page.evaluate(GEOMETRY)
+        frame_t = min(t for t in held if t >= stop["t"])
+        await seek(browser_page, frame_t)
+        assert await browser_page.evaluate(GEOMETRY) == expected, (
+            f"the hold for the stop at {stop['t']} repeats t={frame_t}")

@@ -102,4 +102,25 @@ async def test_the_end_of_a_deck_maps_to_its_dwell(browser_page, deck_timeline):
         [deck_timeline, fps],
     )
     assert schedule[index] == deck_timeline["duration"]
-    assert schedule.count(deck_timeline["duration"]) == 1 + int(1500 * fps / 1000)
+    assert schedule.count(deck_timeline["duration"]) == int(1500 * fps / 1000)
+
+
+@pytest.mark.parametrize("fps", [24, 30, 60])
+async def test_every_stop_maps_to_its_first_held_frame(browser_page, deck_timeline, fps):
+    """At a stop the preview reports the render frame where its dwell begins,
+    and that frame shows the stop's own time."""
+    schedule = render_schedule(deck_timeline["duration"], deck_timeline["stops"], fps)
+    src = CLIENT.read_text()
+    await browser_page.set_content("<!DOCTYPE html><html><body></body></html>")
+    await browser_page.add_script_tag(content=src.replace("export function", "function"))
+    indices = await browser_page.evaluate(
+        """([pub, fps]) => {
+            const engine = { load() {}, seek() {}, get currentTime() { return 0; } };
+            const p = createPlayer({ engine });
+            p.load({ stops: pub.stops, duration: pub.duration, fps });
+            return pub.stops.map(s => p.renderFrameOf(s.t));
+        }""",
+        [deck_timeline, fps],
+    )
+    for stop, index in zip(deck_timeline["stops"], indices):
+        assert schedule[index] == stop["t"], stop

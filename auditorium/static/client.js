@@ -114,35 +114,27 @@ export function createPlayer({ engine, onFrame }) {
      * implementations of one rule, so drift has to be caught mechanically.
      */
     renderFrameOf(t) {
-      // Rounded, not truncated. Frame i sits at trunc(i * 1000 / fps), which
-      // is BELOW the exact time, so truncating back gives i-1: at 30fps frame
-      // 1 is 33ms and trunc(33 * 30 / 1000) is 0. Truncation is not its own
-      // inverse, and the whole readout was off by one frame because of it.
-      const i = Math.round(t * this.fps / 1000);
-      // A beat's dwell is emitted AFTER the frame that first reaches it, so
-      // the frame at a beat does not yet carry its own hold -- only beats the
-      // PREVIOUS frame had already reached shift this one.
-      const prev = i > 0 ? Math.trunc((i - 1) * 1000 / this.fps) : -1;
-      let frame = i;
+      // The number of render frames that show a time before t, which is the
+      // index of the first frame showing t or later. A frame i shows
+      // trunc(i * 1000 / fps); for an integer T that is below T exactly when
+      // i * 1000 < T * fps, so ceil(T * fps / 1000) frames do, in integers.
+      const T = Math.ceil(t);
+      const n = Math.trunc(this.duration * this.fps / 1000);
+      let frame = Math.min(n, Math.floor((T * this.fps + 999) / 1000));
+      // A stop's dwell repeats the stop's own time before the first frame
+      // past it, so every stop before t adds its whole dwell. At a stop
+      // itself this lands on the first frame of its dwell.
       for (const b of this.beatHolds) {
-        if (b.t <= prev) frame += Math.trunc(b.hold_ms * this.fps / 1000);
+        if (b.t < t && b.t <= this.duration) frame += Math.trunc(b.hold_ms * this.fps / 1000);
       }
       return frame;
     },
 
     /** How many frames a render of this timeline would produce. */
     renderFrameCount() {
-      const n = Math.trunc(this.duration * this.fps / 1000);
-      // Stops up to the last frame time dwell where a frame first reaches
-      // them; a stop after it (up to the duration) gets frames of its own.
-      const last = n > 0 ? Math.trunc((n - 1) * 1000 / this.fps) : -1;
-      let total = n;
+      let total = Math.trunc(this.duration * this.fps / 1000);
       for (const b of this.beatHolds) {
-        if (b.t <= last) total += Math.trunc(b.hold_ms * this.fps / 1000);
-        // A held stop after the last frame (a deck's last stop, at the
-        // duration) gets a frame of its own plus its dwell, as in
-        // render_schedule.
-        else if (b.t <= this.duration) total += 1 + Math.trunc(b.hold_ms * this.fps / 1000);
+        if (b.t <= this.duration) total += Math.trunc(b.hold_ms * this.fps / 1000);
       }
       return total;
     },

@@ -56,9 +56,23 @@ def test_a_stop_at_the_end_still_dwells():
     end and its hold, or a rendered deck never rests on its last slide."""
     sched = render_schedule(*tl_of(1300, beats=[(600, 1500), (1300, 1500)]), 30)
     assert sched[-1] == 1300
-    assert sched.count(1300) == 1 + 45
+    assert sched.count(1300) == 45
 
 
 def test_a_timed_format_gets_no_extra_end_frame():
     """Stops with no hold add nothing, at the end or anywhere else."""
     assert render_schedule(*tl_of(1000, beats=[(999, 0), (1000, 0)]), 10)[-1] == 900
+
+
+def test_a_hold_repeats_the_stop_not_the_frame_after_it():
+    """The next press starts 1 ms after a stop and the next slide 1 ms after a
+    beat's last stop, so the first frame past a stop already shows them. The
+    hold has to repeat the stop's own time, before that frame."""
+    sched = render_schedule(*tl_of(1000, beats=[(550, 200)]), 10)
+    assert sched == [0, 100, 200, 300, 400, 500, 550, 550, 600, 700, 800, 900]
+
+
+def test_frame_times_are_exact_integer_division():
+    """trunc(i * 1000 / fps), as client.js computes it. At 24 fps the float
+    product 3 * 41.666... truncates to 124 where the exact time is 125."""
+    assert render_schedule(*tl_of(200), 24)[3] == 125

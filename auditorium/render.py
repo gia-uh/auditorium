@@ -19,36 +19,35 @@ from pathlib import Path
 def render_schedule(duration_ms: int, stops: list[dict], fps: int) -> list[int]:
     """Return one timeline time (ms) per output frame, in order.
 
+    Frame i sits at ``i * 1000 // fps``, for ``i < duration * fps // 1000``.
     ``stops`` are window.auditorium.stops: ``{"t", "hold_ms"}``. A presented
     deck's stops have no length in the timeline, but a rendered video has to
-    dwell on them or it blasts past every reveal. Each stop's hold_ms becomes
-    repeated frames at that same timeline position, inserted where it sits.
+    dwell on them or it blasts past every reveal. Each stop's hold becomes
+    ``hold_ms * fps // 1000`` frames at the stop's own time, inserted before
+    the first frame past it. Not at that frame's time: the next press starts
+    1 ms after a stop and the next slide 1 ms after a beat's last stop, so
+    the first frame past a stop already shows them. A stop after the last
+    frame (a deck's last stop, at the duration) dwells at the end.
+
+    client.js reimplements this as renderFrameOf and renderFrameCount, and
+    tests/test_preview_frames.py asserts the two agree.
     """
     if duration_ms <= 0 and not stops:
         return []
 
-    step_ms = 1000 / fps
     holds = sorted((s["t"], s["hold_ms"]) for s in stops if s.get("hold_ms", 0) > 0)
+    holds = [(t, hold * fps // 1000) for t, hold in holds if t <= duration_ms]
 
     schedule: list[int] = []
-    emitted: set[int] = set()
-    n = int(duration_ms * fps / 1000)
-    for i in range(n):
-        t = int(i * step_ms)
+    k = 0
+    for i in range(duration_ms * fps // 1000):
+        t = i * 1000 // fps
+        while k < len(holds) and holds[k][0] < t:
+            schedule.extend([holds[k][0]] * holds[k][1])
+            k += 1
         schedule.append(t)
-        # Dwell on any stop this frame has just reached or passed.
-        for stop_t, hold_ms in holds:
-            if stop_t in emitted:
-                continue
-            if t >= stop_t:
-                schedule.extend([t] * int(hold_ms * fps / 1000))
-                emitted.add(stop_t)
-    # A held stop after the last frame time (a deck's last stop sits exactly at
-    # the duration) gets a frame at its own time and then its dwell; without
-    # this a rendered deck never rests on its last slide.
-    for stop_t, hold_ms in holds:
-        if stop_t not in emitted and stop_t <= duration_ms:
-            schedule.extend([stop_t] * (1 + int(hold_ms * fps / 1000)))
+    for stop_t, frames in holds[k:]:
+        schedule.extend([stop_t] * frames)
     return schedule
 
 
