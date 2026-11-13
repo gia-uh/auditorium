@@ -1,7 +1,7 @@
 [project]
 name = "auditorium"
 version = "1!4.0.0"
-description = "Check, present and render decks, posters and videos written in HTML"
+description = "Present, preview and render decks, posters and videos written in HTML"
 authors = [{name = "Alejandro Piad", email = "apiad@apiad.net"}]
 license = {text = "MIT"}
 readme = "Readme.md"

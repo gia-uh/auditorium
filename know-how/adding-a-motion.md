@@ -9,7 +9,8 @@ that uses every entrance, exit and idle the runtime knows, timed by attributes
 alone. `tests/test_examples.py` fails when a name in `ENTRANCES` or `IDLES` is
 missing from it.
 
-1. Write the test first in `tests/test_runtime.py`: load a fixture project with
+1. Write the test first in `tests/test_runtime_contract.py`, where every
+   attribute of the file contract has its own test: load a fixture project with
    the `served` fixture and assert what the browser shows at chosen times
    through `window.auditorium.seek`. Include a rewind if the motion adds or
    removes anything from the stage, because a backward seek undoes every op and

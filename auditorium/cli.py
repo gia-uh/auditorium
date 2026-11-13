@@ -17,7 +17,7 @@ import uvicorn
 
 from auditorium.console import console
 
-app = typer.Typer(name="auditorium", help="Check, present and render HTML decks, posters and videos")
+app = typer.Typer(name="auditorium", help="Present, preview and render HTML decks, posters and videos")
 
 
 def _version_callback(value: bool) -> None:
@@ -32,7 +32,7 @@ def _version_callback(value: bool) -> None:
 def main(
     version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True),
 ) -> None:
-    """Check, present and render HTML decks, posters and videos."""
+    """Present, preview and render HTML decks, posters and videos."""
     pass
 
 
