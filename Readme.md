@@ -4,392 +4,149 @@
 [<img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/auditorium.svg">](https://pypi.org/project/auditorium/)
 [<img alt="PyPI" src="https://img.shields.io/pypi/v/auditorium.svg">](https://pypi.org/project/auditorium/)
 
-**The presentation framework for people who think in code.**
+**Decks, posters and short videos written in plain HTML, timed by attributes.**
 
-Auditorium lets you build live technical presentations as Python scripts. Each slide is an `async def` function. Animate algorithms step by step, render live-computed plots, run numerical demos — anything Python can do, your slides can do. No PowerPoint. No Markdown. Just code.
+A project is a folder: an `index.html`, a `theme.css`, an optional `script.js`
+and its assets. Time lives in the HTML as `data-` attributes, so the file opens
+in a browser as it is. The `auditorium` command is the tool around those files:
+it presents them live, previews them with a scrubber, renders them to video
+frame by frame and exports stills.
 
-```python
-from auditorium import Deck
-
-deck = Deck(title="My Talk")
-
-@deck.slide
-async def sorting_demo(ctx):
-    """Explain how the algorithm builds the sorted prefix."""
-    await ctx.md("## Bubble Sort, Step by Step")
-    data = [5, 3, 8, 1, 2]
-    for i in range(len(data)):
-        for j in range(len(data) - 1 - i):
-            if data[j] > data[j + 1]:
-                data[j], data[j + 1] = data[j + 1], data[j]
-            await ctx.md(f"`{data}`")
-            await ctx.sleep(0.5)
-    await ctx.step()
-    await ctx.md("**Sorted!**")
+```html
+<main class="aud" data-format="short">
+  <section data-beat="hook" data-d="4.5">
+    <div class="grid">
+      <h1 data-col="1/13" data-enter="words">A ball rolling downhill</h1>
+      <div class="stat" data-col="1/7" data-in="2.2" data-enter="count">
+        <b data-to="0.01">0</b><span>learning rate</span></div>
+    </div>
+    <audio src="assets/bed.mp3" data-in="0" data-gain="0.5" data-duck></audio>
+  </section>
+</main>
 ```
 
 ```bash
 pip install auditorium
-auditorium run talk.py
+auditorium run examples/talk
 ```
+
+Version 5 replaced the Python authoring API (`Deck`, `@deck.scene`,
+`@deck.slide`). 4.x stays on PyPI for existing `deck.py` decks.
 
 ---
 
-## ✨ Why Auditorium?
+## 🚀 A project
 
-Most presentation tools treat slides as static documents. Auditorium treats them as **programs**.
+```text
+talk/
+  index.html     # the artifact: what you edit
+  theme.css      # CSS variables: palette, fonts
+  script.js      # optional: auditorium.track() functions
+  assets/        # images, audio
+  dist/          # render and export write here
+```
 
-- 🐍 **Run algorithms live** — sort arrays, traverse graphs, train models, all animated on stage
-- 📊 **Compute content** — generate plots, tables, or LaTeX from data, not screenshots
-- 📦 **Use any Python library** — numpy, matplotlib, pandas, whatever you import works
-- 🌍 **Share with students worldwide** — `--public` gives every connected browser your live deck
-- 🔗 **Go public** — `--public` gives you an instant shareable URL, no deployment needed
-- 📤 **Render and share** — render to mp4 frame by frame, or ship a self-contained HTML bundle that replays the whole timeline
+`index.html` loads the runtime from the path the CLI serves:
 
-If you've ever wished you could `await` inside a PowerPoint slide, this is for you.
+```html
+<link rel="stylesheet" href="/_auditorium/auditorium.css">
+<link rel="stylesheet" href="theme.css">
+<script type="module" src="/_auditorium/auditorium.js"></script>
+<script type="module" src="script.js"></script>
+```
 
----
+## 🧩 The file contract
 
-## 🚀 Quick Start
+| Attribute | Means |
+|---|---|
+| `data-format` on `<main class="aud">` | `deck`, `explainer`, `short`, `story`, `square`, `portrait` or `page`: the stage size |
+| `data-beat`, `data-d` on `<section>` | A section is a beat (a slide, a scene); `data-d` is its length in seconds. A presented deck omits it and the presenter advances |
+| `data-step` | In a deck, the element appears at the Nth press inside its slide |
+| `data-in`, `data-out` | Seconds from the start of the beat (of the step, in a deck) |
+| `data-enter`, `data-exit` | `fade`, `rise`, `pop`, `flip`, `grow`, `draw`, `words`, `count`; optional `data-dur`, `data-ease` |
+| `data-idle` | `float`, `tilt`, `pulse`, `ken-burns` |
+| `data-col`, `data-row` | Placement on the twelve-column grid of a `.grid` |
+| `data-from`, `data-to` on an SVG `<line>` | Anchors (`id:side`): the line follows its boxes on every frame |
+| `<aside class="notes">` | Speaker notes, shown in the presenter view only |
+| `<span class="math">`, `<pre data-lang>` | KaTeX and highlighted code, from vendored copies |
+
+Free JavaScript goes through `auditorium.track(fn, {beat, from, to})`, which
+calls `fn(seconds)` on every seek, and `auditorium.rng(seed)` replaces
+`Math.random`. A function of time can be seeked; a `requestAnimationFrame`
+loop cannot.
+
+The page publishes what it built as `window.auditorium`: `format`, `stage`,
+`grid`, `beats`, `stops`, `duration`, `audio`, `seek(t)` and `goto(beat, step)`,
+with times in integer milliseconds.
+
+## 🎛️ Preview
 
 ```bash
-pip install auditorium    # or: uv add auditorium
+auditorium preview examples/motion
 ```
 
-Create `talk.py`:
+- 🎚️ **Scrubber** with a tick per stop
+- 🎞️ **Frame stepping** with `.` and `,`
+- 🔁 **Loop a range** with `i`, `o` and `l`
+- ♻️ **Hot reload holds your position**: save a file in the folder and you stay at the same instant
 
-```python
-from auditorium import Deck
+The frame counter reports **rendered** frames, including the dwell a render
+spends on each stop of a deck, so the number beside the scrubber is one you can
+pass to `--from` / `--to`.
 
-deck = Deck(title="My Talk")
-
-@deck.slide
-async def intro(ctx):
-    """Notes for the presenter — only visible in presenter view."""
-    await ctx.md("# Welcome!")
-    await ctx.md("*Press right arrow to continue*")
-
-@deck.slide
-async def demo(ctx):
-    """Show progressive reveals and timed content."""
-    await ctx.md("## Key Points")
-    await ctx.step()
-    await ctx.md("- First point")
-    await ctx.step()
-    await ctx.md("- Second point")
-    await ctx.sleep(1)
-    await ctx.md("*(that one appeared automatically)*")
-```
-
-Run it:
+## 🎤 Presenting
 
 ```bash
-auditorium run talk.py
+auditorium run talk/ --presenter
 ```
 
----
+Two tabs open: the **presenter view** (notes, timer, the stage, the next beat)
+and the **audience view**. Every connected browser follows the presenter. The
+presenter broadcasts intent ("seek to t", "play from here to there"), never
+positions; only the presenter's socket may drive, and late tabs catch up.
+Without `--presenter`, each tab navigates on its own.
 
-## 📋 Features
+| Key | Action |
+|-----|--------|
+| → / Space / Page Down | Play to the next stop (skip to it if already playing) |
+| ← / Page Up | Back to the previous stop |
+| `r` / Home | Restart |
+| End | Jump to the end |
+| `f` | Fullscreen |
 
-| | Feature | Description |
-|---|---------|-------------|
-| 🐍 | **Imperative Python slides** | Each slide is an `async def` — loops, conditionals, imports, anything |
-| 🧪 | **Jupyter display protocol** | `ctx.show(obj)` renders any `_repr_html_` / `_repr_svg_` / `_repr_png_` object — matplotlib, pandas, altair, tesserax, … |
-| 👁️ | **Progressive reveals** | `await ctx.step()` pauses for keypress, `await ctx.sleep(n)` auto-advances |
-| 🧮 | **LaTeX math** | KaTeX bundled — `$inline$` and `$$display$$` in any markdown |
-| 💻 | **Syntax highlighting** | Fenced code blocks with highlight.js (bundled) |
-| 📐 | **Flexible layouts** | `columns`, `rows` with `"auto"` sizing, arbitrarily nested |
-| 🎤 | **Presenter mode** | `--presenter` — notes, timer, stage mirror, next-scene preview |
-| 🔄 | **Shared navigation** | Presenter drives all audience tabs; audience keyboards are inert |
-| 🌍 | **Public sharing** | `--public` bridges to a relay — instant shareable URL, no deployment |
-| 🕐 | **Late-join sync** | New viewers see the full slide state immediately |
-| 📄 | **HTML / PNG export** | Self-contained interactive HTML, or PNG stills. No PDF — see below |
-| 🎬 | **Deterministic video** | `auditorium render` steps frames against a paused timeline — two renders are byte-identical |
-| 🔀 | **Frame ranges** | `--from`/`--to` make parallel rendering a shell-level fan-out |
-| 🎛️ | **Preview client** | `auditorium preview` — scrubber, frame stepping, loop-a-range |
-| 📐 | **Geometry layer** | `Line`, `Arrow`, `Path`, `Circle` with anchors that track their boxes |
-| ♻️ | **Hot reload** | Edit your `.py` and the browser updates instantly, holding your position |
-| 📡 | **Offline** | All assets bundled — zero CDN, zero internet required |
-| 🔌 | **Auto-reconnect** | Survives server restarts without losing your place |
+On a touch screen, a tap on the right two thirds goes forward and the left
+third goes back. Backward navigation resets and replays forward, so a rewound
+state equals a fresh one and the renderer, which only travels forward, agrees.
 
----
-
-## 🌍 Share Publicly
-
-Present from your laptop, share with the world:
+## 🎬 Rendering and stills
 
 ```bash
-auditorium run talk.py --public
+# Render to video, frame by frame, at the format's stage size
+auditorium render examples/motion -o motion.mp4 --fps 30
+
+# Render a frame range, to fan several out in parallel
+auditorium render examples/motion --from 0 --to 300 -o part1.mp4
+
+# Each beat at its end state as PNG (or each press, with --steps)
+auditorium export examples/talk -f png
 ```
 
-```
-╭───────────────────────── Auditorium ─────────────────────────╮
-│ Deck:   My Talk                                               │
-│ Slides: 15                                                    │
-│ URL:    http://127.0.0.1:8000                                 │
-│ Mode:   independent (per-tab)                                 │
-╰──────────────────────────────────────────────────────────────╯
+A render is deterministic: two renders of the same project are byte-identical.
+The first `<audio>` in the page is mixed in at its `data-in`.
 
-Public URL: http://vps.apiad.net:4243/r/my-talk/
-```
-
-Anyone with the link sees your presentation in real time. No deployment, no hosting — your laptop runs the deck, a lightweight relay forwards it.
-
-```bash
-# Choose your own URL slug
-auditorium run talk.py --public --name my-talk
-
-# Use your own relay server
-auditorium run talk.py --public --relay myserver.com:4243
-```
-
-**Self-host a relay** (it's one command):
+## 🌍 Self-hosting a relay
 
 ```bash
 auditorium relay                    # run directly
 make relay-install                  # install as systemd service
-make relay-update                   # pull + sync + restart
 ```
 
----
-
-## 🎛️ Preview
-
-`auditorium preview talk.py` opens the authoring surface: the stage plus a
-transport bar.
-
-```bash
-auditorium preview talk.py
-```
-
-- 🎚️ **Scrubber** with a tick per beat, so you can see the structure of the timeline
-- 🎞️ **Frame stepping** with `.` and `,` — one output frame at a time
-- 🔁 **Loop a range** with `i`, `o` and `l`, to tune one animation without replaying the deck
-- ♻️ **Hot reload holds your position** — edit the `.py` and you stay at the same instant
-
-The frame counter reports **rendered** frames, including the dwell a render
-spends on each beat — so the number beside the scrubber is the number you can
-pass to `--from` / `--to`. The stage is the render target scaled down, not a
-reflowed copy of it, so what you are looking at is what the mp4 will contain.
-
----
-
-## 🎤 Presenter Mode
-
-Start with `--presenter` to sync all audience tabs to your navigation:
-
-```bash
-auditorium run talk.py --presenter
-```
-
-Two tabs open: your **presenter view** (notes + timer + slide mirror + next-slide preview) and the **audience view**. Navigate from the presenter tab — every connected browser follows in real time.
-
-- 📝 Docstrings become **speaker notes** (never shown to the audience)
-- ⚡ Late-joining tabs catch up instantly (full slide state replayed)
-- 🔒 Audience keyboards are locked — only the presenter navigates, enforced by the server rather than by the audience's good manners
-
-The presenter broadcasts *intent* — "seek to t", "play from here to there" — not
-positions. Every surface runs the same deterministic engine over the same
-timeline, so a command is enough and there is nothing to drift.
-
-Without `--presenter`, each tab navigates independently.
-
----
-
-## 📐 Layouts
-
-```python
-@deck.slide
-async def layout_demo(ctx):
-    """Layouts nest freely."""
-    await ctx.md("## Two Columns")
-    left, right = await ctx.columns([2, 1])
-
-    async with left:
-        await ctx.md("Main content (2/3 width)")
-
-    async with right:
-        await ctx.md("Sidebar (1/3)")
-```
-
-Use `"auto"` for natural-size regions:
-
-```python
-header, body, footer = await ctx.rows(["auto", 1, "auto"])
-```
-
----
-
-## 📐 Geometry
-
-Lines, arrows, paths and circles live in an SVG overlay sharing the stage's
-coordinate space — what CSS cannot express: stroke draw-on, geometric motion,
-and edges that connect boxes.
-
-```python
-from auditorium.nodes import Arrow, Circle, Line, Path
-
-@deck.scene
-async def wiring(s):
-    a = await s.show("<div class='aud-block aud-block-info'>compile</div>")
-    b = await s.show("<div class='aud-block aud-block-success'>seek(t)</div>")
-
-    wire = await s.draw(Arrow(from_=a.bottom, to=b.top, stroke="#2563eb", width=3))
-    await s.play(wire.animate.draw_on(), run_time=0.6, ease="out-cubic")
-
-    await s.play(a.animate.move_by(160, 0), run_time=0.8)   # the arrow follows
-```
-
-**Anchors are symbolic.** `a.bottom` is not a coordinate — it is a promise the
-browser keeps on every frame. Python never computes layout, so an arrow tracks
-its box through motion *and* through flex reflow. Every handle exposes `left`,
-`right`, `top`, `bottom` and `center`.
-
-**`draw_on()`** strokes a shape into existence along its own length. Every
-geometric node is created with `pathLength="1"`, so the animation runs in
-normalized units and needs no measurement of a geometry the anchors may be
-about to change. The same normalization applies to `dash`: write
-`dash="0.05 0.02"` for a 5% dash and a 2% gap, **not** a pattern in pixels —
-which would render as a solid line.
-
-**What this layer does not do.** Path *morphing* between two `d` strings is not
-in v1. Interpolating paths with differing command counts needs normalisation
-that has not been built, and a cross-fade was not worth shipping as a
-substitute. `Path` is static geometry you can draw on and move; it does not
-tween into another path.
-
----
-
-## 🧪 Show Any Jupyter Object
-
-`ctx.show(...)` speaks the **Jupyter display protocol**. Pass any object that implements `_repr_html_`, `_repr_svg_`, `_repr_png_`, or `_repr_jpeg_` and it just renders — no adapters, no bundling, no glue code.
-
-```python
-import pandas as pd
-import matplotlib.pyplot as plt
-from tesserax import Canvas, Circle, Square
-from tesserax.layout import RowLayout
-
-@deck.slide
-async def live_data(ctx):
-    # A pandas DataFrame — _repr_html_
-    df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]})
-    await ctx.show(df)
-
-    # A matplotlib figure — _repr_png_ (or _repr_svg_ with the svg backend)
-    fig, ax = plt.subplots()
-    ax.plot([1, 2, 3], [4, 5, 6])
-    await ctx.show(fig)
-
-    # A tesserax Canvas — _repr_svg_
-    with Canvas() as canvas:
-        with RowLayout():
-            Square(30, fill="green")
-            Circle(20, fill="red")
-    await ctx.show(canvas.fit(padding=10))
-```
-
-This works with **matplotlib** figures, **pandas** DataFrames, **altair** charts, **plotly** figures, **tesserax** canvases, **sympy** expressions, **IPython** rich objects, and anything else in the Jupyter ecosystem. Plain strings are still passed through as HTML. Runnable example: [`examples/tesserax_demo.py`](examples/tesserax_demo.py).
-
----
-
-## 🎬 Rendering & Export
-
-Requires `pip install auditorium[record]` and `playwright install chromium`.
-
-```bash
-# Export a self-contained HTML bundle, or PNG stills
-auditorium export talk.py -f html -o talk.html
-auditorium export talk.py -f png -o slides/
-```
-
-```bash
-# Render to video, frame by frame
-auditorium render talk.py -o talk.mp4
-auditorium render talk.py -o clip.mp4 --size vertical --fps 60
-auditorium render talk.py -o frames/ --format png-sequence
-
-# Render a frame range -- fan several out in parallel, then concat
-auditorium render talk.py -o part1.mp4 --from 0 --to 300
-```
-
-`render` replaces the old `record`. `record` screen-captured a live browser,
-so a loaded machine produced a different video; `render` steps frames against
-a paused timeline, and two renders of the same deck are byte-identical.
-
-### Why there is no PDF export
-
-**Auditorium 4.0 removed PDF export, deliberately. It is not coming back.**
-
-A deck is no longer a list of slides — it is a timeline. A scene is a
-continuous function of time, so there is no canonical instant to print. Every
-answer to "which moment becomes a page?" is invented rather than derived: the
-end of each scene loses every build stage, one page per pause produces a run of
-near-identical cumulative pages, and asking the author to name capture points
-is a knob nobody wants to turn.
-
-PNG and HTML export survive because both *are* total functions of the timeline.
-A PNG is "the frame at time *t*", well-defined for any scene. The HTML bundle
-carries the whole timeline and replays it. Neither has to guess.
-
-**If you want a PDF**, that is a real thing to want — but you are the one who
-knows which instants matter. Export PNGs, pick your frames, and assemble them:
-
-```bash
-auditorium export talk.py -f png -o slides/
-img2pdf slides/*.png -o talk.pdf
-```
-
-**If the document was always meant to be printed**, do not start here. Author
-it in a document engine — [scriptorium](https://github.com/apiad/scriptorium)
-ships a `deck` theme for 16:9 slides and is built for pagination, which is a
-genuinely hard problem and not this project's problem. Auditorium is for
-animation. Print is a different craft, and pretending otherwise produced the
-worst code in this repository.
-
----
-
-## ⌨️ Navigation
-
-Time is a coordinate in 4.0, so navigation moves between **beats** — the pause
-points `await ctx.step()` and `await s.beat()` record — rather than between
-slide indices.
-
-**Present and presenter views:**
-
-| Key | Action |
-|-----|--------|
-| → / Space / Page Down | Play to the next beat (skip to it if already playing) |
-| ← / Page Up | Back to the previous beat |
-| `r` | Restart from the beginning |
-| End | Jump to the end |
-
-**Preview client** (`auditorium preview`) adds:
-
-| Key | Action |
-|-----|--------|
-| Space | Play / pause |
-| `.` / `,` | Step one frame forward / back |
-| `i` / `o` | Set the loop in / out point to the current time |
-| `l` / `x` | Toggle looping / clear the loop |
-| Home / End | Jump to the start / end |
-
-Backward navigation resets the timeline and replays forward. That is deliberate:
-seeking is path-dependent, so a rewound state and a freshly-seeked one would
-otherwise differ — and the renderer only ever travels forward. Replaying is what
-keeps what you see equal to what you get.
-
----
-
-## 📚 Example
-
-See [`examples/demo.py`](examples/demo.py) — six scenes that animate, including a bubble sort whose every swap on screen is a swap the algorithm actually made.
-
-```bash
-auditorium run examples/demo.py
-```
-
----
+## 📚 Examples
+
+- [`examples/talk`](examples/talk): a technical talk with steps, math, code, a
+  `track()` animation and anchored lines.
+- [`examples/motion`](examples/motion): the motion library's gallery, an
+  explainer that uses every entrance, exit and idle.
 
 ## 📜 License
 

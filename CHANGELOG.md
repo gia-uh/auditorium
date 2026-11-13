@@ -1,5 +1,36 @@
 # Changelog
 
+## 5.0.0 (unreleased)
+
+### Changed
+
+- **Authoring is HTML.** A project is a folder with an `index.html` that loads
+  `/_auditorium/auditorium.js` and `auditorium.css`. Time lives in attributes:
+  `data-format`, `data-beat`, `data-d`, `data-step`, `data-in`, `data-out`,
+  `data-enter`, `data-exit`, `data-idle`, `data-col`, `data-row`, and
+  `data-from`/`data-to` on SVG lines for anchors. At load the runtime walks the
+  DOM into the ops and tracks 4.x compiled in Python and publishes
+  `window.auditorium` (`format`, `stage`, `grid`, `beats`, `stops`, `duration`,
+  `audio`, `seek`, `goto`, `track`, `rng`). The engine keeps D2 to D6: one
+  `seek(t)`, every animation paused, `getAnimations()`, replay forward after a
+  rewind, anchors read before written.
+- **Every command takes a project folder.** `run`, `preview`, `render` and
+  `export` read the folder; hot reload watches all of it except `dist/`. The
+  preview and presenter views embed the project's own page and drive it.
+  `render` defaults to the format's stage size.
+- **`export` writes PNG stills** named `beat-01.png` (or per press with
+  `--steps`). HTML and PDF come with `bundle` (#103).
+
+### Removed
+
+- The Python authoring API: `Deck`, `@deck.scene`, `@deck.slide`, nodes,
+  layouts, the compiler and the Python `Timeline`. 4.x stays on PyPI for
+  existing `deck.py` decks.
+- `--theme` and `--transition`: a project's look is its own `theme.css`.
+- The `examples` extra and the `markdown` dependency.
+- The relay viewer page answers 501 until relaying a project folder lands
+  with `run --public` (#104).
+
 ## 4.0.0
 
 ### Added

@@ -1,42 +1,42 @@
 ---
-when: adding or changing an animation primitive, a node type or anything else a scene can call, or editing examples/demo.py
+when: adding or changing a motion (data-enter, data-exit, data-idle), an attribute of the file contract, or editing examples/motion
 ---
 
-# Adding an animation primitive
+# Adding a motion
 
-`examples/demo.py` is the living documentation. It is a set of scenes that move,
-not a tour of the vocabulary: it replaced `demo_deck.py`, whose 25 shim slides of
-`step()` reveals rendered as a slideshow that faded, which is the opposite of what
-4.0 is for.
+`examples/motion` is the motion library's living documentation: an explainer
+that uses every entrance, exit and idle the runtime knows, timed by attributes
+alone. `tests/test_examples.py` fails when a name in `ENTRANCES` or `IDLES` is
+missing from it.
 
-1. Write the compile-side test first (`tests/test_compile.py`,
-   `tests/test_scene.py` or `tests/test_nodes.py`): the primitive lands the
-   tracks and ops you expect, at the times you expect.
-2. If what the browser shows depends on it, add a `seek(t)` test in
-   `tests/test_engine_seek.py` or `tests/test_engine_svg.py` that reads computed
-   style at chosen times. Include a rewind if the primitive adds or removes nodes,
-   because a backward seek resets and replays (D5 in `DESIGN.md`).
-3. Use it in `examples/demo.py`.
-4. Watch it. `tests/test_examples.py` asserts that the demo still moves, not that
-   it reads. Scrub it in `uv run auditorium preview examples/demo.py`, whose frame
+1. Write the test first in `tests/test_runtime.py`: load a fixture project with
+   the `served` fixture and assert what the browser shows at chosen times
+   through `window.auditorium.seek`. Include a rewind if the motion adds or
+   removes anything from the stage, because a backward seek undoes every op and
+   replays (D5 in `DESIGN.md`).
+2. Add the motion to `ENTRANCES` or `IDLES` in `auditorium/static/auditorium.js`:
+   a default duration, an easing, and its effects as `[keyframes, composite]`
+   pairs.
+3. Use it in `examples/motion/index.html`.
+4. Watch it. Scrub it in `uv run auditorium preview examples/motion`, whose frame
    counter gives render frame numbers, then render just that range:
 
    ```bash
-   uv run auditorium render examples/demo.py --from 600 --to 700 \
-       --format png-sequence -o /tmp/demo-frames
+   uv run auditorium render examples/motion --from 0 --to 120 \
+       --format png-sequence -o /tmp/motion-frames
    ```
 
 ## Traps
 
-These cost real time to find. `examples/demo.py` repeats the first two in its
-header comment.
-
-- **`show()` wraps content in a div, and the handle refers to that wrapper.**
-  Anything you anchor an arrow to has to fill its wrapper, or the arrow points at
-  the wrapper's edge. `show(..., into=handle)` does not wrap, which is how composed
-  structures (an epicycle arm inside a rotating parent) are built.
-- **A top-level `rows()` or `columns()` takes the slide root out of centred
-  mode.** Give the scene's content an explicit stage height.
-- **The deck is authored for 1920×1080.** Translations are CSS pixels, so
-  constants like `PITCH` and the stage offsets in `demo.py` were measured at that
-  size and are wrong at any other.
+- **Opacity and transform need separate effects.** Transforms compose with
+  `composite: "add"`, so an entrance's translate and an idle's float both apply.
+  Additive opacity sums against the underlying 1 and clamps, which turns every
+  fade-in into a no-op, so opacity stays `"replace"` in its own effect.
+- **A motion that changes the DOM does it once, at build.** `words` splits text
+  into spans and `draw` sets `pathLength="1"` while the timeline is built. Doing
+  it inside `seek` would repeat the change on every frame.
+- **Nothing a motion does may read a wall clock.** A motion that needs code, like
+  `count`, registers a tween: a function of `t` the engine calls on every seek.
+- **The stage is the format's size.** Translations are CSS pixels on a stage of
+  1920×1080 (or 1080×1920 for a short), scaled by a transform, so a distance that
+  looks right in one format may be large in another.
