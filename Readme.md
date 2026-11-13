@@ -64,10 +64,13 @@ talk/
 | `data-step` | In a deck, the element appears at the Nth press inside its slide |
 | `data-in`, `data-out` | Seconds from the start of the beat (of the step, in a deck) |
 | `data-enter`, `data-exit` | `fade`, `rise`, `pop`, `flip`, `grow`, `draw`, `words`, `count`; optional `data-dur`, `data-ease` |
+| | An exit plays from `data-out`; without it, it ends with a beat that has `data-d`. In a deck, an exit needs `data-out` |
 | `data-idle` | `float`, `tilt`, `pulse`, `ken-burns` |
 | `data-col`, `data-row` | Placement on the twelve-column grid of a `.grid` |
 | `data-from`, `data-to` on an SVG `<line>` | Anchors (`id:side`): the line follows its boxes on every frame |
 | `<aside class="notes">` | Speaker notes, shown in the presenter view only |
+| `data-cue` | Enters at the moment a phrase is said in the beat's narration. Until narration cues land (#73) it enters at its step's start and logs a warning |
+| `data-placeholder` | Set by templates on content the author must replace. Reserved: the runtime ignores it, and the check (#80) will fail while it remains |
 | `<span class="math">`, `<pre data-lang>` | KaTeX and highlighted code, from vendored copies |
 
 Free JavaScript goes through `auditorium.track(fn, {beat, from, to})`, which

@@ -14,13 +14,17 @@
     step's start in a deck).
   - `data-enter`, `data-exit` (`fade rise pop flip grow draw words count`) and
     `data-idle` (`float tilt pulse ken-burns`), with `data-dur` and
-    `data-ease` to override a motion's default duration and easing.
+    `data-ease` to override a motion's default duration and easing. An exit
+    plays from `data-out`; without it, it ends at the end of a beat that has
+    `data-d`. In a deck, an exit needs `data-out`.
   - `data-col` and `data-row` on the twelve-column `.grid`.
   - `data-from` and `data-to` (`id:side`) on an SVG line for anchors.
   - `data-cue` is recognised but does not resolve yet: the element enters at
     its step's start and the page logs a warning, until narration cues (#73).
   - `<aside class="notes">` in a section holds speaker notes for the
     presenter view.
+  - `data-placeholder` is reserved for templates: the runtime ignores it, and
+    the check (#80) will fail while it remains.
   - `<audio data-in data-gain data-duck>` declares audio.
 - **The runtime builds the timeline from the DOM** and publishes
   `window.auditorium`: `format`, `stage`, `grid`, `beats`, `stops`,
@@ -51,8 +55,8 @@
 - `--theme` and `--transition`, and the themes' `--aud-transition` variables:
   a project's look is its own `theme.css`.
 - The `examples` extra and the `markdown` dependency.
-- The relay viewer page answers 501 until relaying a project folder lands
-  with `run --public` (#104).
+- `run --public` exits with an error, and the relay viewer page answers 501,
+  until relaying a project folder lands (#104).
 
 ## 4.0.0
 

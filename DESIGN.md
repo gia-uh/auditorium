@@ -125,8 +125,9 @@ Rules added after the spec:
   `docs/design/2026-08-27-themed-math-and-geometry.md`.
 - **Everything the browser loads is vendored.** KaTeX, highlight.js and fonts ship
   inside the package, so a deck runs offline and a render does not depend on a CDN.
-- **No PDF export.** A timeline has no canonical instant to print, so the format
-  was removed in 4.0 instead of guessed at.
+- **PDF comes back with `bundle` (#103).** 4.0 removed it because a timeline
+  had no canonical instant to print. In an HTML deck the end of each beat is that
+  instant, and a page has none to choose.
 
 ## What a machine checks and what a reader judges
 
@@ -148,7 +149,6 @@ frames, which is why "done" for a new motion includes watching it in
 - A Python authoring API, a shim for `deck.py` or a converter from it.
 - Geometry that negotiates space with flowing text. Overlap is an authoring
   mistake, and layout-aware SVG would be a separate design.
-- PDF output.
 
 Deferred rather than rejected, with the spec's reasoning: `--jobs N`, voiceover
 synced to beats, multi-track audio, alpha output, GIF, cloud rendering.
