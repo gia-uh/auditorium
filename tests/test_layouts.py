@@ -98,6 +98,13 @@ def test_the_topic_ships_with_snippets_and_stays_short(topic):
     assert len(snippets(topic)) >= 5
 
 
+@pytest.mark.parametrize("topic", TOPICS)
+def test_no_snippet_ships_a_placeholder(topic):
+    """Every help snippet is to pass the check, whose placeholder rule fails
+    while a data-placeholder remains; an agent copies snippets as they are."""
+    assert [s for s in snippets(topic) if "data-placeholder" in s] == []
+
+
 def test_the_layout_topic_covers_the_spec_layouts():
     """Section 06 of the 2026-11-10 spec names the layouts."""
     text = topic_path("layouts").read_text()
@@ -254,13 +261,44 @@ MEASURE = """() => {
   m.display = px(s.querySelector('h1'));
   m.body = px(s);
   m.small = px(s.querySelector('.kicker'));
-  m.cards = lefts(at('cards').querySelectorAll('.card'));
+  const content = (el) => { const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
+    return [r.left + parseFloat(cs.paddingLeft), r.right - parseFloat(cs.paddingRight)]; };
+  s = at('cards');
+  const cards = [...s.querySelectorAll('.card')];
+  m.cards = lefts(cards);
+  // The heading spans the row; the cards sit under it.
+  const h2 = s.querySelector('h2').getBoundingClientRect(), [c0, c1] = content(s);
+  m.cardsHeading = [Math.round(h2.width - (c1 - c0)),
+                    cards.every(c => c.getBoundingClientRect().top >= h2.bottom)];
+  m.stats = lefts(at('stats').querySelectorAll('.stat'));
+  // Logos: one row, centred in the section.
+  s = at('logos');
+  const logos = [...s.querySelectorAll('.logo')].map(l => l.getBoundingClientRect());
+  // Logos: as few rows as fit, each centred in the section.
+  const rows = new Map();
+  for (const r of logos) {
+    const y = Math.round((r.top + r.bottom) / 2);
+    const [l, rr] = rows.get(y) || [Infinity, -Infinity];
+    rows.set(y, [Math.min(l, r.left), Math.max(rr, r.right)]);
+  }
+  m.logoRows = rows.size;
+  m.logoCentre = Math.max(...[...rows.values()].map(([l, rr]) => Math.abs((l + rr) / 2 - (c0 + c1) / 2)));
+  // The table fills the section's content box.
+  s = at('table');
+  const [t0, t1] = content(s);
+  m.tableWidth = Math.round(s.querySelector('table').getBoundingClientRect().width - (t1 - t0));
   m.columns = lefts(at('columns').querySelectorAll(':scope > div'));
   s = at('chart');
   m.bars = [...s.querySelectorAll('.bar')].map(b => [
     parseFloat(b.style.getPropertyValue('--v')), b.querySelector('i').getBoundingClientRect().width]);
   m.dots = lefts(at('dots').querySelectorAll('.dots > i'));
-  const ph = at('partners').querySelector('span.logo[data-placeholder]');
+  // No snippet ships a placeholder, so make the one a template would.
+  s = at('logos');
+  const ph = document.createElement('span');
+  ph.className = 'logo';
+  ph.setAttribute('data-placeholder', '');
+  ph.textContent = 'Your logo';
+  s.appendChild(ph);
   const cs = getComputedStyle(ph), r = ph.getBoundingClientRect();
   m.placeholder = [cs.borderTopStyle, parseFloat(cs.borderTopWidth), r.width > 0 && r.height > 0];
   return m;
@@ -270,7 +308,7 @@ MEASURE = """() => {
 # side (1080 px in every staged format), 16 px on a page.
 TYPE = {"deck": (3.2, 1.3, 0.85), "square": (2.8, 1.25, 0.85), "portrait": (2.8, 1.25, 0.85),
         "short": (3.0, 1.35, 0.95), "story": (3.0, 1.35, 0.95), "page": (2.5, 1.1, 0.875)}
-# Cards side by side, and columns side by side.
+# Cards (and stats) side by side, and columns side by side.
 SIDE_BY_SIDE = {"deck": (3, 2), "square": (2, 2), "portrait": (2, 1), "short": (1, 1),
                 "story": (1, 1), "page": (3, 2)}
 
@@ -288,6 +326,12 @@ async def test_each_format_sets_its_type_scale_and_columns(browser_page, served,
     assert m["body"] == pytest.approx(body * root, abs=0.05)
     assert m["small"] == pytest.approx(small * root, abs=0.05)
     assert (m["cards"], m["columns"]) == SIDE_BY_SIDE[fmt]
+    assert m["stats"] == m["cards"]
+    assert m["cardsHeading"] == [0, True]
+    # Three logos fit one row on a landscape stage and wrap on a narrow one.
+    assert m["logoRows"] == (1 if fmt in ("deck", "page") else 2)
+    assert m["logoCentre"] <= 1
+    assert m["tableWidth"] == 0
     # A bar is as long as its --v says, relative to the longest.
     (v0, w0), *rest = m["bars"]
     for v, w in rest:

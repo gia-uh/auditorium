@@ -60,7 +60,9 @@
   `kicker`, `card`, `stat`, `logo` (with a `data-placeholder` box until the
   file exists), `figure` over an `<svg>` or `<img>`, `frame` to clip a zooming
   photo, `bars`, `dots` and twelve `icon-*` glyphs. Inline SVG follows the
-  theme through `currentColor` and the `fill-*` and `stroke-*` classes.
+  theme through `currentColor` and the `fill-*` and `stroke-*` classes. An
+  `<svg>` directly inside a `<figure>` clips to its viewBox, so a stroke or
+  marker drawn past it no longer shows.
 - **Each format sets its safe area and type scale** as variables on
   `<main class="aud">`: `--aud-safe-top|right|bottom|left` (the spec's
   placeholder insets until #83 measures them), `--aud-inset`, `--aud-cols`,

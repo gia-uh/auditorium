@@ -86,16 +86,23 @@ sit in the second of two columns.
 </section>
 ```
 
-## logo placeholders
-
-A template marks a logo it cannot know with `data-placeholder`; replace the
-`<span>` with `<img class="logo" src="assets/NAME.png" alt="NAME">` once the
-file is in assets/. `auditorium check` will flag a remaining placeholder once
-it exists (#80).
+## logos under a title
 
 ```html
-<section data-beat="partners" class="logos">
-  <span class="logo" data-placeholder>Your logo</span>
-  <span class="logo" data-placeholder>Partner logo</span>
+<section data-beat="opening" class="title">
+  <h1 data-enter="words">A joint project</h1>
+  <div class="logos" data-in="0.8" data-enter="fade">
+    <img class="logo" src="assets/logo-1.png" alt="First partner">
+    <img class="logo" src="assets/logo-2.png" alt="Second partner">
+  </div>
 </section>
 ```
+
+## logo placeholders
+
+A template marks a logo it cannot know as
+`<span class="logo" data-placeholder>Your logo</span>`, drawn as a dashed box
+with the label. Never write one yourself: replace it with
+`<img class="logo" src="assets/NAME.png" alt="NAME">` once the file is in
+assets/. `auditorium check` will flag a remaining placeholder once it exists
+(#80), so no snippet here contains one.

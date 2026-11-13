@@ -100,8 +100,8 @@ Draw in the SVG with `currentColor` and the `fill-*` and `stroke-*` classes
 <section data-beat="logos" class="logos">
   <h2>With</h2>
   <img class="logo" src="assets/logo-1.png" alt="First partner" data-enter="fade">
-  <span class="logo" data-placeholder data-in="0.2" data-enter="fade">Second partner</span>
-  <span class="logo" data-placeholder data-in="0.4" data-enter="fade">Third partner</span>
+  <img class="logo" src="assets/logo-2.png" alt="Second partner" data-in="0.2" data-enter="fade">
+  <img class="logo" src="assets/logo-3.png" alt="Third partner" data-in="0.4" data-enter="fade">
 </section>
 ```
 

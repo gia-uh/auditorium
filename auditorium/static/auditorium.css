@@ -609,7 +609,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     max-width: none;
     font-weight: 600;
 }
-.aud .statement em, .aud .title em { font-style: normal; color: var(--aud-accent, currentColor); }
+.aud > section.statement em, .aud > section.title em { font-style: normal; color: var(--aud-accent, currentColor); }
 
 /* cards and stats: --aud-cols side by side; a heading spans the row. */
 .aud .cards, .aud > section.cards,
@@ -733,6 +733,9 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     background: var(--aud-rule, #d1d5db);
 }
 .aud .frame > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+/* A figure clips its drawing to the viewBox, unlike the global
+   `.aud svg { overflow: visible }`: a stroke past the box would otherwise
+   spill outside the layout and the safe area. */
 .aud figure > svg { overflow: hidden; }
 .aud figcaption {
     font-size: var(--aud-type-small);
