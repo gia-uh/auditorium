@@ -97,6 +97,24 @@ The page publishes what it built as `window.auditorium`: `format`, `stage`,
 `grid`, `beats`, `stops`, `duration`, `audio`, `seek(t)` and `goto(beat, step)`,
 with times in integer milliseconds.
 
+## 🧱 Layouts and components
+
+A layout is a class on a beat's `<section>`: `title`, `statement`, `cards`,
+`stats`, `columns`, `figure`, `logos`, `photo`, `table` or `chart`. It keeps
+the beat inside the format's safe area and sizes type for the format, so the
+same section works in a deck and in a vertical short:
+
+```html
+<section data-beat="results" class="stats">
+  <h2>One run</h2>
+  <div class="stat" data-enter="count"><b data-to="200">0</b><span>steps</span></div>
+  <div class="stat" data-in="0.3" data-enter="count"><b data-to="98">0</b><span>% less loss</span></div>
+</section>
+```
+
+`auditorium help layouts` and `auditorium help components` print every piece
+as a snippet to copy.
+
 ## 🎛️ Preview
 
 ```bash

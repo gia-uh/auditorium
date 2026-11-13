@@ -60,6 +60,30 @@
 - Type on a stage is sized from the stage: the root font is 3 % of its short
   side, so the themes' `rem` sizes scale with it.
 
+### Added
+
+- **Layouts and components in `auditorium.css`** (#86). Ten layouts, each a
+  class on a beat's `<section>`: `title`, `statement`, `cards`, `stats`,
+  `columns`, `figure`, `logos`, `photo`, `table` and `chart`. Components:
+  `kicker`, `card`, `stat`, `logo` (with a `data-placeholder` box until the
+  file exists), `figure` over an `<svg>` or `<img>`, `frame` to clip a zooming
+  photo, `bars`, `dots` and twelve `icon-*` glyphs. Inline SVG follows the
+  theme through `currentColor` and the `fill-*` and `stroke-*` classes. An
+  `<svg>` directly inside a `<figure>` clips to its viewBox, so a stroke or
+  marker drawn past it no longer shows. Existing `.card` and `.stat` change
+  look with the library: cards are padded 1.1em 1.4em (was 1.2em 1.6em) on a
+  3 % tint of the ink, and stat numbers are set in Playfair Display.
+- **Each format sets its safe area and type scale** as variables on
+  `<main class="aud">`: `--aud-safe-top|right|bottom|left` (the spec's
+  placeholder insets until #83 measures them), `--aud-inset`, `--aud-cols`,
+  `--aud-columns` and `--aud-type-display|title|body|small`. Layouts keep
+  their content inside the safe area and stack cards, stats and columns to
+  what the format shows side by side; a `page` stacks them below 700 px.
+- **`auditorium help [TOPIC]`** prints the guide that ships with the
+  version, one Markdown topic at a time; with no topic it lists them. The
+  first topics are `layouts` and `components`, and a test drops every snippet
+  in them into each staged format and checks it against the safe area.
+
 ### Removed
 
 - The Python authoring API: `Deck`, `@deck.scene`, `@deck.slide`, nodes,
