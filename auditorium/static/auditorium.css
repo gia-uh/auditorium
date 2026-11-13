@@ -132,16 +132,8 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 .aud .grid > * { grid-column: 1 / -1; min-width: 0; }
 
-/* ---- Components the examples use; the library proper lands with #86 ---- */
-.aud .stat { display: flex; flex-direction: column; align-items: center; }
-.aud .stat b { font-size: 2.5em; line-height: 1.1; color: var(--aud-accent, currentColor); }
-.aud .stat span { color: var(--aud-muted, #6b7280); }
-.aud .card {
-    padding: 1.2em 1.6em;
-    border: 2px solid var(--aud-rule, #d1d5db);
-    border-radius: 12px;
-    text-align: center;
-}
+/* The layouts and components are at the end of this file, after the base
+   typography they override. */
 .aud .accent-fill { fill: var(--aud-accent, currentColor); }
 .aud .aud-word { display: inline-block; }
 .aud svg { overflow: visible; }
@@ -497,3 +489,326 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 .aud .katex-display > .katex {
     font-size: 1.35em;
 }
+
+/* ==== The library: formats, layouts and components (#86) ====
+ * Plain classes an author puts on HTML, taught by `auditorium help layouts`
+ * and `auditorium help components`, whose snippets tests/test_layouts.py
+ * drops into every staged format. A layout is a class on a beat's <section>;
+ * the container classes (cards, stats, columns, logos) also work on a <div>
+ * inside any beat. Everything sizes from the variables below, so a layout
+ * follows the format it is placed in instead of hard-coding one stage.
+ */
+
+/* ---- What each format sets ----
+ * The safe area is the inset that platform chrome covers (the app bars over a
+ * story or a short); a layout keeps its content inside it plus --aud-inset.
+ * The insets are the placeholders of the 2026-11-05 spec's format table until
+ * the formats issue (#83) measures them. --aud-cols is how many cards, stats
+ * or columns sit side by side; the type scale is in rem, which follows the
+ * stage (see html.aud-staged above). A deck is the default, so a page with no
+ * data-format still gets one.
+ */
+.aud {
+    --aud-safe-top: 60px;
+    --aud-safe-right: 80px;
+    --aud-safe-bottom: 60px;
+    --aud-safe-left: 80px;
+    --aud-inset: 40px;
+    --aud-cols: 3;
+    --aud-columns: 2;
+    --aud-type-display: 3.2rem;
+    --aud-type-title: 2.2rem;
+    --aud-type-body: 1.3rem;
+    --aud-type-small: 0.85rem;
+}
+.aud[data-format="square"],
+.aud[data-format="portrait"] {
+    --aud-safe-top: 60px;
+    --aud-safe-right: 60px;
+    --aud-safe-bottom: 60px;
+    --aud-safe-left: 60px;
+    --aud-cols: 2;
+    --aud-type-display: 2.8rem;
+    --aud-type-title: 2rem;
+    --aud-type-body: 1.25rem;
+}
+.aud[data-format="portrait"] {
+    --aud-safe-top: 70px;
+    --aud-safe-bottom: 70px;
+    --aud-columns: 1;
+}
+.aud[data-format="story"],
+.aud[data-format="short"] {
+    --aud-safe-top: 250px;
+    --aud-safe-right: 60px;
+    --aud-safe-bottom: 340px;
+    --aud-safe-left: 60px;
+    --aud-cols: 1;
+    --aud-columns: 1;
+    --aud-type-display: 3rem;
+    --aud-type-title: 2.2rem;
+    --aud-type-body: 1.35rem;
+    --aud-type-small: 0.95rem;
+}
+/* The spec's placeholder gives a short a wider band on the left; #83 checks
+   it against the platforms, whose action buttons sit on the right. */
+.aud[data-format="short"] { --aud-safe-left: 120px; }
+/* A page has no stage and no chrome over it; it reflows to one column on a
+   phone, where the check measures it at 390 px. */
+.aud[data-format="page"] {
+    --aud-safe-top: 0px;
+    --aud-safe-right: 0px;
+    --aud-safe-bottom: 0px;
+    --aud-safe-left: 0px;
+    --aud-inset: 2rem;
+    --aud-type-display: 2.5rem;
+    --aud-type-title: 1.75rem;
+    --aud-type-body: 1.1rem;
+    --aud-type-small: 0.875rem;
+}
+@media (max-width: 700px) {
+    .aud[data-format="page"] { --aud-cols: 1; --aud-columns: 1; --aud-inset: 1rem; }
+}
+
+/* ---- Layouts: a class on the beat's <section> ---- */
+
+.aud > section:is(.title, .statement, .cards, .stats, .columns, .figure,
+                  .logos, .photo, .table, .chart) {
+    padding: calc(var(--aud-safe-top) + var(--aud-inset))
+             calc(var(--aud-safe-right) + var(--aud-inset))
+             calc(var(--aud-safe-bottom) + var(--aud-inset))
+             calc(var(--aud-safe-left) + var(--aud-inset));
+    font-size: var(--aud-type-body);
+}
+/* The single-column layouts stack and centre on a page too, where sections
+   are not on a stage. The containers set their own display below; the
+   section-level selectors there outrank the stage's section rule. */
+.aud > section:is(.title, .statement, .figure, .photo, .table, .chart) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--aud-block-gap);
+}
+.aud > section:is(.cards, .stats, .columns, .figure, .logos, .photo, .table, .chart) > h2 {
+    font-size: var(--aud-type-title);
+    line-height: 1.15;
+}
+
+/* title: a kicker, the heading, a subtitle. */
+.aud > section.title { text-align: center; }
+.aud > section.title h1 { font-size: var(--aud-type-display); line-height: 1.1; }
+.aud > section.title p { font-size: var(--aud-type-body); color: var(--aud-muted, #6b7280); }
+
+/* statement: one sentence, as large as the format allows; <em> is the
+   second tone. */
+.aud > section.statement { align-items: flex-start; justify-content: center; }
+.aud > section.statement p {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: var(--aud-type-display);
+    line-height: 1.15;
+    max-width: none;
+    font-weight: 600;
+}
+.aud .statement em, .aud .title em { font-style: normal; color: var(--aud-accent, currentColor); }
+
+/* cards and stats: --aud-cols side by side; a heading spans the row. */
+.aud .cards, .aud > section.cards,
+.aud .stats, .aud > section.stats {
+    display: grid;
+    grid-template-columns: repeat(var(--aud-cols), minmax(0, 1fr));
+    gap: var(--aud-inset);
+    align-content: center;
+    align-items: stretch;
+    width: 100%;
+}
+.aud .cards > :not(.card),
+.aud .stats > :not(.stat) { grid-column: 1 / -1; }
+
+/* columns: two blocks side by side, stacked where the format is narrow. */
+.aud .columns, .aud > section.columns {
+    display: grid;
+    grid-template-columns: repeat(var(--aud-columns), minmax(0, 1fr));
+    gap: var(--aud-inset);
+    align-content: center;
+    align-items: center;
+    width: 100%;
+}
+.aud .columns > h2 { grid-column: 1 / -1; }
+.aud .columns > * { min-width: 0; }
+
+/* logos: a centred, wrapping row; a heading takes a line of its own. */
+.aud .logos, .aud > section.logos {
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+    gap: var(--aud-inset) calc(var(--aud-inset) * 1.5);
+}
+.aud .logos > :not(.logo) { flex-basis: 100%; }
+
+/* figure, photo, table, chart: a heading and one thing as large as fits.
+   The thing shrinks to the room left (min-height: 0), never past the safe
+   area. */
+.aud > section:is(.figure, .photo, .table, .chart) { justify-content: center; }
+.aud > section:is(.figure, .photo) > figure { flex: 1 1 auto; min-height: 0; width: 100%; }
+.aud > section.table > table { width: 100%; font-size: 0.85em; }
+.aud > section.chart > .bars { width: 100%; }
+
+/* ---- Components ---- */
+
+/* kicker: the small label above a heading. */
+.aud .kicker {
+    font-size: var(--aud-type-small);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--aud-accent, currentColor);
+}
+
+/* card: a bordered box with a heading and a line. */
+.aud .card {
+    padding: 1.1em 1.4em;
+    border: 2px solid var(--aud-rule, #d1d5db);
+    border-radius: 12px;
+    text-align: center;
+    background: color-mix(in srgb, var(--aud-fg, #111827) 3%, transparent);
+}
+.aud .card h3 { font-size: 1.15em; margin-bottom: 0.3em; }
+.aud .card p { font-size: 0.85em; color: var(--aud-muted, #6b7280); }
+.aud .card .icon { font-size: 1.8em; margin-bottom: 0.3em; color: var(--aud-accent, currentColor); }
+
+/* stat: a number over its label; data-enter="count" counts it up. */
+.aud .stat { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.aud .stat b {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 2.5em;
+    line-height: 1.1;
+    color: var(--aud-accent, currentColor);
+    font-variant-numeric: tabular-nums;
+}
+.aud .stat span { color: var(--aud-muted, #6b7280); }
+
+/* logo: an <img>, or a labelled box marked data-placeholder until the real
+   file arrives (the check fails while the mark remains). */
+.aud .logo { height: 2.6em; width: auto; max-width: 8em; object-fit: contain; }
+.aud span.logo {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 1em;
+    border: 2px dashed var(--aud-muted, #6b7280);
+    border-radius: 8px;
+    color: var(--aud-muted, #6b7280);
+    font-size: var(--aud-type-small);
+    max-width: none;
+}
+
+/* figure: an <img> (a photo) or an inline <svg> (a figure) over its
+   <figcaption>. Inline SVG follows the theme: currentColor is the ink, and
+   the fill-* and stroke-* classes map shapes to the palette. */
+.aud figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5em;
+    min-height: 0;
+}
+.aud figure > img,
+.aud figure > svg {
+    display: block;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    color: var(--aud-fg, #111827);
+}
+.aud figure > img { object-fit: cover; border-radius: 10px; background: var(--aud-rule, #d1d5db); }
+/* frame: clips a photo to its box, so a ken-burns zoom stays inside it
+   instead of spilling over the caption and the safe area. */
+.aud .frame {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 10px;
+    background: var(--aud-rule, #d1d5db);
+}
+.aud .frame > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.aud figure > svg { overflow: hidden; }
+.aud figcaption {
+    font-size: var(--aud-type-small);
+    color: var(--aud-muted, #6b7280);
+    text-align: center;
+}
+.aud svg .fill-ink { fill: var(--aud-fg, #111827); }
+.aud svg .fill-muted { fill: var(--aud-geom-muted, #9ca3af); }
+.aud svg .fill-accent { fill: var(--aud-accent, currentColor); }
+.aud svg .fill-1 { fill: var(--aud-geom-1); }
+.aud svg .fill-2 { fill: var(--aud-geom-2); }
+.aud svg .fill-3 { fill: var(--aud-geom-3); }
+.aud svg .fill-4 { fill: var(--aud-geom-4); }
+.aud svg .stroke-ink { stroke: var(--aud-fg, #111827); }
+.aud svg .stroke-muted { stroke: var(--aud-geom-muted, #9ca3af); }
+.aud svg .stroke-accent { stroke: var(--aud-accent, currentColor); }
+.aud svg .stroke-1 { stroke: var(--aud-geom-1); }
+.aud svg .stroke-2 { stroke: var(--aud-geom-2); }
+.aud svg .stroke-3 { stroke: var(--aud-geom-3); }
+.aud svg .stroke-4 { stroke: var(--aud-geom-4); }
+
+/* bars: a horizontal bar chart. Each row is a label, a bar and its value;
+   the bar's length is --v, from 0 to 1, and data-enter="grow" draws it from
+   the left. */
+.aud .bars {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr) max-content;
+    align-items: center;
+    gap: 0.45em 0.8em;
+}
+.aud .bar { display: contents; }
+.aud .bar > span { text-align: right; }
+.aud .bar > i {
+    display: block;
+    height: 1em;
+    width: calc(var(--v, 0) * 100%);
+    border-radius: 3px;
+    background: var(--aud-accent, currentColor);
+}
+.aud .bar > b { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* dots: a grid of --per-row dots (10 by default); class "on" picks a subset. */
+.aud .dots {
+    display: grid;
+    grid-template-columns: repeat(var(--per-row, 10), 0.7em);
+    gap: 0.35em;
+    justify-content: center;
+}
+.aud .dots > i {
+    display: block;
+    width: 0.7em;
+    height: 0.7em;
+    border-radius: 50%;
+    background: var(--aud-rule, #d1d5db);
+}
+.aud .dots > i.on { background: var(--aud-accent, currentColor); }
+
+/* icon: <i class="icon icon-NAME"></i>, one em square in the text colour.
+   Drawn as a mask over currentColor, so every theme recolours it. */
+.aud .icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.15em;
+    background: currentColor;
+    mask: var(--aud-icon) center / contain no-repeat;
+}
+.aud .icon-person { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Ccircle cx=%2712%27 cy=%277%27 r=%274%27/%3E%3Cpath d=%27M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8%27/%3E%3C/svg%3E"); }
+.aud .icon-people { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Ccircle cx=%279%27 cy=%278%27 r=%273.5%27/%3E%3Cpath d=%27M2 20c0-3.9 3.1-7 7-7s7 3.1 7 7%27/%3E%3Ccircle cx=%2717%27 cy=%277%27 r=%273%27/%3E%3Cpath d=%27M17 13c2.8 0 5 2.2 5 5%27/%3E%3C/svg%3E"); }
+.aud .icon-document { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 2h8l5 5v15H6z%27/%3E%3Cpath d=%27M14 2v5h5M9 13h7M9 17h7%27/%3E%3C/svg%3E"); }
+.aud .icon-chart { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M3 21h18%27/%3E%3Crect x=%275%27 y=%2711%27 width=%273%27 height=%277%27/%3E%3Crect x=%2710.5%27 y=%276%27 width=%273%27 height=%2712%27/%3E%3Crect x=%2716%27 y=%2714%27 width=%273%27 height=%274%27/%3E%3C/svg%3E"); }
+.aud .icon-check { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M4 12.5l5 5L20 6.5%27/%3E%3C/svg%3E"); }
+.aud .icon-cross { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M6 6l12 12M18 6L6 18%27/%3E%3C/svg%3E"); }
+.aud .icon-arrow { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M4 12h16M14 6l6 6-6 6%27/%3E%3C/svg%3E"); }
+.aud .icon-clock { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%279%27/%3E%3Cpath d=%27M12 7v5l3 3%27/%3E%3C/svg%3E"); }
+.aud .icon-pin { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M12 22s7-6.6 7-12a7 7 0 0 0-14 0c0 5.4 7 12 7 12z%27/%3E%3Ccircle cx=%2712%27 cy=%2710%27 r=%272.5%27/%3E%3C/svg%3E"); }
+.aud .icon-star { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M12 3l2.8 5.8 6.2.9-4.5 4.4 1.1 6.2L12 17.4l-5.6 2.9 1.1-6.2L3 9.7l6.2-.9z%27/%3E%3C/svg%3E"); }
+.aud .icon-mail { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%273%27 y=%275%27 width=%2718%27 height=%2714%27 rx=%271%27/%3E%3Cpath d=%27M3 6l9 7 9-7%27/%3E%3C/svg%3E"); }
+.aud .icon-idea { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M9 18h6M10 21h4%27/%3E%3Cpath d=%27M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z%27/%3E%3C/svg%3E"); }
