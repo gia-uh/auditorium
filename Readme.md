@@ -160,8 +160,10 @@ The first `<audio>` in the page is mixed in at its `data-in`.
 the presenter. It turns on shared navigation and opens the presenter view, as
 `--presenter` does. The relay keeps no copy of the project: each file a viewer
 asks for is fetched from your machine over the presenter's connection, so the
-audience sees your edits after hot reload. The presenter view and the preview
-are never served to the public.
+audience sees your edits after hot reload. The presenter view, the preview
+and dotfiles (`.env`, `.git/`) are never served to the public. Speaker notes
+are not private: they are `<aside class="notes">` inside `index.html`, so
+anyone with the URL can read them in the page source.
 
 ```bash
 auditorium run talk/ --public --name my-talk     # http://RELAY/r/my-talk/

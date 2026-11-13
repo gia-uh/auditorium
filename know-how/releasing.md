@@ -27,6 +27,13 @@ trusted publisher, so no token is involved.
    uvx --from 'auditorium==1!X.Y.Z' auditorium --version
    ```
 
+5. Redeploy the public relay that `--relay` defaults to, when the release
+   changes `relay.py`: the relay protocol moves with the package, so an old
+   relay cannot serve a new presenter (5.0 added file fetching, #104). In the
+   relay host's checkout run `make relay-update` (it pulls, syncs and
+   restarts the service), then check
+   `auditorium run examples/talk --public` against it.
+
 ## Traps
 
 - **Keep the `1!` epoch in `pyproject.toml`.** Releases before 2.0 used calendar

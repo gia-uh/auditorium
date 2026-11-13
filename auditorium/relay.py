@@ -34,7 +34,9 @@ TIMEOUT = 30.0
 # Content types the relay rewrites; anything else streams through untouched.
 REWRITTEN = ("text/html", "text/css", "javascript")
 # Top-level paths of the local server that never leave the presenter's machine:
-# the presenter view shows the speaker notes and the preview is for the author.
+# the presenter view and the preview are the presenter's and the author's
+# tools. This does not keep speaker notes private: they are <aside
+# class="notes"> inside index.html, which every viewer receives.
 PRIVATE = {"presenter", "preview"}
 
 
@@ -219,6 +221,9 @@ def create_relay_app() -> FastAPI:
         session = app.state.sessions[session_id]
         session.viewer_clients.append(ws)
 
+        # No hello_ack here: the relay does not answer a viewer's hello, and
+        # the only hello_ack upstream is the bridge's own, sent before any
+        # viewer joined. A client that waits on onHello would wait forever.
         if session.last_cmd is not None:
             await ws.send_text(session.last_cmd)
 
@@ -240,12 +245,18 @@ def relay_urls(relay_host: str) -> tuple[str, str]:
 
 
 def _fetch_local(local_port: int, path: str, query: str) -> tuple[int, str, bytes]:
-    """GET a path from the local server, refusing the presenter-only pages."""
+    """GET a path from the local server, refusing presenter-only pages and dotfiles.
+
+    A segment starting with a dot (.env, .git/, editor files) is never part of
+    a talk, and the local server would serve it: before --public it was only
+    reachable from localhost.
+    """
     import urllib.error
     import urllib.parse
     import urllib.request
 
-    if path.split("/", 1)[0] in PRIVATE:
+    segments = path.split("/")
+    if segments[0] in PRIVATE or any(seg.startswith(".") for seg in segments):
         return 404, "text/plain", b"Not served through the relay"
     url = f"http://127.0.0.1:{local_port}/{urllib.parse.quote(path)}"
     if query:

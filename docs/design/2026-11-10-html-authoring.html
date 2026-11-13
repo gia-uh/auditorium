@@ -305,7 +305,7 @@ launch/
 <tr><td>render</td><td class="why">mp4 (or webm, PNG sequence) with <code>--jobs N</code> (#74), audio mixed from the contract.</td><td class="why">exists, extended</td></tr>
 <tr><td>export</td><td class="why"><code>png</code> (a poster, or any beat), <code>pdf</code>, <code>html</code> (alias of bundle).</td><td class="why">exists, gains pdf</td></tr>
 <tr><td>sheet</td><td class="why">Contact sheet of beats, or beats plus N frames between (#72); red tiles where a rule fired.</td><td class="why">#72</td></tr>
-<tr><td>relay</td><td class="why">Self-host a relay, unchanged.</td><td class="why">exists</td></tr>
+<tr><td>relay</td><td class="why">Self-host a relay. It now also fetches the project's files from the presenter's machine (#104), so a 4.x relay cannot serve a 5.0 talk.</td><td class="why">exists</td></tr>
 </tbody>
 </table>
 <h3>Editing in preview</h3>
@@ -462,7 +462,7 @@ launch/
 <tr><td>timeline.py</td><td class="why">Removed in Python; the timeline is built in the browser. Its pure render schedule moves into render.py, where the test that preview and render agree on frames stays</td></tr>
 <tr><td>engine.js, client.js, theme.css, the shells</td><td class="why">Kept as the base of auditorium.js and auditorium.css</td></tr>
 <tr><td>server.py</td><td class="why">Kept: serves a folder, watches it for hot reload, syncs presenter and audience</td></tr>
-<tr><td>relay.py</td><td class="why">Kept unchanged</td></tr>
+<tr><td>relay.py</td><td class="why">Kept, and extended to carry the project's files over the presenter's socket (#104)</td></tr>
 <tr><td>render.py, exporter.py</td><td class="why">Kept and extended: deterministic capture, jobs, audio, PDF</td></tr>
 <tr><td>D1 compile, don't perform; D7 the slide shim</td><td class="why">Dropped with Python authoring</td></tr>
 <tr><td>D2 to D6, D8, D9</td><td class="why">Kept; DESIGN.md restates them for the DOM-built timeline</td></tr>

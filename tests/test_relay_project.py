@@ -6,11 +6,13 @@ presenter's machine fetches it from the local server, and the answer comes back
 in chunks. These tests run a real local server, a real relay and the real bridge
 on loopback.
 """
+import asyncio
 import json
 import os
 import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -21,7 +23,7 @@ from websockets.sync.client import connect
 
 from auditorium import relay as relay_mod
 from auditorium.relay import bridge, create_relay_app
-from auditorium.server import STATIC_DIR, create_app, serve_in_thread
+from auditorium.server import STATIC_DIR, create_app, reload_project, serve_in_thread
 from conftest import write_project
 
 BODY = """
@@ -43,13 +45,23 @@ def project(tmp_path):
     (folder / "assets").mkdir()
     # Larger than several chunks, so the answer streams in more than one frame.
     (folder / "assets" / "blob.bin").write_bytes(os.urandom(relay_mod.CHUNK * 3 + 17))
+    # Root-relative runtime paths in author CSS and JS, which the relay rewrites.
+    (folder / "extra.css").write_text("@import url(/_auditorium/themes/dark.css);\n")
+    (folder / "extra.js").write_text('import "/_auditorium/client.js";\n')
+    # Files that must never leave the presenter's machine.
+    (folder / ".env").write_text("SECRET=1\n")
+    (folder / ".git").mkdir()
+    (folder / ".git" / "config").write_text("[core]\n")
+    (folder / "assets" / ".hidden").write_text("x\n")
     return folder
 
 
 @pytest.fixture
 def public(project):
     """A presenter-mode local server, a relay, and the bridge between them."""
-    local = serve_in_thread(create_app(project, presenter_mode=True))
+    app = create_app(project, presenter_mode=True)
+    local = serve_in_thread(app)
+    local.app = app
     relay = serve_in_thread(create_relay_app())
     url = bridge(f"127.0.0.1:{relay.port}", local.port, name="talk")
     yield local, relay, url
@@ -167,3 +179,89 @@ def test_run_public_prints_a_url_that_serves_the_project(tmp_path):
         proc.terminate()
         proc.wait(timeout=10)
         relay.stop()
+
+
+def test_dotfiles_are_not_served_through_the_relay(public):
+    """A project folder may hold .env, .git or editor files; before --public
+    they were served to localhost only, and none of them is part of the talk."""
+    _, _, url = public
+    for path in (".env", ".git/config", "assets/.hidden", ".git/", "%2Eenv"):
+        assert _get(url + path)[0] == 404, path
+
+
+def test_runtime_paths_in_author_css_and_js_are_rewritten(public):
+    _, _, url = public
+    status, _, body = _get(url + "extra.css")
+    assert status == 200 and body == b"@import url(/r/talk/_auditorium/themes/dark.css);\n"
+    status, _, body = _get(url + "extra.js")
+    assert status == 200 and body == b'import "/r/talk/_auditorium/client.js";\n'
+
+
+def test_hot_reload_reaches_a_relayed_viewer(public):
+    """An edit on the presenter's machine reloads every remote viewer."""
+    local, relay, _ = public
+    with connect(f"ws://127.0.0.1:{relay.port}/r/talk/ws") as viewer:
+        # The bridge's own audience socket may not be registered yet: retry.
+        for _ in range(20):
+            asyncio.run_coroutine_threadsafe(reload_project(local.app), local.app.state.loop).result(5)
+            try:
+                msg = json.loads(viewer.recv(timeout=0.5))
+            except TimeoutError:
+                continue
+            if msg.get("type") == "reload":
+                break
+        else:
+            pytest.fail("no reload reached the viewer")
+
+
+def test_the_session_root_redirects_to_its_folder():
+    with TestClient(create_relay_app()) as client:
+        r = client.get("/r/x", follow_redirects=False)
+        assert r.status_code == 307 and r.headers["location"] == "/r/x/"
+
+
+@pytest.fixture
+def silent_upstream():
+    """A relay with a registered upstream that reads requests and never answers."""
+    relay = serve_in_thread(create_relay_app())
+    up = connect(f"ws://127.0.0.1:{relay.port}/upstream")
+    up.send(json.dumps({"type": "register", "name": "s"}))
+    assert json.loads(up.recv())["type"] == "registered"
+    yield relay, up
+    up.close()
+    relay.stop()
+
+
+def test_a_presenter_that_does_not_answer_is_a_504(silent_upstream, monkeypatch):
+    relay, _ = silent_upstream
+    monkeypatch.setattr(relay_mod, "TIMEOUT", 0.5)
+    assert _get(f"http://127.0.0.1:{relay.port}/r/s/index.html")[0] == 504
+
+
+def test_a_presenter_leaving_wakes_waiting_viewers_and_ends_the_session(silent_upstream):
+    relay, up = silent_upstream
+    result = {}
+
+    def viewer():
+        start = time.monotonic()
+        result["status"] = _get(f"http://127.0.0.1:{relay.port}/r/s/index.html")[0]
+        result["took"] = time.monotonic() - start
+
+    t = threading.Thread(target=viewer)
+    t.start()
+    assert json.loads(up.recv(timeout=5))["type"] == "http"
+    up.close()
+    t.join(timeout=10)
+    # Woken at once, not after the relay's 30 s timeout.
+    assert result["status"] == 504 and result["took"] < 5
+    assert _get(f"http://127.0.0.1:{relay.port}/r/s/")[0] == 404
+
+
+def test_a_viewer_socket_sends_nothing_upstream(silent_upstream):
+    """The audience is read-only: what a viewer sends never reaches the presenter."""
+    relay, up = silent_upstream
+    with connect(f"ws://127.0.0.1:{relay.port}/r/s/ws") as viewer:
+        viewer.send(json.dumps({"type": "ack"}))
+        viewer.send(json.dumps({"type": "cmd", "cmd": "seek", "t": 5}))
+        with pytest.raises(TimeoutError):
+            up.recv(timeout=0.5)

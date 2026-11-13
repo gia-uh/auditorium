@@ -50,10 +50,11 @@
 - **`run --public` relays a project folder.** The relay fetches every file a
   viewer asks for from the presenter's machine over the presenter's socket, and
   rewrites the runtime's `/_auditorium/` paths and the page's socket path under
-  `/r/NAME/`. `--public` implies `--presenter`. The presenter view and the
-  preview are not served through the relay. A viewer who joins late is sent to
+  `/r/NAME/`. `--public` implies `--presenter`. The presenter view, the
+  preview and dotfiles are not served through the relay. Speaker notes live in
+  `index.html`, so anyone with the URL can read them. A viewer who joins late is sent to
   where the room is, instead of replaying every command since the start. The
-  relay must run 5.0 too.
+  relay must run 5.0 too: a 4.x relay cannot carry a folder.
 - **`AUDITORIUM_CHROMIUM`** now also chooses the browser for `render` and
   `export`, not only the tests.
 - Type on a stage is sized from the stage: the root font is 3 % of its short
