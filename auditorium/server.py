@@ -23,6 +23,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 STATIC_DIR = Path(__file__).parent / "static"
+THEMES_DIR = Path(__file__).parent / "themes"
 RUNTIME_PATH = "/_auditorium"
 
 
@@ -151,6 +152,9 @@ def create_app(project: Path | None = None, presenter_mode: bool = False) -> Fas
         except (WebSocketDisconnect, asyncio.CancelledError):
             pass
 
+    # The bundled themes, for a project to link instead of writing its own
+    # theme.css. Mounted before the runtime so its own path wins.
+    app.mount(RUNTIME_PATH + "/themes", StaticFiles(directory=str(THEMES_DIR)), name="themes")
     app.mount(RUNTIME_PATH, StaticFiles(directory=str(STATIC_DIR)), name="runtime")
     if app.state.project is not None:
         # Last, so the routes above win over a file of the same name.

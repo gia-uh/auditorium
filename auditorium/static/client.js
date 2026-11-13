@@ -133,13 +133,16 @@ export function createPlayer({ engine, onFrame }) {
     /** How many frames a render of this timeline would produce. */
     renderFrameCount() {
       const n = Math.trunc(this.duration * this.fps / 1000);
-      // A beat past the last frame time never gets dwelt on, so it must not
-      // be counted. A deck's last stop sits exactly at the duration, which is
-      // exactly when that case arises.
+      // Stops up to the last frame time dwell where a frame first reaches
+      // them; a stop after it (up to the duration) gets frames of its own.
       const last = n > 0 ? Math.trunc((n - 1) * 1000 / this.fps) : -1;
       let total = n;
       for (const b of this.beatHolds) {
         if (b.t <= last) total += Math.trunc(b.hold_ms * this.fps / 1000);
+        // A held stop after the last frame (a deck's last stop, at the
+        // duration) gets a frame of its own plus its dwell, as in
+        // render_schedule.
+        else if (b.t <= this.duration) total += 1 + Math.trunc(b.hold_ms * this.fps / 1000);
       }
       return total;
     },

@@ -48,3 +48,17 @@ def test_schedule_is_monotonic_non_decreasing():
 
 def test_an_empty_timeline_yields_no_frames():
     assert render_schedule(0, [], 30) == []
+
+
+def test_a_stop_at_the_end_still_dwells():
+    """A deck's last stop sits exactly at the duration, where no regular frame
+    falls (frames run at t < duration). It must still get its own frame at the
+    end and its hold, or a rendered deck never rests on its last slide."""
+    sched = render_schedule(*tl_of(1300, beats=[(600, 1500), (1300, 1500)]), 30)
+    assert sched[-1] == 1300
+    assert sched.count(1300) == 1 + 45
+
+
+def test_a_timed_format_gets_no_extra_end_frame():
+    """Stops with no hold add nothing, at the end or anywhere else."""
+    assert render_schedule(*tl_of(1000, beats=[(999, 0), (1000, 0)]), 10)[-1] == 900

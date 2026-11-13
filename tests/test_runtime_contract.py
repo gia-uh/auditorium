@@ -90,6 +90,82 @@ async def test_an_idle_composes_with_an_entrance(browser_page, served):
     assert await translate_y(browser_page, "#rise-float") == pytest.approx(32, abs=0.5)
 
 
+async def matrix(page, sel):
+    """The element's computed transform as {a, b, d, m22}: a and d are the x and
+    y scale, b gives the rotation, m22 the cosine of a rotateX."""
+    return await js(
+        page,
+        """(s) => { const m = new DOMMatrix(getComputedStyle(document.querySelector(s)).transform);
+                   return { a: m.a, b: m.b, d: m.d, m22: m.m22 }; }""",
+        sel,
+    )
+
+
+async def test_flip_turns_from_edge_on_to_flat(browser_page, served):
+    """rotateX goes from 90deg (edge on, cos 0) to 0 (flat, cos 1) over 600 ms."""
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 0)
+    assert (await matrix(browser_page, "#flipper"))["m22"] == pytest.approx(0.0, abs=0.01)
+    # The entrance easing front-loads the turn: at 300 ms it is already within
+    # 6 degrees of flat, so the in-between probe sits early.
+    await seek(browser_page, 100)
+    assert 0.05 < (await matrix(browser_page, "#flipper"))["m22"] < 0.95
+    await seek(browser_page, 600)
+    assert (await matrix(browser_page, "#flipper"))["m22"] == pytest.approx(1.0, abs=0.001)
+
+
+async def test_grow_scales_from_its_left_edge(browser_page, served):
+    await load(browser_page, served(MOTIONS))
+    origin = await js(browser_page, "() => getComputedStyle(document.getElementById('grower')).transformOrigin")
+    assert origin.startswith("0px "), origin
+    await seek(browser_page, 0)
+    assert (await matrix(browser_page, "#grower"))["a"] == pytest.approx(0.0, abs=0.001)
+    await seek(browser_page, 350)
+    assert 0.05 < (await matrix(browser_page, "#grower"))["a"] < 0.99
+    await seek(browser_page, 700)
+    assert (await matrix(browser_page, "#grower"))["a"] == pytest.approx(1.0, abs=0.001)
+
+
+async def test_tilt_swings_between_its_angles(browser_page, served):
+    """rotate(-1.5deg) to rotate(1.5deg) over 4 s, eased: level half way."""
+    import math
+
+    await load(browser_page, served(MOTIONS))
+    angles = []
+    for t in (0, 2000, 3999):
+        await seek(browser_page, t)
+        m = await matrix(browser_page, "#tilter")
+        angles.append(math.degrees(math.atan2(m["b"], m["a"])))
+    assert angles[0] == pytest.approx(-1.5, abs=0.05)
+    assert angles[1] == pytest.approx(0.0, abs=0.1)
+    assert angles[2] == pytest.approx(1.5, abs=0.05)
+
+
+async def test_pulse_loops_back_and_forth(browser_page, served):
+    """scale 1 to 1.04 in 1.2 s, then back: at 2.4 s it is at 1 again."""
+    await load(browser_page, served(MOTIONS))
+    scales = []
+    for t in (0, 1200, 2400):
+        await seek(browser_page, t)
+        scales.append((await matrix(browser_page, "#pulser"))["a"])
+    assert scales[0] == pytest.approx(1.0, abs=0.001)
+    assert scales[1] == pytest.approx(1.04, abs=0.001)
+    assert scales[2] == pytest.approx(1.0, abs=0.001)
+
+
+async def test_ken_burns_runs_once_over_the_whole_beat(browser_page, served):
+    """scale 1 to 1.08, linear, once over the element's 4 s on stage: half way
+    at 2 s, not looping."""
+    await load(browser_page, served(MOTIONS))
+    scales = []
+    for t in (0, 2000, 3999):
+        await seek(browser_page, t)
+        scales.append((await matrix(browser_page, "#kenburns"))["a"])
+    assert scales[0] == pytest.approx(1.0, abs=0.001)
+    assert scales[1] == pytest.approx(1.04, abs=0.002)
+    assert scales[2] == pytest.approx(1.08, abs=0.002)
+
+
 # ---- words, count, draw ----------------------------------------------------------
 
 
@@ -305,3 +381,32 @@ async def test_a_timed_page_opened_directly_pauses_at_the_beats_end(browser_page
     assert await js(browser_page, "() => window.auditorium.t") == 4499
     assert await visible(browser_page, "#first-title") is True
     assert await visible(browser_page, "#second-title") is False
+
+
+async def test_a_bundled_theme_styles_the_stage(browser_page, served, tmp_path):
+    """dark.css sets the slide background to #14171c."""
+    project = write_project(tmp_path / "themed", '<section data-beat="a" data-d="1"><p>x</p></section>',
+                            head='<link rel="stylesheet" href="/_auditorium/themes/dark.css">')
+    await load(browser_page, served(project))
+    bg = await js(browser_page, "() => getComputedStyle(document.querySelector('main.aud')).backgroundColor")
+    assert bg == "rgb(20, 23, 28)"
+
+
+async def test_a_page_that_cannot_build_says_why(tmp_path):
+    """Render and export report the reason instead of a 30 s timeout."""
+    from auditorium.render import published_timeline
+
+    folder = tmp_path / "nomain"
+    folder.mkdir()
+    (folder / "index.html").write_text(
+        '<!DOCTYPE html><html><head><script type="module" src="/_auditorium/auditorium.js"></script>'
+        "</head><body><p>no main</p></body></html>")
+    with pytest.raises(RuntimeError, match='no <main class="aud">'):
+        await published_timeline(folder)
+
+
+async def test_a_fractional_step_counts_as_its_whole_press(browser_page, served, tmp_path):
+    project = write_project(tmp_path / "frac", """
+<section data-beat="a"><p id="half" data-step="1.5">x</p></section>""", fmt="deck")
+    await load(browser_page, served(project))
+    assert await js(browser_page, "() => window.auditorium.beats[0].steps") == 1

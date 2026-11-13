@@ -43,12 +43,19 @@ def render_schedule(duration_ms: int, stops: list[dict], fps: int) -> list[int]:
             if t >= stop_t:
                 schedule.extend([t] * int(hold_ms * fps / 1000))
                 emitted.add(stop_t)
+    # A held stop after the last frame time (a deck's last stop sits exactly at
+    # the duration) gets a frame at its own time and then its dwell; without
+    # this a rendered deck never rests on its last slide.
+    for stop_t, hold_ms in holds:
+        if stop_t not in emitted and stop_t <= duration_ms:
+            schedule.extend([stop_t] * (1 + int(hold_ms * fps / 1000)))
     return schedule
 
 
 FRAME_NAME = "frame-{:06d}.png"
 
-READY = "() => window.auditorium && window.auditorium.built === true"
+# Built, or failed with a reason: either way there is no point waiting longer.
+READY = "() => window.auditorium && (window.auditorium.built === true || !!window.auditorium.error)"
 
 
 async def open_project(p, project: Path, size: tuple[int, int] | None):
@@ -70,6 +77,9 @@ async def open_project(p, project: Path, size: tuple[int, int] | None):
         page = await browser.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
         await page.goto(served.url + "/?embed")
         await page.wait_for_function(READY, timeout=30000)
+        error = await page.evaluate("() => window.auditorium.error")
+        if error:
+            raise RuntimeError(f"{project}/index.html did not build: {error}")
         published = await page.evaluate(
             "() => { const a = window.auditorium; return {format: a.format, stage: a.stage,"
             " beats: a.beats, stops: a.stops, duration: a.duration, audio: a.audio}; }"

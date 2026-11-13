@@ -151,3 +151,22 @@ async def test_a_mouse_click_does_not_navigate(browser_page, live_server):
     )
     await browser_page.wait_for_timeout(300)
     assert await browser_page.evaluate("() => window.auditorium.t === window.auditorium.stops[0].t")
+
+
+async def test_page_down_and_page_up_navigate_like_the_arrows(browser_page, live_server):
+    """What a presentation clicker sends."""
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.keyboard.press("PageDown")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[1].t")
+    await browser_page.keyboard.press("PageUp")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.stops[0].t")
+
+
+async def test_end_and_home_jump_to_the_ends(browser_page, live_server):
+    await _ready(browser_page, live_server)
+    await _settle_at_first_stop(browser_page)
+    await browser_page.keyboard.press("End")
+    await browser_page.wait_for_function("() => window.auditorium.t === window.auditorium.duration")
+    await browser_page.keyboard.press("Home")
+    await browser_page.wait_for_function("() => window.auditorium.t === 0")

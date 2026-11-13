@@ -245,9 +245,11 @@ export function build(root, { tracked = [] } = {}) {
     const timed = Array.from(section.querySelectorAll("*")).filter(
       (el) => TIMED_ATTRS.some((a) => el.hasAttribute(a)) && el.tagName !== "AUDIO"
     );
-    const steps = timedBeat ? 0 : Math.max(0, ...timed.map((el) => num(el, "data-step", 0)));
+    // A step is a press count: "1.5" is press 1, and negative is none.
+    const stepOf = (el) => Math.max(0, Math.trunc(num(el, "data-step", 0)));
+    const steps = timedBeat ? 0 : Math.max(0, ...timed.map(stepOf));
     const byStep = Array.from({ length: steps + 1 }, () => []);
-    for (const el of timed) byStep[timedBeat ? 0 : num(el, "data-step", 0)].push(el);
+    for (const el of timed) byStep[timedBeat ? 0 : stepOf(el)].push(el);
 
     // Track functions bound to this beat lengthen an untimed beat to fit.
     const beatTracks = tracked.filter((tr) => tr.opts.beat === id || tr.opts.beat === index);
@@ -464,6 +466,7 @@ const tracked = [];
 const listeners = [];
 let built = null;
 let readyResolve;
+let readyReject;
 
 const player = createPlayer({
   engine,
@@ -486,7 +489,8 @@ const api = {
   stops: [],
   duration: 0,
   audio: [],
-  ready: new Promise((r) => { readyResolve = r; }),
+  error: null,
+  ready: new Promise((resolve, reject) => { readyResolve = resolve; readyReject = reject; }),
   get t() { return engine.currentTime; },
   get playing() { return player.playing; },
   player,
@@ -525,6 +529,15 @@ const api = {
   onFrame(fn) { listeners.push(fn); },
 };
 window.auditorium = api;
+// A page that never builds rejects ready; nobody awaiting it is not an error.
+api.ready.catch(() => {});
+
+/** Publish why the page cannot build, for render, export and the console. */
+function fail(message) {
+  api.error = message;
+  console.error("auditorium: " + message);
+  readyReject(new Error(message));
+}
 
 function keyboard() {
   const presenterMode = document.querySelector('meta[name="auditorium-presenter-mode"]')?.content === "true";
@@ -579,14 +592,19 @@ function live(presenterMode) {
 async function start() {
   const root = document.querySelector("main.aud");
   if (!root) {
-    console.error("auditorium: no <main class=\"aud\"> in this page");
+    fail('no <main class="aud"> in this page');
     return;
   }
-  await loadDecorators(root);
-  decorate(root);
-  placeOnGrid(root);
-
-  const result = build(root, { tracked });
+  let result;
+  try {
+    await loadDecorators(root);
+    decorate(root);
+    placeOnGrid(root);
+    result = build(root, { tracked });
+  } catch (e) {
+    fail("the build failed: " + (e && e.message ? e.message : String(e)));
+    return;
+  }
   Object.assign(api, {
     format: result.format, stage: result.stage, beats: result.beats,
     stops: result.timeline.stops, duration: result.duration, audio: result.audio,

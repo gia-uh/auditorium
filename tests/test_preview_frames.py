@@ -82,3 +82,24 @@ async def test_every_frame_time_maps_to_the_frame_that_shows_it(browser_page, de
     assert len(reported) > 1
     for i, index in enumerate(reported):
         assert schedule[index] == int(i * 1000 / fps)
+
+
+async def test_the_end_of_a_deck_maps_to_its_dwell(browser_page, deck_timeline):
+    """The preview's frame for t = duration is the render's first frame at the
+    end, and the render rests on the last slide for its hold."""
+    fps = 30
+    schedule = render_schedule(deck_timeline["duration"], deck_timeline["stops"], fps)
+    src = CLIENT.read_text()
+    await browser_page.set_content("<!DOCTYPE html><html><body></body></html>")
+    await browser_page.add_script_tag(content=src.replace("export function", "function"))
+    index = await browser_page.evaluate(
+        """([pub, fps]) => {
+            const engine = { load() {}, seek() {}, get currentTime() { return 0; } };
+            const p = createPlayer({ engine });
+            p.load({ stops: pub.stops, duration: pub.duration, fps });
+            return p.renderFrameOf(pub.duration);
+        }""",
+        [deck_timeline, fps],
+    )
+    assert schedule[index] == deck_timeline["duration"]
+    assert schedule.count(deck_timeline["duration"]) == 1 + int(1500 * fps / 1000)

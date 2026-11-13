@@ -141,3 +141,15 @@ def test_index_html_gets_the_same_injected_mode_as_the_root():
     with TestClient(server.create_app(make_deck(), presenter_mode=True)) as client:
         html = client.get("/index.html").text
         assert '<meta name="auditorium-presenter-mode" content="true">' in html
+
+
+def test_every_bundled_theme_is_served_to_a_project():
+    """A project links a theme as /_auditorium/themes/NAME.css."""
+    themes = sorted(server.THEMES_DIR.glob("*.css"))
+    assert len(themes) == 14
+    with TestClient(server.create_app(make_deck())) as client:
+        for theme in themes:
+            r = client.get(f"/_auditorium/themes/{theme.name}")
+            assert r.status_code == 200, theme.name
+            assert ".aud" in r.text
+        assert "window.auditorium" in client.get("/_auditorium/auditorium.js").text
