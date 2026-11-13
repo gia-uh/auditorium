@@ -119,7 +119,8 @@ Rules added after the spec:
 - **The stage is a fixed box of the format's size scaled by `transform`.** Type is
   sized from the stage, so resizing the box would reflow text into a layout the
   renderer never produces.
-- **Themes carry the palette; content names a role.** An element uses a role
+- **Themes carry the palette; content names a role.** A project links a bundled
+  theme from `/_auditorium/themes/` or writes its own `theme.css`. An element uses a role
   (`--aud-accent`, a geometry series variable) and the theme picks the colour,
   so a figure keeps its meaning when the theme changes. See
   `docs/design/2026-08-27-themed-math-and-geometry.md`.

@@ -55,6 +55,16 @@ talk/
 <script type="module" src="script.js"></script>
 ```
 
+Instead of writing your own `theme.css`, a project can link one or more of
+the bundled themes, each a palette or a layout that stacks with the others:
+
+```html
+<link rel="stylesheet" href="/_auditorium/themes/academic.css">
+<link rel="stylesheet" href="/_auditorium/themes/dark.css">
+```
+
+The themes are academic, comic, compact, dark, light, magazine, minimalist, mono, neon, pastel, print, simple, solarized, terminal. Porting them to the 5.0 variables is #84.
+
 ## 🧩 The file contract
 
 | Attribute | Means |

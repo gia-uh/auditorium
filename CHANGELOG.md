@@ -42,6 +42,9 @@
 - **`export` writes PNG stills only**, named `beat-01.png` (or per press with
   `--steps`). `export html` is gone until `bundle` lands (#103), which also
   brings `export pdf`.
+- **The 14 bundled themes are served at `/_auditorium/themes/NAME.css`** for a
+  project to link, retargeted from `#slide-root` to `.aud`. Porting them to
+  the 5.0 variables is #84.
 - **`AUDITORIUM_CHROMIUM`** now also chooses the browser for `render` and
   `export`, not only the tests.
 - Type on a stage is sized from the stage: the root font is 3 % of its short
