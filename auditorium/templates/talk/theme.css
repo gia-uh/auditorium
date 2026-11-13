@@ -1,0 +1,9 @@
+/* The talk's palette. Variables only: layout, type sizes and motion come from
+   auditorium.css. A bundled theme (auditorium template new --theme NAME) is
+   linked before this file, so a variable set here wins over it. */
+:root {
+  --aud-slide-bg: #fbfaf7;
+  --aud-fg: #1d1d1f;
+  --aud-muted: #6b6b70;
+  --aud-accent: #c2410c;
+}

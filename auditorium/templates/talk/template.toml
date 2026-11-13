@@ -1,0 +1,3 @@
+summary = "a technical talk, presented live"
+for = "A lecture or conference talk: title, parts, statements, steps, a figure, math, code. The presenter advances it."
+formats = ["deck"]
