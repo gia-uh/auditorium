@@ -36,14 +36,6 @@ def test_render_writes_a_file(tmp_path):
     assert out.exists() and out.stat().st_size > 0
 
 
-def test_run_public_refuses_until_the_relay_carries_a_project():
-    """The relay viewer answers 501 until #104; --public must say so and exit
-    non-zero rather than print a URL that does not work."""
-    result = runner.invoke(app, ["run", "examples/talk", "--public", "--no-open"])
-    assert result.exit_code == 1
-    assert "#104" in result.stdout
-
-
 def test_a_bad_size_is_a_usage_error_for_render_and_export():
     for command in ("render", "export"):
         result = runner.invoke(app, [command, "examples/talk", "--size", "enormous"])

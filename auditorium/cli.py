@@ -8,7 +8,6 @@ reset to ``SIG_DFL`` before uvicorn starts, for a clean shutdown.
 from __future__ import annotations
 
 import asyncio
-import json
 import signal
 from pathlib import Path
 
@@ -88,20 +87,17 @@ def run(
     port: int = typer.Option(8000, help="Port to bind to"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser automatically"),
     presenter: bool = typer.Option(False, "-p", "--presenter", help="Also open presenter view"),
-    public: bool = typer.Option(False, "--public", help="Share via relay for remote viewers (not available yet, #104)"),
+    public: bool = typer.Option(False, "--public", help="Share through a relay: remote viewers follow the presenter (implies --presenter)"),
     relay_host: str = typer.Option("vps.apiad.net:4243", "--relay", help="Relay server host:port"),
     public_name: str = typer.Option(None, "--name", help="Custom name for the public URL (e.g. --name my-talk)"),
     watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch the folder and hot-reload"),
 ) -> None:
     """Present a project live."""
-    if public:
-        # A relayed audience now needs the project's files, which the relay
-        # does not carry yet. Refuse rather than hand out a URL that answers 501.
-        console.print("[red]Error:[/] --public is not available yet: relaying a project folder lands with #104.")
-        raise typer.Exit(1)
     _serve(
         _project(project), host, port, open_browser, watch,
-        presenter=presenter, public=public, relay_host=relay_host,
+        # A public audience only follows someone, and in shared mode the local
+        # audience tab no longer navigates, so --public brings the presenter view.
+        presenter=presenter or public, public=public, relay_host=relay_host,
         public_name=public_name,
     )
 
@@ -134,7 +130,7 @@ def _serve(
         _setup_watcher(application, folder)
 
     if public:
-        _start_relay_bridge(relay_host, port, public_name)
+        _start_relay_bridge(application, relay_host, port, public_name)
 
     if open_browser:
         import threading
@@ -272,73 +268,24 @@ def relay(
     uvicorn.run(relay_app, host=host, port=port, log_level="warning")
 
 
-def _start_relay_bridge(relay_host: str, local_port: int, name: str | None = None) -> None:
-    """Connect to a relay server and bridge the local presentation to it."""
+def _start_relay_bridge(application, relay_host: str, local_port: int, name: str | None = None) -> None:
+    """Once the local server listens, bridge it to a relay and print the public URL."""
     import threading
+    import time
+
+    from auditorium.relay import bridge
 
     def _bridge():
-        import time
-        from websockets.sync.client import connect as ws_connect
-
-        time.sleep(1.5)  # Wait for local server to start
-
-        relay_protocol = "wss" if ":443" in relay_host else "ws"
-        http_protocol = "https" if relay_protocol == "wss" else "http"
-
+        while getattr(application.state, "loop", None) is None:
+            time.sleep(0.1)  # set by the app's startup hook
         try:
-            # Connect to the relay as an upstream presenter
-            relay_ws = ws_connect(f"{relay_protocol}://{relay_host}/upstream")
-
-            # Send registration with optional custom name
-            register_msg = {"type": "register"}
-            if name:
-                register_msg["name"] = name
-            relay_ws.send(json.dumps(register_msg))
-
-            reg = json.loads(relay_ws.recv())
-            if reg.get("type") == "error":
-                console.print(f"[red]Relay error:[/] {reg.get('message')}")
-                return
-            if reg.get("type") != "registered":
-                console.print("[red]Relay error:[/] unexpected response")
-                return
-
-            session_id = reg["id"]
-            public_url = f"{http_protocol}://{relay_host}/r/{session_id}/"
-            console.print(f"\n[green]Public URL:[/] [bold cyan]{public_url}[/]\n")
-
-            # Connect to the local server as an audience client
-            local_ws = ws_connect(f"ws://127.0.0.1:{local_port}/ws")
-            local_ws.send(json.dumps({"type": "hello", "slide": 0}))
-
-            # Two threads: local→relay and relay→local
-            def forward_local_to_relay():
-                try:
-                    while True:
-                        data = local_ws.recv()
-                        relay_ws.send(data)
-                except Exception:
-                    pass
-
-            def forward_relay_to_local():
-                try:
-                    while True:
-                        data = relay_ws.recv()
-                        local_ws.send(data)
-                except Exception:
-                    pass
-
-            t1 = threading.Thread(target=forward_local_to_relay, daemon=True)
-            t2 = threading.Thread(target=forward_relay_to_local, daemon=True)
-            t1.start()
-            t2.start()
-            t1.join()
-
+            url = bridge(relay_host, local_port, name)
         except Exception as e:
             console.print(f"[red]Relay error:[/] {e}")
+            return
+        console.print(f"\n[green]Public URL:[/] [bold cyan]{url}[/]\n")
 
-    thread = threading.Thread(target=_bridge, daemon=True)
-    thread.start()
+    threading.Thread(target=_bridge, daemon=True).start()
 
 
 def watch_filter(folder: Path):

@@ -156,14 +156,23 @@ The first `<audio>` in the page is mixed in at its `data-in`.
 
 ## 🌍 Self-hosting a relay
 
-A relay gives a remote audience a URL. Until it can carry a project folder
-(#104), its viewer page answers 501 and `auditorium run --public` refuses to
-start; the relay itself still runs:
+`auditorium run talk/ --public` gives a remote audience a URL whose page follows
+the presenter. It turns on shared navigation and opens the presenter view, as
+`--presenter` does. The relay keeps no copy of the project: each file a viewer
+asks for is fetched from your machine over the presenter's connection, so the
+audience sees your edits after hot reload. The presenter view and the preview
+are never served to the public.
 
 ```bash
-auditorium relay                    # run directly
-make relay-install                  # install as systemd service
+auditorium run talk/ --public --name my-talk     # http://RELAY/r/my-talk/
+auditorium run talk/ --public --relay relay.example.org:443
+auditorium relay                    # run your own relay
+make relay-install                  # install it as a systemd service
 ```
+
+Keep paths in a project relative (`assets/logo.png`, not `/assets/logo.png`):
+behind a relay the page lives under `/r/NAME/`, and only the runtime's own
+`/_auditorium/` paths are rewritten.
 
 ## 📚 Examples
 
