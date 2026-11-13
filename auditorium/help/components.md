@@ -104,5 +104,5 @@ A template marks a logo it cannot know as
 `<span class="logo" data-placeholder>Your logo</span>`, drawn as a dashed box
 with the label. Never write one yourself: replace it with
 `<img class="logo" src="assets/NAME.png" alt="NAME">` once the file is in
-assets/. `auditorium check` will flag a remaining placeholder once it exists
+assets/. The check will flag a remaining placeholder once it exists
 (#80), so no snippet here contains one.
