@@ -265,26 +265,24 @@ async def test_every_example_builds_and_fits_the_safe_area(browser_page, served,
     """A template's example is the finished artifact the spec says passes the
     check: it builds without an error and keeps every box in the safe area, in
     every format the template makes."""
+    # The example on its own, as the check will see it: only data-format changes.
+    import shutil
+
     dest = tmp_path / name
-    assert run("new", name, str(dest), "--format", fmt).exit_code == 0
-    # The example, made into a project the way an author would finish one.
-    example = TEMPLATES / name / "example"
-    for path in example.rglob("*"):
-        if path.is_file():
-            target = dest / path.relative_to(example)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(path.read_bytes())
+    shutil.copytree(TEMPLATES / name / "example", dest)
     page = (dest / "index.html").read_text()
     (dest / "index.html").write_text(re.sub(r'data-format="[a-z]+"', f'data-format="{fmt}"', page, count=1))
     write_assets(dest, page)
 
-    errors = []
+    errors, missing = [], []
     browser_page.on("pageerror", lambda e: errors.append(str(e)))
+    # A file it names that is not in its folder is a 404, which no pageerror reports.
+    browser_page.on("response", lambda r: r.status == 404 and missing.append(r.url))
     w, h = STAGE[fmt]
     await browser_page.set_viewport_size({"width": w, "height": h})
     await browser_page.goto(served(dest) + "/?embed")
     await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
-    assert errors == []
+    assert errors == [] and missing == []
     published = await browser_page.evaluate("() => window.auditorium.beats.length")
     assert published >= 1
     assert await browser_page.evaluate(OUTSIDE, list(SAFE[fmt])) == []
@@ -314,4 +312,4 @@ def test_an_example_carries_every_file_it_names(name):
     example = TEMPLATES / name / "example"
     html = (example / "index.html").read_text()
     names = re.findall(r'(?:src|href)="(?!/|https?:|#)([^"]+)"', html)
-    assert [n for n in names if not (example / n).is_file() and not (TEMPLATES / name / n).is_file()] == []
+    assert [n for n in names if not (example / n).is_file()] == []
