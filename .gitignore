@@ -175,3 +175,6 @@ demo_deck.pdf
 !tests/fixtures/**/*.html
 dist/
 !tests/fixtures/*.html
+# The check rules' fixtures are projects too: each index.html breaks one rule
+# (tests/test_check.py), and CI fails without them.
+!tests/rules/**/*.html
