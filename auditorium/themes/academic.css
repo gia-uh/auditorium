@@ -1,51 +1,9 @@
-/* Auditorium theme: academic (layout axis)
- * Serif body (Source Serif 4 — vendored), display serif for titles
- * (Playfair Display — vendored). Chrome footer carries deck title (left)
- * and slide N / total (right). Subtitle gets a hairline rule. */
-
-body, .aud {
-    font-family: 'Source Serif 4', Georgia, serif;
+/* academic: serif body, display serif headings, tight corners, no shadow.
+   The 4.x look auditorium.css is built on, stated in full. The palette is the
+   default one. */
+:root {
+    --aud-font-body: 'Source Serif 4', Georgia, serif;
+    --aud-font-display: 'Playfair Display', Georgia, serif;
+    --aud-radius: 4px;
+    --aud-shadow: none;
 }
-.aud {
-    text-align: left;
-}
-.aud h1, .aud h2, .aud h3,
-.aud .aud-slide-title {
-    font-family: 'Playfair Display', Georgia, serif;
-    font-weight: 600;
-    letter-spacing: -0.005em;
-}
-.aud .aud-slide-title {
-    border-bottom: 1px solid currentColor;
-    padding-bottom: 0.2em;
-    text-align: left;
-    align-self: flex-start;
-    width: 100%;
-    opacity: 0.95;
-}
-.aud .aud-slide-subtitle {
-    font-family: 'Source Serif 4', Georgia, serif;
-    font-style: italic;
-    opacity: 0.75;
-    text-align: left;
-    align-self: flex-start;
-}
-.aud .aud-block-title {
-    font-style: italic;
-    font-weight: 600;
-}
-
-/* Footer chrome: deck title (left) and slide counter (right). */
-.aud-chrome-footer {
-    height: auto;
-    padding: 0.5em 2em;
-    display: flex;
-    justify-content: space-between;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 0.7em;
-    color: currentColor;
-    opacity: 0.55;
-    font-variant-numeric: tabular-nums;
-}
-.aud-chrome-footer::before { content: var(--aud-deck-title, ""); }
-.aud-chrome-footer::after  { content: var(--aud-slide-number) " / " var(--aud-slide-total); }

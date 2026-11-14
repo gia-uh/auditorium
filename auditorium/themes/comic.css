@@ -1,40 +1,9 @@
-/* Auditorium theme: comic (layout axis)
- * Marker-style display, loose bullets, slightly rotated block borders.
- * Best stacked with `neon` or `light` for the full effect. */
-
-body, .aud {
-    font-family: "Comic Sans MS", "Comic Neue", "Marker Felt", "Patrick Hand", cursive, sans-serif;
+/* comic: a marker-style hand for everything, round corners, a soft drop
+   shadow. Uses the default palette; the hand is the system's, so it differs
+   between machines. */
+:root {
+    --aud-font-body: "Comic Neue", "Comic Sans MS", "Marker Felt", "Patrick Hand", cursive, sans-serif;
+    --aud-font-display: "Comic Neue", "Comic Sans MS", "Marker Felt", "Patrick Hand", cursive, sans-serif;
+    --aud-radius: 20px;
+    --aud-shadow: 4px 4px 0 rgba(0, 0, 0, 0.12);
 }
-.aud h1, .aud h2, .aud h3,
-.aud .aud-slide-title, .aud .aud-slide-subtitle {
-    font-family: inherit;
-    font-weight: 700;
-    letter-spacing: 0.01em;
-    text-transform: none;
-}
-.aud .aud-slide-title { font-size: 2.4em; }
-.aud .aud-slide-subtitle { font-size: 1.4em; opacity: 0.8; }
-
-/* Marker-style underline on strong text. */
-.aud strong {
-    background: linear-gradient(transparent 60%, var(--aud-accent, #ffe27a) 60%);
-    padding: 0 0.1em;
-}
-
-/* Playful bullets. */
-.aud ul { list-style: none; padding-left: 1.5em; }
-.aud ul > li { position: relative; }
-.aud ul > li::before {
-    content: "✦";
-    position: absolute;
-    left: -1.2em;
-    color: var(--aud-accent, currentColor);
-}
-
-/* Slightly rotated block frames — handwritten feel. */
-.aud .aud-block {
-    border-radius: 0.6em;
-    border-width: 2px;
-    transform: rotate(-0.4deg);
-}
-.aud .aud-block:nth-child(even) { transform: rotate(0.4deg); }

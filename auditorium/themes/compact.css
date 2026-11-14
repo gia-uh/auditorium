@@ -1,18 +1,9 @@
-/* Auditorium theme: compact (layout axis)
- * Tighter padding, smaller titles, denser line-height. For content-heavy
- * technical decks. Pairs well with any color theme. */
-
+/* compact: tighter spacing and denser lines, for content-heavy technical
+   decks. Fonts and palette are the defaults. */
 :root {
     --aud-slide-padding: 1.5rem 3rem;
     --aud-content-max-width: 70rem;
     --aud-line-height: 1.45;
     --aud-block-gap: 0.7em;
-    --aud-font-size: calc(min(100vw, 100vh * 16 / 9) * 0.018);
+    --aud-radius: 6px;
 }
-.aud .aud-slide-title { font-size: 1.5em; }
-.aud .aud-slide-subtitle { font-size: 1.05em; }
-.aud h1 { font-size: 1.5em; }
-.aud h2 { font-size: 1.2em; }
-.aud h3 { font-size: 1.05em; }
-.aud pre { padding: 0.6em 0.9em; font-size: 0.85em; }
-.aud .aud-block { padding: 0.5em 0.8em; }

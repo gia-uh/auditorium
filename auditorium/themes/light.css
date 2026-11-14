@@ -1,7 +1,4 @@
-/* Auditorium theme: light (color axis)
- * Cream letterbox, paper-white slide, graphite text, muted indigo accent.
- * Explicit re-assertion of the framework default look. */
-
+/* light: cream letterbox, paper-white stage, graphite text, indigo accent. */
 :root {
     --aud-letterbox-bg: #f4f3ee;
     --aud-slide-bg: #ffffff;
@@ -10,34 +7,9 @@
     --aud-accent: #4f46e5;
     --aud-rule: #d1d5db;
     --aud-code-bg: #f3f4f6;
-}
-body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
-.aud {
-    background: var(--aud-slide-bg);
-    color: var(--aud-fg);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 8px 24px rgba(0, 0, 0, 0.04);
-}
-.aud a { color: var(--aud-accent); }
-.aud hr { border-color: var(--aud-rule); }
-.aud code, .aud pre {
-    background: var(--aud-code-bg);
-    color: var(--aud-fg);
-}
-.aud blockquote {
-    border-left-color: var(--aud-accent);
-    color: var(--aud-muted);
-}
-.aud table th, .aud table td {
-    border-color: var(--aud-rule);
-}
-
-/* ---- Geometry palette ----
- * Indigo lead against white, rose as the natural contrast. */
-:root {
     --aud-geom-1: #4f46e5;
     --aud-geom-2: #e11d48;
     --aud-geom-3: #0891b2;
     --aud-geom-4: #ca8a04;
     --aud-geom-muted: #9ca3af;
-    --aud-geom-width: 3;
 }

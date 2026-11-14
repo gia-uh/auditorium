@@ -1,78 +1,21 @@
-/* Auditorium theme: neon (color axis)
- * Pure-black backdrop. Saturated cyan / magenta / lime accents with soft
- * glow on titles. Animated underline on the slide title. */
-
+/* neon: pure-black stage, saturated cyan, magenta and lime, a cyan glow
+   around cards, code panels and figures. */
 :root {
     --aud-letterbox-bg: #000000;
     --aud-slide-bg: #06070a;
     --aud-fg: #e6f7ff;
     --aud-muted: #7d93a6;
-    --aud-accent: #00e5ff;        /* electric cyan */
-    --aud-accent-2: #ff2bd6;      /* hot magenta */
-    --aud-accent-3: #b4ff39;      /* lime */
+    --aud-accent: #00e5ff;
     --aud-rule: #1c2230;
+    --aud-shadow: 0 0 24px rgba(0, 229, 255, 0.25);
     --aud-code-bg: #0c1219;
-}
-body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
-.aud {
-    background: var(--aud-slide-bg);
-    color: var(--aud-fg);
-}
-.aud h1, .aud h2, .aud h3,
-.aud .aud-slide-title {
-    color: var(--aud-accent);
-    text-shadow: 0 0 12px rgba(0, 229, 255, 0.45), 0 0 2px rgba(0, 229, 255, 0.6);
-}
-.aud .aud-slide-subtitle {
-    color: var(--aud-accent-2);
-    text-shadow: 0 0 10px rgba(255, 43, 214, 0.35);
-}
-.aud strong { color: var(--aud-accent-3); }
-.aud a { color: var(--aud-accent); }
-.aud a:hover {
-    text-shadow: 0 0 8px var(--aud-accent);
-}
-.aud code, .aud pre {
-    background: var(--aud-code-bg);
-    color: var(--aud-accent-3);
-    border: 1px solid var(--aud-rule);
-}
-.aud hr { border-color: var(--aud-accent); opacity: 0.4; }
-.aud blockquote {
-    border-left-color: var(--aud-accent-2);
-    color: var(--aud-muted);
-}
-.aud table th, .aud table td {
-    border-color: var(--aud-rule);
-}
-.aud .aud-block {
-    background: rgba(0, 229, 255, 0.04);
-    border-color: var(--aud-rule);
-}
-
-/* Animated cursor under the slide title. */
-.aud .aud-slide-title::after {
-    content: "";
-    display: inline-block;
-    width: 0.6em;
-    height: 0.85em;
-    margin-left: 0.15em;
-    vertical-align: -0.05em;
-    background: var(--aud-accent);
-    box-shadow: 0 0 10px var(--aud-accent);
-    animation: aud-neon-blink 1.1s steps(2, end) infinite;
-}
-@keyframes aud-neon-blink {
-    50% { opacity: 0; }
-}
-
-/* ---- Geometry palette ----
- * The theme's own three accents, in order, plus amber. */
-:root {
+    --aud-code-keyword: #ff2bd6;
+    --aud-code-literal: #00e5ff;
+    --aud-code-string: #b4ff39;
+    --aud-code-comment: #7d93a6;
     --aud-geom-1: #00e5ff;
     --aud-geom-2: #ff2bd6;
     --aud-geom-3: #b4ff39;
     --aud-geom-4: #ffd166;
     --aud-geom-muted: #243049;
-    --aud-geom-width: 3.5;
 }

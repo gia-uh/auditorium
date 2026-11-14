@@ -1,51 +1,11 @@
-/* Auditorium theme: terminal (layout axis)
- * Monospaced everything, prompt-style hooks. Pairs hilariously well with
- * the `mono` color theme. */
-
-body, .aud,
-.aud h1, .aud h2, .aud h3,
-.aud .aud-slide-title, .aud .aud-slide-subtitle,
-.aud code, .aud pre,
-.aud p, .aud li {
-    font-family: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-    font-weight: 400;
-    letter-spacing: 0;
-}
+/* terminal: monospace everywhere, square corners, tighter lines. The palette
+   is the default one; pair it with mono by copying mono's palette into
+   theme.css. */
 :root {
+    --aud-font-body: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --aud-font-display: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --aud-font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
     --aud-slide-padding: 2.5rem 4rem;
     --aud-line-height: 1.5;
+    --aud-radius: 0px;
 }
-.aud .aud-slide-title::before { content: "$ "; opacity: 0.5; }
-.aud .aud-slide-subtitle::before { content: "# "; opacity: 0.5; }
-.aud h2::before { content: "## "; opacity: 0.5; }
-.aud h3::before { content: "### "; opacity: 0.5; }
-.aud ul > li::marker { content: "* "; }
-.aud ol > li::marker { content: counter(list-item) ". "; }
-.aud strong { font-weight: 700; }
-.aud code, .aud pre {
-    border: 1px solid currentColor;
-    padding: 0.1em 0.3em;
-}
-.aud pre { padding: 0.6em 0.9em; }
-.aud .aud-block {
-    border-radius: 0;
-    border-width: 0 0 0 0.4em;
-}
-
-/* Blinking cursor at the bottom-left of every slide. */
-.aud-chrome-footer {
-    height: auto;
-    padding: 0.4em 1.2em;
-    font-family: inherit;
-    font-size: 0.7em;
-    opacity: 0.6;
-}
-.aud-chrome-footer::before {
-    content: "[" var(--aud-slide-number) "/" var(--aud-slide-total) "] " var(--aud-slide-name);
-}
-.aud-chrome-footer::after {
-    content: "_";
-    margin-left: 0.3em;
-    animation: aud-terminal-blink 1s steps(2, end) infinite;
-}
-@keyframes aud-terminal-blink { 50% { opacity: 0; } }

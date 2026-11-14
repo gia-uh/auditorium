@@ -1,67 +1,9 @@
-/* Auditorium theme: magazine (layout axis)
- * Strong display serif title, body in clean sans, two-column-friendly
- * proportions, sidebar chrome with deck title vertical-rotated on the
- * right edge. */
-
-body, .aud {
-    font-family: "Inter", "Helvetica Neue", system-ui, sans-serif;
-}
+/* magazine: a clean sans body under display serif headings, wider measure.
+   The palette is the default one; the sans is the system's. */
 :root {
+    --aud-font-body: "Inter", "Helvetica Neue", system-ui, sans-serif;
+    --aud-font-display: "Playfair Display", "Times New Roman", serif;
     --aud-content-max-width: 64rem;
     --aud-block-gap: 0.9em;
-}
-.aud .aud-slide-title {
-    font-family: "Playfair Display", "Times New Roman", serif;
-    font-size: 2.6em;
-    font-weight: 700;
-    line-height: 1.05;
-    text-align: left;
-    align-self: flex-start;
-    letter-spacing: -0.02em;
-}
-.aud .aud-slide-subtitle {
-    font-family: "Playfair Display", "Times New Roman", serif;
-    font-style: italic;
-    font-weight: 400;
-    text-align: left;
-    align-self: flex-start;
-    opacity: 0.7;
-}
-.aud h2 {
-    font-family: "Playfair Display", "Times New Roman", serif;
-    text-transform: uppercase;
-    font-size: 0.9em;
-    letter-spacing: 0.15em;
-    border-bottom: 2px solid currentColor;
-    padding-bottom: 0.3em;
-}
-.aud strong {
-    font-family: "Playfair Display", "Times New Roman", serif;
-    font-weight: 700;
-}
-.aud blockquote {
-    font-family: "Playfair Display", "Times New Roman", serif;
-    font-style: italic;
-    font-size: 1.3em;
-    border-left-width: 4px;
-    padding: 0.5em 1em;
-    margin: 0.5em 0;
-}
-
-/* Sidebar chrome: deck title runs vertically on the right edge. */
-.aud-chrome-right {
-    width: 2.5em;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.aud-chrome-right::after {
-    content: var(--aud-deck-title, "");
-    font-family: "Playfair Display", "Times New Roman", serif;
-    font-size: 0.7em;
-    letter-spacing: 0.4em;
-    text-transform: uppercase;
-    opacity: 0.4;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
+    --aud-radius: 2px;
 }

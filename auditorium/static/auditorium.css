@@ -38,6 +38,33 @@
     --aud-slide-bg: #ffffff;
 }
 
+/* ---- Theme variables (#84) ----
+ * Everything a theme sets, and nothing else: a theme, bundled or the
+ * project's own theme.css, is a :root block of these. The palette roles are
+ * --aud-slide-bg and --aud-letterbox-bg above, --aud-fg (text), --aud-muted
+ * (secondary text), --aud-accent (kickers, numbers, emphasis; no default, so
+ * an unset accent is the text colour), --aud-rule (borders) and the geometry
+ * palette further down. A theme that sets the palette sets every text role,
+ * since the contrast test (tests/test_themes.py) measures them together.
+ */
+:root {
+    --aud-fg: #111827;
+    --aud-muted: #6b7280;
+    --aud-rule: #d1d5db;
+    --aud-font-body: 'Source Serif 4', Georgia, serif;
+    --aud-font-display: 'Playfair Display', Georgia, serif;
+    --aud-font-mono: monospace;
+    --aud-radius: 12px;
+    --aud-shadow: none;
+    /* Code: the panel, and highlight.js's token roles. The defaults are its
+       github style, which the runtime loads; a dark theme sets all five. */
+    --aud-code-bg: #f8f8f8;
+    --aud-code-keyword: #d73a49;
+    --aud-code-literal: #005cc5;
+    --aud-code-string: #032f62;
+    --aud-code-comment: #6a737d;
+}
+
 /* ---- Reset / base (replaces Tailwind) ---- */
 
 *, *::before, *::after {
@@ -47,7 +74,7 @@
 }
 
 body {
-    font-family: 'Source Serif 4', Georgia, serif;
+    font-family: var(--aud-font-body);
     -webkit-font-smoothing: antialiased;
     background: var(--aud-letterbox-bg);
     color: var(--aud-fg, #111827);
@@ -187,7 +214,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 .aud h1,
 .aud h2,
 .aud h3 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-weight: 600;
     text-align: center;
 }
@@ -240,8 +267,8 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     margin: 0 auto;
     max-width: 100%;
     font-size: 0.78em;
-    border-top: 2.5px solid #000;
-    border-bottom: 2.5px solid #000;
+    border-top: 2.5px solid var(--aud-fg);
+    border-bottom: 2.5px solid var(--aud-fg);
 }
 
 .aud th,
@@ -266,7 +293,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 /* Midrule sits below the header. The toprule (table border-top) already
    acts as the upper edge of the header band, framing the header row. */
 .aud thead tr {
-    border-bottom: 1.5px solid #000;
+    border-bottom: 1.5px solid var(--aud-fg);
 }
 
 .aud th {
@@ -285,16 +312,19 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 
 /* ---- Code ---- */
 
+.aud code, .aud pre { font-family: var(--aud-font-mono); }
+
 .aud code {
     font-size: 0.85em;
-    background: #f5f5f5;
+    background: var(--aud-code-bg);
     padding: 0.15em 0.4em;
     border-radius: 0.25em;
 }
 
 .aud pre {
-    background: #f8f8f8;
-    border-radius: 0.5em;
+    background: var(--aud-code-bg);
+    border-radius: var(--aud-radius);
+    box-shadow: var(--aud-shadow);
     padding: 1.25em;
     margin-bottom: 0.75em;
     overflow-x: auto;
@@ -308,12 +338,25 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     font-size: 0.8em;
 }
 
+/* highlight.js tokens in the theme's code colours. The github style the
+   runtime loads paints them for a white panel; these outrank it, so a dark
+   theme's panel keeps legible code. */
+.aud .hljs { color: inherit; background: transparent; }
+.aud :is(.hljs-keyword, .hljs-doctag, .hljs-template-tag, .hljs-type,
+         .hljs-variable.language_, .hljs-title, .hljs-section) { color: var(--aud-code-keyword); }
+.aud :is(.hljs-number, .hljs-literal, .hljs-built_in, .hljs-attr, .hljs-attribute,
+         .hljs-variable, .hljs-meta, .hljs-operator, .hljs-selector-attr,
+         .hljs-selector-class, .hljs-selector-id) { color: var(--aud-code-literal); }
+.aud :is(.hljs-string, .hljs-regexp, .hljs-symbol, .hljs-bullet, .hljs-name,
+         .hljs-quote, .hljs-selector-tag) { color: var(--aud-code-string); }
+.aud :is(.hljs-comment, .hljs-code, .hljs-formula) { color: var(--aud-code-comment); }
+
 /* ---- Semantic slide chrome ---- */
 /* Sizes are in em so they scale with --aud-font-size, matching the
    viewport-proportional theme. */
 
 .aud .aud-slide-title {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-weight: 600;
     font-size: 2em;
     line-height: 1.1;
@@ -322,7 +365,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 
 .aud .aud-slide-subtitle {
-    font-family: 'Source Serif 4', Georgia, serif;
+    font-family: var(--aud-font-body);
     font-weight: 400;
     font-style: italic;
     font-size: 1em;
@@ -346,7 +389,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 
 .aud .aud-section-number {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-size: 1.1em;
     font-weight: 400;
     letter-spacing: 0.2em;
@@ -355,7 +398,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 
 .aud .aud-section-title {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-size: 3.2em;
     font-weight: 700;
     line-height: 1.05;
@@ -375,7 +418,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 
 .aud .aud-block-title {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-weight: 600;
     font-size: 0.9em;
     padding: 0.4em 0.9em;
@@ -440,7 +483,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 /* ---- Blockquotes ---- */
 
 .aud blockquote {
-    border-left: 4px solid #d1d5db;
+    border-left: 4px solid var(--aud-rule);
     padding-left: 1em;
     margin-bottom: 0.75em;
     color: var(--aud-muted, #6b7280);
@@ -448,7 +491,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 
 /* ---- Geometry palette ----
- * Defaults for the SVG layer, tuned for a light ground. Colour-axis themes
+ * Defaults for the SVG layer, tuned for a light ground. Themes with a palette
  * override every one of these; tests/test_themes.py asserts they do, because a
  * theme that forgets them draws figures in colours chosen for someone else's
  * background -- wrong rather than invisible, which is harder to notice.
@@ -463,7 +506,6 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     --aud-geom-3: #059669;
     --aud-geom-4: #d97706;
     --aud-geom-muted: #9ca3af;
-    --aud-geom-width: 3;
 }
 
 /* ---- Mathematics ----
@@ -603,7 +645,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
    second tone. */
 .aud > section.statement { align-items: flex-start; justify-content: center; }
 .aud > section.statement p {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-size: var(--aud-type-display);
     line-height: 1.15;
     max-width: none;
@@ -669,7 +711,8 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 .aud .card {
     padding: 1.1em 1.4em;
     border: 2px solid var(--aud-rule, #d1d5db);
-    border-radius: 12px;
+    border-radius: var(--aud-radius);
+    box-shadow: var(--aud-shadow);
     text-align: center;
     background: color-mix(in srgb, var(--aud-fg, #111827) 3%, transparent);
 }
@@ -680,7 +723,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 /* stat: a number over its label; data-enter="count" counts it up. */
 .aud .stat { display: flex; flex-direction: column; align-items: center; text-align: center; }
 .aud .stat b {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: var(--aud-font-display);
     font-size: 2.5em;
     line-height: 1.1;
     color: var(--aud-accent, currentColor);
@@ -702,6 +745,23 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     max-width: none;
 }
 
+/* brand: the logo slot. One <img class="brand"> directly inside <main>, outside
+   every beat, so the runtime leaves it alone and it shows on every beat. It
+   sits in the band between the safe area and the layouts' content (both
+   --aud-inset wide), bottom right, so it never covers a layout; a theme may set
+   --aud-logo-h, at the cost of that guarantee. A page flows it where it stands. */
+.aud > .brand {
+    position: absolute;
+    right: var(--aud-safe-right);
+    bottom: var(--aud-safe-bottom);
+    height: var(--aud-logo-h, var(--aud-inset));
+    width: auto;
+    max-width: 30%;
+    object-fit: contain;
+    z-index: 3;
+}
+.aud[data-format="page"] > .brand { position: static; display: block; margin: var(--aud-inset); }
+
 /* figure: an <img> (a photo) or an inline <svg> (a figure) over its
    <figcaption>. Inline SVG follows the theme: currentColor is the ink, and
    the fill-* and stroke-* classes map shapes to the palette. */
@@ -721,7 +781,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     height: 100%;
     color: var(--aud-fg, #111827);
 }
-.aud figure > img { object-fit: cover; border-radius: 10px; background: var(--aud-rule, #d1d5db); }
+.aud figure > img { object-fit: cover; border-radius: var(--aud-radius); background: var(--aud-rule, #d1d5db); }
 /* frame: clips a photo to its box, so a ken-burns zoom stays inside it
    instead of spilling over the caption and the safe area. */
 .aud .frame {
@@ -729,7 +789,7 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     min-height: 0;
     width: 100%;
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: var(--aud-radius);
     background: var(--aud-rule, #d1d5db);
 }
 .aud .frame > img { display: block; width: 100%; height: 100%; object-fit: cover; }
