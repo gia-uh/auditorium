@@ -95,6 +95,15 @@
 
 ### Added
 
+- `auditorium bundle DIR` (and `export -f html`): one `dist/NAME.html` that
+  presents from disk, with the runtime, CSS, fonts, scripts and assets inside,
+  each asset embedded once. `--no-audio` leaves the audio out. It refuses
+  missing files and anything loaded from the network, with file and line (#103).
+- `auditorium export DIR -f pdf`: a deck or another staged format prints one
+  page per beat at stage size, every step shown; a page prints at A4. Text
+  stays selectable. Needs `pypdf`, now in the `record` extra (#103).
+- `auditorium export -f png --beat ID|N` exports one beat, such as a poster (#103).
+
 - **Layouts and components in `auditorium.css`** (#86). Ten layouts, each a
   class on a beat's `<section>`: `title`, `statement`, `cards`, `stats`,
   `columns`, `figure`, `logos`, `photo`, `table` and `chart`. Components:
