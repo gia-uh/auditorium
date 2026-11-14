@@ -313,3 +313,66 @@ def test_an_example_carries_every_file_it_names(name):
     html = (example / "index.html").read_text()
     names = re.findall(r'(?:src|href)="(?!/|https?:|#)([^"]+)"', html)
     assert [n for n in names if not (example / n).is_file()] == []
+
+
+# ---- the logo slot (#84) ------------------------------------------------------
+
+# On each beat: the logo's box in stage pixels, and every visible content box
+# of the beat that it intersects.
+LOGO = """([top, right, bottom, left]) => {
+  const a = window.auditorium, out = [];
+  const main = document.querySelector('main.aud');
+  const logo = main.querySelector(':scope > img.brand');
+  if (!logo) return null;
+  for (const beat of a.beats) {
+    a.goto(beat.id);
+    const stage = main.getBoundingClientRect();
+    const scale = stage.width / a.stage.w;
+    const box = (r) => [(r.left - stage.left) / scale, (r.top - stage.top) / scale,
+                        (r.right - stage.left) / scale, (r.bottom - stage.top) / scale];
+    const cs = getComputedStyle(logo);
+    const [x0, y0, x1, y1] = box(logo.getBoundingClientRect());
+    const hits = [];
+    const section = main.querySelector(`section[data-beat="${beat.id}"]`);
+    for (const el of section.querySelectorAll('*')) {
+      const s = getComputedStyle(el);
+      if (el.closest('aside.notes') || s.visibility === 'hidden' || s.display === 'none') continue;
+      const [l, t, r, b] = box(el.getBoundingClientRect());
+      if (r - l > 0 && b - t > 0 && l < x1 && r > x0 && t < y1 && b > y0) hits.push(el.tagName);
+    }
+    out.push({beat: beat.id, shown: cs.display !== 'none' && cs.visibility !== 'hidden' && x1 - x0 > 0,
+              inside: x0 >= left - 1 && y0 >= top - 1 && x1 <= a.stage.w - right + 1 && y1 <= a.stage.h - bottom + 1,
+              hits});
+  }
+  return out;
+}"""
+
+
+@pytest.mark.parametrize("name,fmt", list(cases()))
+async def test_the_logo_shows_on_every_beat_and_covers_nothing(browser_page, served, tmp_path, name, fmt):
+    """The brand kit's logo slot: one <img class="brand"> in <main> shows on
+    every beat of the example, inside the safe area, over no layout content."""
+    import shutil
+
+    dest = tmp_path / name
+    shutil.copytree(TEMPLATES / name / "example", dest)
+    page = (dest / "index.html").read_text()
+    (dest / "index.html").write_text(re.sub(r'data-format="[a-z]+"', f'data-format="{fmt}"', page, count=1))
+    w, h = STAGE[fmt]
+    await browser_page.set_viewport_size({"width": w, "height": h})
+    await browser_page.goto(served(dest) + "/?embed")
+    await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
+    beats = await browser_page.evaluate(LOGO, list(SAFE[fmt]))
+    assert beats, "the example has no logo slot"
+    assert [b for b in beats if not (b["shown"] and b["inside"] and not b["hits"])] == []
+
+
+@pytest.mark.parametrize("name", sorted(templates()))
+def test_new_copies_the_placeholder_logo(tmp_path, name):
+    """The skeleton's logo slot points at a file new writes, marked
+    data-placeholder so the check (#80) asks for the real logo."""
+    dest = tmp_path / name
+    assert run("new", name, str(dest)).exit_code == 0
+    page = (dest / "index.html").read_text()
+    assert re.search(r'<img class="brand" src="assets/logo.svg" [^>]*data-placeholder', page)
+    assert (dest / "assets" / "logo.svg").is_file()
