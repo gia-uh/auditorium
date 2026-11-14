@@ -1,16 +1,8 @@
-/* Auditorium theme: simple (layout axis)
- * Minimal sans-serif baseline. No chrome content. Use as a neutral starting
- * point when stacking with a color theme: e.g. `simple + dark`. */
-
-body, .aud {
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-.aud h1, .aud h2, .aud h3,
-.aud .aud-slide-title, .aud .aud-slide-subtitle {
-    font-family: inherit;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-}
-.aud code, .aud pre code {
-    font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+/* simple: the system sans for text and headings, a matching monospace for
+   code. A neutral start; the palette is the default one. */
+:root {
+    --aud-font-body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --aud-font-display: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --aud-font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --aud-radius: 8px;
 }

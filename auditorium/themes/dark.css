@@ -1,7 +1,5 @@
-/* Auditorium theme: dark (color axis)
- * Near-black slide on warm-black letterbox, off-white text, amber accent.
- * Pure color override — pairs with any layout theme. */
-
+/* dark: near-black stage on a warm-black letterbox, off-white text, amber
+   accent, and code colours for a dark panel. */
 :root {
     --aud-letterbox-bg: #07080a;
     --aud-slide-bg: #14171c;
@@ -10,38 +8,15 @@
     --aud-accent: #f7c873;
     --aud-rule: #2a2e36;
     --aud-code-bg: #1c2026;
-}
-body { background: var(--aud-letterbox-bg); color: var(--aud-fg); }
-.aud {
-    background: var(--aud-slide-bg);
-    color: var(--aud-fg);
-}
-.aud a { color: var(--aud-accent); }
-.aud hr { border-color: var(--aud-rule); }
-.aud code, .aud pre {
-    background: var(--aud-code-bg);
-    color: var(--aud-fg);
-}
-.aud blockquote {
-    border-left-color: var(--aud-accent);
-    color: var(--aud-muted);
-}
-.aud table th, .aud table td {
-    border-color: var(--aud-rule);
-}
-.aud .aud-block {
-    background: rgba(255, 255, 255, 0.03);
-    border-color: var(--aud-rule);
-}
-
-/* ---- Geometry palette ----
- * Amber lead matching the accent; cool secondaries so a pair of
- * curves separates by hue rather than by brightness alone. */
-:root {
+    --aud-code-keyword: #ff7b72;
+    --aud-code-literal: #79c0ff;
+    --aud-code-string: #a5d6ff;
+    --aud-code-comment: #8b949e;
+    /* Amber lead matching the accent; cool secondaries so a pair of curves
+       separates by hue rather than by brightness alone. */
     --aud-geom-1: #f7c873;
     --aud-geom-2: #7dd3fc;
     --aud-geom-3: #f9a8d4;
     --aud-geom-4: #86efac;
     --aud-geom-muted: #3f4650;
-    --aud-geom-width: 3;
 }
