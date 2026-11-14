@@ -1,4 +1,4 @@
-"""The ``auditorium`` command: ``template``, ``help``, ``run``, ``preview``, ``render``, ``export``, ``relay``.
+"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``run``, ``preview``, ``render``, ``export``, ``relay``.
 
 Every command but ``template``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
@@ -212,6 +212,32 @@ def export(
     console.print(f"[green]✓[/] {len(written)} PNG files in [bold]{output or folder / 'dist'}/[/]")
 
 
+@app.command()
+def check(
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
+    as_json: bool = typer.Option(False, "--json", help="Print every finding as JSON"),
+) -> None:
+    """Check a project against every rule; exit 1 on any error.
+
+    Prints the first errors with their lines and fixes, then the counts, and
+    writes every finding to dist/check.json. auditorium help check explains them.
+    """
+    import json
+
+    from auditorium.check import check as run_check
+
+    folder = _project(project)
+    report = run_check(folder)
+    data = report.as_dict()
+    dist = folder / "dist"
+    dist.mkdir(exist_ok=True)
+    (dist / "check.json").write_text(json.dumps(data, indent=2) + "\n")
+    # Plain print: messages quote the author's text, which may hold [brackets].
+    print(json.dumps(data, indent=2) if as_json else report.text())
+    if report.errors:
+        raise typer.Exit(1)
+
+
 template_app = typer.Typer(help="List, show and copy the templates a project starts from")
 app.add_typer(template_app, name="template")
 
@@ -296,10 +322,15 @@ def template_new(
 @app.command(name="help")
 def help_(
     topic: str = typer.Argument(None, help="Topic to print; omit for the list"),
+    name: str = typer.Argument(None, help="With topic 'rule': the rule to print"),
     all_: bool = typer.Option(False, "--all", help="Print every topic, in order"),
 ) -> None:
     """Print the guide that ships with this version, one topic at a time."""
     from auditorium.help import nearest, topic_path, topics
+
+    if topic == "rule":
+        _help_rule(name)
+        return
 
     if all_ and topic is not None:
         print("error: --all prints every topic; give a topic or --all, not both.", file=sys.stderr)
@@ -328,6 +359,27 @@ def help_(
     # Plain print, not the rich console: snippets hold [brackets] and markup
     # rich would eat, and an agent reads the bytes as written.
     print(topic_path(topic).read_text(), end="")
+
+
+def _help_rule(name: str | None) -> None:
+    """``help rule NAME``: one check rule, broken and fixed; bare, the list."""
+    from auditorium.check import RULES
+    from auditorium.help import rule_path
+
+    if name is None:
+        width = max(len(n) for n in RULES)
+        for rule in RULES.values():
+            print(f"{rule.name:<{width}}  {rule.group:<9}  {rule.catches}")
+        print(f"{len(RULES)} rules; auditorium help rule NAME prints one")
+        return
+    if name not in RULES:
+        import difflib
+
+        guess = difflib.get_close_matches(name, list(RULES), n=1, cutoff=0.5)
+        hint = f" Did you mean '{guess[0]}'?" if guess else ""
+        print(f"error: no rule '{name}'.{hint} auditorium help rule lists them.", file=sys.stderr)
+        raise typer.Exit(1)
+    print(rule_path(name).read_text(), end="")
 
 
 def _start_live_status(application) -> None:

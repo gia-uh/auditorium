@@ -72,8 +72,13 @@ class Presentation:
         return bool(self.audience_clients) or self.presenter_ws is not None
 
 
-def create_app(project: Path | None = None, presenter_mode: bool = False) -> FastAPI:
-    """Serve ``project`` (a folder holding index.html), or nothing but the runtime."""
+def create_app(project: Path | None = None, presenter_mode: bool = False,
+               annotate: bool = False) -> FastAPI:
+    """Serve ``project`` (a folder holding index.html), or nothing but the runtime.
+
+    ``annotate`` serves index.html with ``data-aud-line`` on every element, so
+    the check can say which line of the file an element it measured came from.
+    """
     app = FastAPI()
     app.state.project = Path(project).resolve() if project is not None else None
     app.state.presenter_mode = presenter_mode
@@ -96,6 +101,10 @@ def create_app(project: Path | None = None, presenter_mode: bool = False) -> Fas
         if app.state.project is None:
             return HTMLResponse("No project.", status_code=404)
         html = (app.state.project / "index.html").read_text()
+        if annotate:
+            from auditorium.check.source import annotate as with_lines
+
+            html = with_lines(html)
         # Injected into the page rather than sent over the socket, because the
         # audience has to decide whether to autoplay at load time. Waiting for
         # hello_ack would race it: in shared mode an autoplaying audience and a
@@ -105,7 +114,7 @@ def create_app(project: Path | None = None, presenter_mode: bool = False) -> Fas
         mode = "true" if app.state.presenter_mode else "false"
         meta = f'<meta name="auditorium-presenter-mode" content="{mode}">'
         if "</head>" in html:
-            html = html.replace("</head>", meta + "\n</head>", 1)
+            html = html.replace("</head>", meta + "</head>", 1)
         else:
             html = meta + html
         return HTMLResponse(html, headers={"Cache-Control": "no-store"})

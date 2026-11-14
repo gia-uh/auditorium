@@ -8,8 +8,9 @@ Python to write.
 2. Copy: `auditorium template new talk my-talk` (`--format`, `--theme dark`).
 3. Edit `my-talk/index.html`: replace every `data-placeholder` element and
    delete the attribute; keep the classes. More beats: `help layouts`.
-4. Look: `auditorium preview my-talk`, or `auditorium export my-talk -f png`
-   for each beat at its end in `my-talk/dist/`. Fix overflow, look again.
+4. Check: `auditorium check my-talk` until it prints 0 errors; each finding
+   names a line and its fix (`help check`). Look: `auditorium preview my-talk`,
+   or `auditorium export my-talk -f png` for each beat in `my-talk/dist/`.
 5. Ship: `auditorium run my-talk` presents live (`--public` for a URL),
    `auditorium render my-talk` writes a video, `auditorium export` a PNG.
 
