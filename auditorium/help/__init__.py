@@ -5,6 +5,7 @@ topics are written for an agent reading a terminal, so they need no rendering,
 and a file per topic keeps each one short enough (under 150 lines, section 09
 of the 2026-11-10 spec) to read whole. The first line of each file is its
 summary (``# name: summary``), listed by ``auditorium help`` with no topic.
+Each check rule has a page under ``rules/``, printed by ``help rule NAME``.
 """
 from __future__ import annotations
 
@@ -25,6 +26,11 @@ def topics() -> dict[str, str]:
 
 def topic_path(name: str) -> Path:
     return HELP / f"{name}.md"
+
+
+def rule_path(name: str) -> Path:
+    """A check rule's page: ``auditorium help rule NAME`` prints it."""
+    return HELP / "rules" / f"{name}.md"
 
 
 def nearest(name: str) -> str | None:
