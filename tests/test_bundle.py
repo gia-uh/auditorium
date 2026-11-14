@@ -234,9 +234,13 @@ async def test_the_talk_presents_from_disk_with_the_arrow_keys(tmp_path):
     try:
         stops = await page.evaluate("window.auditorium.stops.map((s) => s.t)")
         reached = []
-        for _ in stops:
+        for stop in stops:
             await page.keyboard.press("ArrowRight")
-            await page.wait_for_function("() => !window.auditorium.playing")
+            # Wait for this press to land, not only for playback to be idle:
+            # right after the key, playing may not have started yet.
+            await page.wait_for_function(
+                "(stop) => !window.auditorium.playing && window.auditorium.t >= stop", arg=stop
+            )
             reached.append(await page.evaluate("window.auditorium.t"))
         state = await page.evaluate("""async () => {
             await document.fonts.ready;
