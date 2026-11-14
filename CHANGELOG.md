@@ -20,6 +20,13 @@
 - `auditorium help check`, and `auditorium help rule NAME` with a broken and a
   fixed snippet for each rule.
 
+### Fixed
+
+- A seek followed by a new playback in the same frame no longer revives the
+  stopped one. Its frame loop used to read the new playing flag as its own,
+  reach its nearer target first and stop the deck there, so fast arrow
+  presses could land a presentation back on an earlier stop.
+
 ### Changed
 
 - **Authoring is HTML.** A project is a folder with an `index.html` that loads

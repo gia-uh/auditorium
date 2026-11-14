@@ -46,12 +46,14 @@ export function createPlayer({ engine, onFrame }) {
 
     seekTo(t) {
       this.playing = false;
+      this.generation = (this.generation || 0) + 1;
       engine.seek(t);
       if (onFrame) onFrame(this);
     },
 
     pause() {
       this.playing = false;
+      this.generation = (this.generation || 0) + 1;
     },
 
     /** Play from the current position to `target`, then stop.
@@ -63,10 +65,14 @@ export function createPlayer({ engine, onFrame }) {
      */
     playTo(target, onArrive) {
       this.playing = true;
+      // Each playback owns a generation. A loop whose frame is still pending
+      // when a seek and a new playTo happen must exit, not read the new
+      // playing flag as its own and seek the engine back to its target.
+      const generation = this.generation = (this.generation || 0) + 1;
       const base = engine.currentTime;
       const started = performance.now();
       const step = (now) => {
-        if (!this.playing) return;
+        if (!this.playing || this.generation !== generation) return;
         const t = Math.min(base + (now - started), target);
         engine.seek(t);
         if (onFrame) onFrame(this);
