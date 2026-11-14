@@ -428,14 +428,19 @@ function loadStyle(href) {
   document.head.appendChild(l);
 }
 
+// A bundle inlines KaTeX and highlight.js ahead of the runtime, and runs it
+// from a data: URI, which has no directory to resolve "vendor/" against.
 async function loadDecorators(root) {
+  const needMath = root.querySelector(".math") && typeof katex === "undefined";
+  const needCode = root.querySelector("pre[data-lang]") && typeof hljs === "undefined";
+  if (!needMath && !needCode) return;
   const base = new URL(".", import.meta.url).href;
   const jobs = [];
-  if (root.querySelector(".math")) {
+  if (needMath) {
     loadStyle(base + "vendor/katex/katex.min.css");
     jobs.push(loadScript(base + "vendor/katex/katex.min.js"));
   }
-  if (root.querySelector("pre[data-lang]")) {
+  if (needCode) {
     loadStyle(base + "vendor/hljs/styles/github.min.css");
     jobs.push(loadScript(base + "vendor/hljs/highlight.min.js"));
   }

@@ -1,4 +1,4 @@
-"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``run``, ``preview``, ``render``, ``export``, ``relay``.
+"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``run``, ``preview``, ``render``, ``bundle``, ``export``, ``relay``.
 
 Every command but ``template``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
@@ -192,23 +192,64 @@ def render(
 
 
 @app.command()
+def bundle(
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
+    output: Path = typer.Option(None, "-o", "--output", help="Output file (default: dist/NAME.html)"),
+    audio: bool = typer.Option(True, "--audio/--no-audio", help="Embed the audio, or leave it out"),
+) -> None:
+    """Write the project as one HTML file that presents from disk, with nothing to fetch."""
+    _bundle(_project(project), output, audio)
+
+
+def _bundle(folder: Path, output: Path | None, audio: bool) -> None:
+    from auditorium.bundle import BundleError, bundle as write_bundle
+
+    try:
+        out = write_bundle(folder, output, audio=audio)
+    except BundleError as exc:
+        for problem in exc.problems:
+            console.print(f"[red]error:[/] {problem}", highlight=False, soft_wrap=True)
+        console.print(f"{len(exc.problems)} problems, nothing written")
+        raise typer.Exit(1)
+    kinds = ", ".join(f"{kind} {n / 1e6:.2f} MB" for kind, n in sorted(out.kinds.items()))
+    console.print(f"[green]✓[/] [bold]{out.path}[/] ({kinds})", highlight=False, soft_wrap=True)
+    console.print(f"{out.size} bytes in 1 file")
+
+
+@app.command()
 def export(
     project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
-    fmt: str = typer.Option("png", "-f", "--format", help="Output format: png"),
-    output: Path = typer.Option(None, "-o", "--output", help="Output folder (default: dist/)"),
-    size: str = typer.Option(None, "--size", help="WIDTHxHEIGHT or a preset (default: the format's stage)"),
-    steps: bool = typer.Option(False, "-s", "--steps", help="One image per press instead of per beat"),
+    fmt: str = typer.Option("png", "-f", "--format", help="png, pdf or html (the same as bundle)"),
+    output: Path = typer.Option(None, "-o", "--output", help="Output folder for png, file for pdf and html (default: dist/)"),
+    size: str = typer.Option(None, "--size", help="png: WIDTHxHEIGHT or a preset (default: the format's stage)"),
+    steps: bool = typer.Option(False, "-s", "--steps", help="png: one image per press instead of per beat"),
+    beat: str = typer.Option(None, "-b", "--beat", help="png: only this beat, by id or number from 1"),
 ) -> None:
-    """Export each beat at its end state as a PNG."""
+    """Export beats at their end state as PNG, the project as a PDF, or as one HTML file."""
     folder = _project(project)
+    if fmt == "html":
+        _bundle(folder, output, True)
+        return
+    if fmt == "pdf":
+        from auditorium.exporter import export_pdf
+
+        path = asyncio.run(export_pdf(folder, output or folder / "dist" / f"{folder.name}.pdf"))
+        from pypdf import PdfReader
+
+        console.print(f"[green]✓[/] [bold]{path}[/]", highlight=False, soft_wrap=True)
+        console.print(f"{len(PdfReader(str(path)).pages)} pages")
+        return
     if fmt != "png":
-        # html and pdf come with bundle (#103); say so instead of guessing.
-        console.print(f"[red]Error:[/] format [bold]'{fmt}'[/] is not available yet. Use png.")
+        console.print(f"[red]Error:[/] format [bold]'{fmt}'[/] is not one of png, pdf, html.")
         raise typer.Exit(1)
     dims = _size(size)
     from auditorium.exporter import export_png
 
-    written = asyncio.run(export_png(folder, output or folder / "dist", size=dims, steps=steps))
+    try:
+        written = asyncio.run(export_png(folder, output or folder / "dist", size=dims, steps=steps, beat=beat))
+    except ValueError as exc:
+        console.print(f"[red]Error:[/] {exc}")
+        raise typer.Exit(1)
     console.print(f"[green]✓[/] {len(written)} PNG files in [bold]{output or folder / 'dist'}/[/]")
 
 

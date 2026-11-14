@@ -19,6 +19,7 @@ auditorium = "auditorium.cli:app"
 [project.optional-dependencies]
 record = [
     "playwright>=1.62",
+    "pypdf>=5",
     "tqdm>=4.67.3",
 ]
 dev = [
@@ -42,6 +43,7 @@ include = [
 dev = [
     "httpx>=0.28.1",
     "playwright>=1.62",
+    "pypdf>=5",
     "pytest>=8",
     "pytest-asyncio>=0.24",
     "ruff>=0.4",

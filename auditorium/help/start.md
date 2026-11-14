@@ -12,7 +12,8 @@ Python to write.
    names a line and its fix (`help check`). Look: `auditorium preview my-talk`,
    or `auditorium export my-talk -f png` for each beat in `my-talk/dist/`.
 5. Ship: `auditorium run my-talk` presents live (`--public` for a URL),
-   `auditorium render my-talk` writes a video, `auditorium export` a PNG.
+   `auditorium render my-talk` a video, `auditorium bundle my-talk` one HTML
+   file, `auditorium export my-talk -f pdf` a PDF (`help export`).
 
 Rules that hold everywhere:
 

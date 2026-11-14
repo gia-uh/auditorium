@@ -81,6 +81,23 @@ async def test_space_during_playback_skips_to_the_stop_not_past_it(browser_page,
     assert not await _shown(browser_page, "second")
 
 
+async def test_a_stopped_playback_does_not_wake_when_a_new_one_starts(browser_page, live_server):
+    """A seek stops a playback, and a new playTo in the same frame must not
+    revive it: before the fix the old frame loop saw playing again, reached its
+    nearer target first and stopped the new playback there. On a slow runner
+    this showed as arrow presses landing back on the first stop."""
+    await _ready(browser_page, live_server)
+    t, second = await browser_page.evaluate("""() => new Promise((done) => {
+        const a = window.auditorium, p = a.player;
+        p.seekTo(0);
+        p.playTo(a.stops[0].t);
+        p.seekTo(0);
+        p.playTo(a.stops[1].t, () => setTimeout(() => done([a.t, a.stops[1].t]), 300));
+        setTimeout(() => done([a.t, a.stops[1].t]), 10000);
+    })""")
+    assert t == second
+
+
 async def test_backward_navigation_works(browser_page, live_server):
     await _ready(browser_page, live_server)
     await _settle_at_first_stop(browser_page)

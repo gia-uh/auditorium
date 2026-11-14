@@ -61,7 +61,12 @@ static/engine.js                               seek(t): the only runtime
 - **The renderer** (`render.py`) maps output frames to timeline positions with a
   pure function of the published duration and stops, seeks Chromium to each
   one, screenshots, and encodes with ffmpeg. **The exporter** (`exporter.py`)
-  seeks to each beat's end state and saves PNG stills.
+  seeks to each beat's end state and saves PNG stills, or prints each one to a
+  PDF page; a page format prints at A4.
+- **The bundler** (`bundle.py`) writes the folder as one HTML file that presents
+  from disk. It rewrites markup through an HTML parser, never a regex, keeps
+  each asset once in a table that markup, CSS and paths built in code resolve
+  through, and maps ES modules once through an import map.
 - **The check** (`auditorium/check/`) reads a project in passes, cheapest
   first: structure from the files with a line-keeping parser, then layout in
   Chromium on a copy served with `data-aud-line` on every element, so a box
@@ -147,9 +152,14 @@ Rules added after the spec:
   attributes, templates and every snippet.
 - **Everything the browser loads is vendored.** KaTeX, highlight.js and fonts ship
   inside the package, so a deck runs offline and a render does not depend on a CDN.
-- **PDF comes back with `bundle` (#103).** 4.0 removed it because a timeline
-  had no canonical instant to print. In an HTML deck the end of each beat is that
-  instant, and a page has none to choose.
+- **PDF prints the end of each beat.** 4.0 removed PDF because a timeline had
+  no canonical instant to print. In an HTML deck the end of each beat, every
+  step shown, is that instant, and a page has none to choose. Chromium prints a
+  document in one state, so each beat is printed after its own seek and the
+  pages are joined.
+- **A bundle loads nothing and refuses rather than breaks.** A missing file or a
+  network URL stops `bundle` with the file and line that names it, because a
+  page that breaks where it is opened is found by its audience, not its author.
 
 ## What a machine checks and what a reader judges
 

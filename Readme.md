@@ -10,7 +10,7 @@ A project is a folder: an `index.html`, a `theme.css`, an optional `script.js`
 and its assets. Time lives in the HTML as `data-` attributes, so the file opens
 in a browser as it is. The `auditorium` command is the tool around those files:
 it presents them live, previews them with a scrubber, renders them to video
-frame by frame and exports stills.
+frame by frame, exports stills and a PDF, and bundles them into one HTML file.
 
 ```html
 <main class="aud" data-format="short">
@@ -63,7 +63,7 @@ talk/
   assets/        # images, audio, the logo
   auditorium.toml  # the template, version and format it was made with
   README.md      # written by template new: where the folder came from
-  dist/          # render and export write here
+  dist/          # bundle, render and export write here
 ```
 
 `index.html` loads the runtime from the path the CLI serves:
@@ -187,7 +187,20 @@ auditorium render examples/motion --from 0 --to 300 -o part1.mp4
 # Each beat at its end state as PNG (or each press, with --steps),
 # into examples/talk/dist/
 auditorium export examples/talk -f png
+auditorium export examples/talk -f png --beat rule   # one beat, by id or number
+
+# One page per beat at stage size, every step shown; a page format prints at A4.
+# Text stays selectable. Writes examples/talk/dist/talk.pdf
+auditorium export examples/talk -f pdf
+
+# One HTML file with the runtime, CSS, fonts, scripts and assets inside.
+# It presents from disk with the keyboard or touch. Writes dist/talk.html
+auditorium bundle examples/talk              # or: auditorium export -f html
+auditorium bundle examples/talk --no-audio   # leave the audio out
 ```
+
+`bundle` refuses a project that names a missing file or loads anything from the
+network, with the file and line of each reference, and writes nothing.
 
 A render is deterministic: two renders of the same project are byte-identical.
 The first `<audio>` in the page is mixed in at its `data-in`.
