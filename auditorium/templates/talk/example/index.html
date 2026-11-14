@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gradient descent, one step at a time</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<main class="aud" data-format="deck">
+
+  <section data-beat="title" class="title">
+    <span class="kicker">Lecture 3, Machine Learning</span>
+    <h1 data-enter="words">Gradient descent, one step at a time</h1>
+    <p data-in="0.8" data-enter="fade">How a ball finds the bottom of a valley</p>
+    <aside class="notes">Open with the picture of a ball rolling downhill.</aside>
+  </section>
+
+  <section data-beat="part-1" class="title">
+    <span class="kicker">Part 1</span>
+    <h1 data-enter="rise">The idea</h1>
+  </section>
+
+  <section data-beat="claim" class="statement">
+    <p data-enter="words">Small steps beat <em>big guesses</em>.</p>
+  </section>
+
+  <section data-beat="steps">
+    <h2>The loop</h2>
+    <ol>
+      <li data-step="1" data-enter="rise">Measure the slope where you stand</li>
+      <li data-step="2" data-enter="rise">Take a small step downhill</li>
+      <li data-step="3" data-enter="rise">Repeat until the ground is flat</li>
+    </ol>
+  </section>
+
+  <section data-beat="figure" class="figure">
+    <h2>The valley</h2>
+    <figure>
+      <svg viewBox="0 0 800 400">
+        <path data-enter="draw" d="M 40 40 Q 400 700 760 40" fill="none" stroke="currentColor" stroke-width="6"/>
+        <circle cx="140" cy="150" r="18" class="fill-accent" data-in="1" data-enter="pop"/>
+      </svg>
+      <figcaption>The loss as a function of one weight</figcaption>
+    </figure>
+  </section>
+
+  <section data-beat="math">
+    <h2>The update rule</h2>
+    <div class="math" data-enter="fade">\theta_{t+1} = \theta_t - \eta \, \nabla f(\theta_t)</div>
+    <p data-step="1" data-enter="fade">Step against the gradient, scaled by the learning rate</p>
+  </section>
+
+  <section data-beat="code">
+    <h2>In code</h2>
+    <pre data-lang="python" data-enter="fade"><code>for step in range(200):
+    theta = theta - lr * grad(f, theta)</code></pre>
+  </section>
+
+  <section data-beat="end" class="statement">
+    <p data-enter="words">Small steps, flat ground. <em>Questions?</em></p>
+  </section>
+
+</main>
+</body>
+</html>

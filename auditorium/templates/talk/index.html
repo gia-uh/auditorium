@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Talk title</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<!-- A talk: one <section> per slide, advanced by the presenter. Replace every
+     element marked data-placeholder, then delete the attribute. Delete beats
+     you do not need, copy the ones you need twice. Layouts and components:
+     auditorium help layouts. Times and steps: auditorium help attributes. -->
+<main class="aud" data-format="deck">
+
+  <section data-beat="title" class="title">
+    <span class="kicker" data-placeholder>Event, date</span>
+    <h1 data-enter="words" data-placeholder>The title of the talk</h1>
+    <p data-in="0.8" data-enter="fade" data-placeholder>Speaker name, affiliation</p>
+    <aside class="notes" data-placeholder>What to say while the title is up.</aside>
+  </section>
+
+  <!-- A part opener: copy it before each part. -->
+  <section data-beat="part-1" class="title">
+    <span class="kicker">Part 1</span>
+    <h1 data-enter="rise" data-placeholder>The first part</h1>
+  </section>
+
+  <!-- A statement: one short sentence; <em> is the accent. -->
+  <section data-beat="claim" class="statement">
+    <p data-enter="words" data-placeholder>One sentence the audience <em>keeps</em>.</p>
+  </section>
+
+  <!-- Steps: each data-step is one press of the presenter. -->
+  <section data-beat="steps">
+    <h2 data-placeholder>Three steps</h2>
+    <ol>
+      <li data-step="1" data-enter="rise" data-placeholder>The first step</li>
+      <li data-step="2" data-enter="rise" data-placeholder>The second step</li>
+      <li data-step="3" data-enter="rise" data-placeholder>The third step</li>
+    </ol>
+  </section>
+
+  <!-- A figure: draw with currentColor and the fill-* and stroke-* classes. -->
+  <section data-beat="figure" class="figure">
+    <h2 data-placeholder>What the figure shows</h2>
+    <figure>
+      <svg viewBox="0 0 800 400">
+        <path data-enter="draw" d="M 40 360 L 280 200 L 520 240 L 760 40" fill="none" stroke="currentColor" stroke-width="6"/>
+        <circle cx="760" cy="40" r="18" class="fill-accent" data-in="1" data-enter="pop"/>
+      </svg>
+      <figcaption data-placeholder>The caption</figcaption>
+    </figure>
+  </section>
+
+  <!-- Math: TeX inside class="math"; a <span class="math"> sits inline. -->
+  <section data-beat="math">
+    <h2 data-placeholder>The formula</h2>
+    <div class="math" data-enter="fade" data-placeholder>e^{i\pi} + 1 = 0</div>
+    <p data-step="1" data-enter="fade" data-placeholder>What it means, in one line</p>
+  </section>
+
+  <!-- Code: data-lang names the language for highlighting. -->
+  <section data-beat="code">
+    <h2 data-placeholder>In code</h2>
+    <pre data-lang="python" data-enter="fade" data-placeholder><code>print("hello")</code></pre>
+  </section>
+
+  <section data-beat="end" class="statement">
+    <p data-enter="words" data-placeholder>Thank you. <em>Questions?</em></p>
+  </section>
+
+</main>
+</body>
+</html>

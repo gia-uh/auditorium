@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Poster</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<!-- A poster: one beat, exported as one PNG at the format's size
+     (auditorium export . -f png). Replace every element marked
+     data-placeholder, then delete the attribute. Keep the headline under ten
+     words and at most three stats; delete the stats if there are no numbers. -->
+<main class="aud" data-format="square">
+
+  <section data-beat="poster" class="title">
+    <span class="kicker" data-placeholder>Who, when</span>
+    <h1 data-placeholder>The headline, in a few words</h1>
+    <p data-placeholder>One line that says why it matters</p>
+    <div class="stats">
+      <div class="stat"><b data-placeholder>12</b><span data-placeholder>first number</span></div>
+      <div class="stat"><b data-placeholder>3</b><span data-placeholder>second number</span></div>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

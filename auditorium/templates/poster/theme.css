@@ -1,0 +1,10 @@
+/* The poster's palette. Variables only: layout, type sizes and the safe area
+   come from auditorium.css and the format. A bundled theme (auditorium
+   template new --theme NAME) is linked before this file, so a variable set
+   here wins over it. */
+:root {
+  --aud-slide-bg: #0f172a;
+  --aud-fg: #f8fafc;
+  --aud-muted: #94a3b8;
+  --aud-accent: #fbbf24;
+}

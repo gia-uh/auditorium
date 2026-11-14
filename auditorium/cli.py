@@ -1,6 +1,6 @@
-"""The ``auditorium`` command: ``run``, ``preview``, ``render``, ``export``, ``relay``, ``help``.
+"""The ``auditorium`` command: ``template``, ``help``, ``run``, ``preview``, ``render``, ``export``, ``relay``.
 
-Every command but ``relay`` and ``help`` takes a project: a folder holding index.html (or
+Every command but ``template``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
 only in which surface they open and whether shared navigation is on. SIGINT is
 reset to ``SIG_DFL`` before uvicorn starts, for a clean shutdown.
@@ -212,15 +212,108 @@ def export(
     console.print(f"[green]✓[/] {len(written)} PNG files in [bold]{output or folder / 'dist'}/[/]")
 
 
+template_app = typer.Typer(help="List, show and copy the templates a project starts from")
+app.add_typer(template_app, name="template")
+
+
+def _template_error(exc: Exception) -> None:
+    print(f"error: {exc}", file=sys.stderr)
+    raise typer.Exit(1)
+
+
+@template_app.command("list")
+def template_list(
+    as_json: bool = typer.Option(False, "--json", help="Print the templates as JSON"),
+) -> None:
+    """List the templates, what each is for and the formats it makes."""
+    import json
+
+    from auditorium.templates import templates
+
+    known = templates()
+    if as_json:
+        print(json.dumps([{"name": n, **m} for n, m in known.items()], indent=2))
+        return
+    width = max(len(n) for n in known)
+    for name, meta in known.items():
+        print(f"{name:<{width}}  {meta['summary']} ({', '.join(meta['formats'])})")
+        print(f"{'':<{width}}  {meta['for']}")
+    print(f"{len(known)} templates; auditorium template show NAME prints one")
+
+
+@template_app.command("show")
+def template_show(
+    name: str = typer.Argument(..., help="Template to show"),
+    as_json: bool = typer.Option(False, "--json", help="Print the template as JSON"),
+) -> None:
+    """Print a template: what it is for, its formats, and the index.html new copies."""
+    import json
+
+    from auditorium.templates import TemplateError, show
+
+    try:
+        shown = show(name)
+    except TemplateError as exc:
+        _template_error(exc)
+    if as_json:
+        print(json.dumps(shown, indent=2))
+        return
+    print(f"{name}: {shown['summary']}")
+    print(shown["for"])
+    print(f"formats: {', '.join(shown['formats'])} (the first is the default)")
+    print(f"files: {', '.join(shown['files'])}, plus auditorium.toml and README.md")
+    print()
+    print(shown["index"], end="")
+    print(f"{len(shown['files'])} files; auditorium template new {name} DIR")
+
+
+@template_app.command("new")
+def template_new(
+    name: str = typer.Argument(..., help="Template to copy (auditorium template list)"),
+    folder: Path = typer.Argument(..., help="New project folder; must not exist or be empty"),
+    fmt: str = typer.Option(None, "--format", help="One of the template's formats (default: its first)"),
+    theme: str = typer.Option(None, "--theme", help="A bundled theme to link, e.g. dark"),
+    as_json: bool = typer.Option(False, "--json", help="Print what was written as JSON"),
+) -> None:
+    """Start a project from a template. The project owns its copy."""
+    import json
+
+    from auditorium.templates import TemplateError, new
+
+    try:
+        made = new(name, folder, fmt=fmt, theme=theme)
+    except TemplateError as exc:
+        _template_error(exc)
+    if as_json:
+        print(json.dumps(made, indent=2))
+        return
+    for rel in made["files"]:
+        print(f"  {folder / rel}")
+    print(f"{len(made['files'])} files written to {folder} from template {name}, format {made['format']}; "
+          f"next: auditorium preview {folder}")
+
+
 @app.command(name="help")
 def help_(
     topic: str = typer.Argument(None, help="Topic to print; omit for the list"),
+    all_: bool = typer.Option(False, "--all", help="Print every topic, in order"),
 ) -> None:
     """Print the guide that ships with this version, one topic at a time."""
     from auditorium.help import nearest, topic_path, topics
 
-    if topic is None:
+    if all_ and topic is not None:
+        print("error: --all prints every topic; give a topic or --all, not both.", file=sys.stderr)
+        raise typer.Exit(1)
+    if all_:
         known = topics()
+        for name in known:
+            print(topic_path(name).read_text())
+        print(f"{len(known)} topics")
+        return
+    if topic is None:
+        # Section 09: bare help shows start, the loop, then what else there is.
+        known = topics()
+        print(topic_path("start").read_text())
         width = max(len(n) for n in known)
         for name, summary in known.items():
             print(f"{name:<{width}}  {summary}")

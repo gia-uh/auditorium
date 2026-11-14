@@ -163,6 +163,10 @@ demo_deck.pdf
 # rule above would drop them from the wheel -- and a missing preview.html is a
 # 500 on /preview that nothing in the test suite would notice.
 !auditorium/static/*.html
+# The templates' pages are shipped source too: without this, template show and
+# new crash on a clean checkout and the wheel has no templates
+# (tests/test_templates.py::test_every_template_file_ships).
+!auditorium/templates/**/*.html
 
 # In 5.0 an index.html is the source a project is written in, so the examples
 # and the test fixture projects are tracked. What a project builds lands in

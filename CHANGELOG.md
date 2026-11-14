@@ -83,6 +83,24 @@
   version, one Markdown topic at a time; with no topic it lists them. The
   first topics are `layouts` and `components`, and a test drops every snippet
   in them into each staged format and checks it against the safe area.
+- **`auditorium template list|show|new`** starts a project from a template:
+  `auditorium template new talk my-talk [--format F] [--theme NAME]` copies
+  the template into a new folder, links a bundled theme if asked (and then
+  leaves `theme.css` with the template's palette commented out, so the theme's
+  colours show), and writes
+  `auditorium.toml` and `README.md` saying what it came from. It never writes
+  into a folder that holds files. The first templates are `talk` (deck) and
+  `poster` (square, portrait, story); each marks what to replace with
+  `data-placeholder` and ships a finished `example/` that a test builds in
+  every format it makes, inside the safe area. `list`, `show` and `new` take
+  `--json`.
+- **`auditorium help` gains `start`, `formats`, `attributes` and
+  `templates`**, and `--all` to print every topic. Bare `auditorium help`
+  prints `start`, the loop in ten lines, before the list of topics. Tests tie each topic to
+  the code: every command a topic names exists, every format's stage and safe
+  area match the runtime, every attribute the runtime reads is taught, every
+  template and bundled theme is listed, and every HTML snippet builds in
+  Chromium and stays inside its format's safe area.
 
 ### Removed
 

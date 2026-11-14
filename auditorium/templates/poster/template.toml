@@ -1,0 +1,3 @@
+summary = "a single still for a feed or a print"
+for = "An announcement, a result or an event: a kicker, a headline, a line of text, up to three numbers. Exported as one PNG."
+formats = ["square", "portrait", "story"]

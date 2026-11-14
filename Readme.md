@@ -42,12 +42,25 @@ Version 5 replaced the Python authoring API (`Deck`, `@deck.scene`,
 
 ## 🚀 A project
 
+Start from a template, which marks with `data-placeholder` what you replace:
+
+```bash
+uv run auditorium template list                # talk, poster
+uv run auditorium template new talk my-talk    # add --theme dark, --format
+uv run auditorium help start                   # the loop, for you or an agent
+```
+
+`auditorium help` is the whole guide, versioned with the package: `start`,
+`formats`, `attributes`, `templates`, `layouts`, `components`.
+
 ```text
 talk/
   index.html     # the artifact: what you edit
   theme.css      # CSS variables: palette, fonts
   script.js      # optional: auditorium.track() functions
   assets/        # images, audio
+  auditorium.toml  # the template, version and format it was made with
+  README.md      # written by template new: where the folder came from
   dist/          # render and export write here
 ```
 
