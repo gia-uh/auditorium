@@ -199,6 +199,25 @@ def test_new_refuses_an_unknown_theme_with_the_list(tmp_path):
     assert not (tmp_path / "t").exists()
 
 
+def test_new_refuses_a_theme_it_cannot_link(tmp_path, monkeypatch):
+    """A template whose index.html links theme.css another way would get an
+    emptied theme.css and no theme; new must say so and write nothing."""
+    import shutil
+
+    import auditorium.templates as tpl
+
+    fake = tmp_path / "templates"
+    shutil.copytree(TEMPLATES / "talk", fake / "talk")
+    page = (fake / "talk" / "index.html").read_text()
+    (fake / "talk" / "index.html").write_text(page.replace('  <link rel="stylesheet" href="theme.css">',
+                                                           '<link href="theme.css" rel="stylesheet">'))
+    monkeypatch.setattr(tpl, "TEMPLATES", fake)
+    result = run("new", "talk", str(tmp_path / "t"), "--theme", "dark")
+    assert result.exit_code == 1
+    assert "theme" in result.output
+    assert not (tmp_path / "t").exists()
+
+
 def test_new_never_writes_into_a_folder_with_files(tmp_path):
     dest = tmp_path / "mine"
     dest.mkdir()
@@ -206,6 +225,22 @@ def test_new_never_writes_into_a_folder_with_files(tmp_path):
     result = run("new", "talk", str(dest))
     assert result.exit_code == 1
     assert (dest / "index.html").read_text() == "my work"
+
+
+def test_new_never_replaces_a_file(tmp_path):
+    dest = tmp_path / "notes.txt"
+    dest.write_text("mine")
+    result = run("new", "talk", str(dest))
+    assert result.exit_code == 1
+    assert "not an empty folder" in result.output
+    assert dest.read_text() == "mine"
+
+
+def test_new_refuses_an_unknown_template_with_the_nearest(tmp_path):
+    result = run("new", "tlak", str(tmp_path / "t"))
+    assert result.exit_code == 1
+    assert "no template 'tlak'" in result.output and "Did you mean 'talk'?" in result.output
+    assert not (tmp_path / "t").exists()
 
 
 def test_new_json_reports_what_it_wrote(tmp_path):
@@ -255,17 +290,21 @@ async def test_every_example_builds_and_fits_the_safe_area(browser_page, served,
     assert await browser_page.evaluate(OUTSIDE, list(SAFE[fmt])) == []
 
 
-@pytest.mark.parametrize("name", sorted(templates()))
-async def test_a_fresh_project_builds(browser_page, served, tmp_path, name):
-    """What new writes opens as it is, placeholders and all."""
+@pytest.mark.parametrize("name,fmt", list(cases()))
+async def test_a_fresh_project_builds_and_fits_the_safe_area(browser_page, served, tmp_path, name, fmt):
+    """What new writes opens as it is, placeholders and all, in every format
+    the template makes, with every box inside the safe area."""
     dest = tmp_path / name
-    assert run("new", name, str(dest)).exit_code == 0
+    assert run("new", name, str(dest), "--format", fmt).exit_code == 0
     errors = []
     browser_page.on("pageerror", lambda e: errors.append(str(e)))
+    w, h = STAGE[fmt]
+    await browser_page.set_viewport_size({"width": w, "height": h})
     await browser_page.goto(served(dest) + "/?embed")
     await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
     assert errors == []
     assert await browser_page.evaluate("() => window.auditorium.beats.length") >= 1
+    assert await browser_page.evaluate(OUTSIDE, list(SAFE[fmt])) == []
 
 
 @pytest.mark.parametrize("name", sorted(templates()))

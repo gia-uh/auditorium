@@ -60,6 +60,7 @@ talk/
   script.js      # optional: auditorium.track() functions
   assets/        # images, audio
   auditorium.toml  # the template, version and format it was made with
+  README.md      # written by template new: where the folder came from
   dist/          # render and export write here
 ```
 

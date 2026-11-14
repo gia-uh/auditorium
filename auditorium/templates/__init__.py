@@ -27,6 +27,10 @@ THEMES = TEMPLATES.parent / "themes"
 _OWN = {"template.toml", "example", "__init__.py", "__pycache__"}
 
 
+# The line in a template's index.html a --theme link goes before.
+_THEME_ANCHOR = '  <link rel="stylesheet" href="theme.css">'
+
+
 class TemplateError(ValueError):
     """A request ``new`` refuses, with the message an agent can act on."""
 
@@ -92,6 +96,10 @@ def new(name: str, dest: Path, fmt: str | None = None, theme: str | None = None)
         raise TemplateError(f"{dest} already exists and is not an empty folder; pick a new one.")
 
     root = TEMPLATES / name
+    if theme and _THEME_ANCHOR not in (root / "index.html").read_text():
+        # A template that links theme.css differently would get an emptied
+        # theme.css and no theme: refuse loudly instead.
+        raise TemplateError(f"template '{name}' has no '{_THEME_ANCHOR.strip()}' line to put a theme before.")
     for rel in files(name):
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -103,8 +111,7 @@ def new(name: str, dest: Path, fmt: str | None = None, theme: str | None = None)
     if theme:
         # Before theme.css, so the project's own variables still win.
         link = f'<link rel="stylesheet" href="/_auditorium/themes/{theme}.css">'
-        page = page.replace('  <link rel="stylesheet" href="theme.css">',
-                            f'  {link}\n  <link rel="stylesheet" href="theme.css">', 1)
+        page = page.replace(_THEME_ANCHOR, f"  {link}\n{_THEME_ANCHOR}", 1)
     index.write_text(page)
     if theme:
         # theme.css loads after the theme, so a palette left in it would win
