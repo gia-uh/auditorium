@@ -44,9 +44,24 @@
 - **`export` writes PNG stills only**, named `beat-01.png` (or per press with
   `--steps`). `export html` is gone until `bundle` lands (#103), which also
   brings `export pdf`.
-- **The 14 bundled themes are served at `/_auditorium/themes/NAME.css`** for a
-  project to link, retargeted from `#slide-root` to `.aud`. Porting them to
-  the 5.0 variables is #84.
+- **A theme is a file of CSS variables** (#84), the bundled ones and a
+  project's `theme.css` alike: palette roles (`--aud-slide-bg`, `--aud-fg`,
+  `--aud-muted`, `--aud-accent`, `--aud-rule`, the geometry palette), fonts
+  (`--aud-font-body`, `--aud-font-display`, `--aud-font-mono`),
+  `--aud-radius`, `--aud-shadow`, the code panel and highlight colours
+  (`--aud-code-bg`, `--aud-code-keyword`, `--aud-code-literal`,
+  `--aud-code-string`, `--aud-code-comment`) and `--aud-logo-h`.
+  auditorium.css reads them where it used fixed values, so a dark theme now
+  darkens code panels, table rules and blockquote bars and keeps highlighted
+  code legible. Twelve 4.x themes are ported and served at
+  `/_auditorium/themes/NAME.css`: academic, comic, compact, dark, light,
+  magazine, minimalist, mono, neon, print, simple, terminal. A test holds
+  every text on every beat of every template's example to WCAG AA under each
+  of them. `auditorium help themes` lists the variables and the themes.
+- **A logo slot in every template**: `<img class="brand">` directly inside
+  `<main>` shows on every beat, bottom right, in the band between the safe
+  area and the layouts' content. The skeletons ship a placeholder
+  `assets/logo.svg`, the examples a finished logo.
 - **`run --public` relays a project folder.** The relay fetches every file a
   viewer asks for from the presenter's machine over the presenter's socket, and
   rewrites the runtime's `/_auditorium/` paths and the page's socket path under
@@ -109,6 +124,10 @@
   existing `deck.py` decks.
 - `--theme` and `--transition`, and the themes' `--aud-transition` variables:
   a project's look is its own `theme.css`.
+- The `pastel` and `solarized` themes: their accent and muted text fail WCAG
+  AA contrast on the template examples. The 4.x themes' selector rules
+  (chrome footers, title glow and underlines, comic bullets, terminal
+  prompts) and the unused `--aud-geom-width` and `--aud-accent-2`/`-3`.
 - The `examples` extra and the `markdown` dependency.
 
 ## 4.0.0

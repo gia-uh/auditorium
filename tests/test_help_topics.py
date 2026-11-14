@@ -22,7 +22,7 @@ from test_templates import known_class
 
 ROOT = Path(__file__).parent.parent
 RUNTIME = (ROOT / "auditorium" / "static" / "auditorium.js").read_text()
-NEW = ["start", "formats", "attributes", "templates"]
+NEW = ["start", "formats", "attributes", "templates", "themes"]
 
 # test_layouts' safe-area probe, except the anchored-line overlay's own box: it
 # covers its section by design, as the layer lines are drawn in. The lines in

@@ -16,10 +16,10 @@ template refuses one it does not make.
 `--theme NAME` links a bundled theme and leaves the project's `theme.css`
 with no variable in force (the template's palette stays there as a comment),
 so the theme decides the colours. Set a variable in `theme.css` to override
-one.
+one. `auditorium help themes` has the variables and the logo slot.
 
 Themes: academic, comic, compact, dark, light, magazine, minimalist, mono,
-neon, pastel, print, simple, solarized, terminal.
+neon, print, simple, terminal.
 
 ## Near misses
 
@@ -36,7 +36,8 @@ neon, pastel, print, simple, solarized, terminal.
 | file | holds |
 |---|---|
 | index.html | the beats; the only file most requests touch |
-| theme.css | colour variables only |
+| theme.css | theme variables only: palette, fonts, radius, shadow |
+| assets/logo.svg | the logo slot's placeholder |
 | auditorium.toml | the template, version, format, language and theme it was made with |
 | README.md | where the folder came from |
 

@@ -56,9 +56,9 @@ uv run auditorium help start                   # the loop, for you or an agent
 ```text
 talk/
   index.html     # the artifact: what you edit
-  theme.css      # CSS variables: palette, fonts
+  theme.css      # CSS variables: palette, fonts, radius, shadow
   script.js      # optional: auditorium.track() functions
-  assets/        # images, audio
+  assets/        # images, audio, the logo
   auditorium.toml  # the template, version and format it was made with
   README.md      # written by template new: where the folder came from
   dist/          # render and export write here
@@ -73,15 +73,20 @@ talk/
 <script type="module" src="script.js"></script>
 ```
 
-Instead of writing your own `theme.css`, a project can link one or more of
-the bundled themes, each a palette or a layout that stacks with the others:
+`theme.css` holds CSS variables only: palette, fonts, radius, shadow and
+code colours (`auditorium help themes` lists them). Instead of writing your
+own, `auditorium template new talk my-talk --theme dark` links a bundled
+theme, which is the same kind of file:
 
 ```html
-<link rel="stylesheet" href="/_auditorium/themes/academic.css">
 <link rel="stylesheet" href="/_auditorium/themes/dark.css">
+<link rel="stylesheet" href="theme.css">
 ```
 
-The themes are academic, comic, compact, dark, light, magazine, minimalist, mono, neon, pastel, print, simple, solarized, terminal. Porting them to the 5.0 variables is #84.
+The themes are academic, comic, compact, dark, light, magazine, minimalist,
+mono, neon, print, simple and terminal; each passes WCAG AA contrast on every
+template's example. Every template also has a logo slot, an
+`<img class="brand">` inside `<main>` that shows on every beat.
 
 ## 🧩 The file contract
 

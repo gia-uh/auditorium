@@ -82,7 +82,7 @@ banned in shipped CSS, because a CSS transition leaves `getAnimations()` when it
 finishes and every later backward seek past it silently does nothing.
 
 **D4. `seek` drives `document.getAnimations()`, never a private registry.** An
-author's CSS and the themes ship animations on pseudo-elements, which a registry
+author's CSS and auditorium.css ship animations on pseudo-elements, which a registry
 cannot see, and an unpaused animation makes every frame differ between runs.
 
 **D5. A backward seek undoes every op and replays forward.** Seeking is
@@ -126,6 +126,11 @@ Rules added after the spec:
   (`--aud-accent`, a geometry series variable) and the theme picks the colour,
   so a figure keeps its meaning when the theme changes. See
   `docs/design/2026-08-27-themed-math-and-geometry.md`.
+- **A theme is variables only.** A selector in a theme would target markup the
+  templates and layouts own, and break when they change; a variable is a
+  contract auditorium.css keeps. So bundled themes are `:root` blocks a project
+  can paste into its `theme.css`, and a theme that fails contrast on a
+  template's example is dropped, never patched per template.
 - **A template is copied once, and the project owns the copy.** `template new`
   never links back to the package, so upgrading auditorium never rewrites a
   deck someone has finished. `auditorium.toml` records the template and the
@@ -148,7 +153,9 @@ until they begin, that `seek` pins every animation on the page, that an anchored
 line meets its boxes, that the talk example reached by a rewind matches the same
 instant reached fresh, that two renders are byte-identical, that the preview's
 frame counter matches the renderer's schedule, that shipped CSS has no bare
-transitions and that every colour theme defines the geometry palette.
+transitions, that every colour theme defines the geometry palette, that a theme
+holds variables only and passes WCAG AA contrast on every template example, and
+that the logo slot covers no layout content.
 
 No test can say whether a beat reads well. That takes looking at rendered
 frames, which is why "done" for a new motion includes watching it in
