@@ -75,12 +75,21 @@ def test_every_command_a_topic_names_exists(topic):
     assert wrong == []
 
 
-def test_bare_help_points_at_start_and_lists_every_topic():
+def test_bare_help_shows_start_then_lists_every_topic():
+    """Section 09: start is "shown by bare auditorium help"."""
     result = CliRunner().invoke(app, ["help"])
     assert result.exit_code == 0
-    assert "auditorium help start" in result.output
+    assert result.output.startswith(text("start"))
+    listing = result.output[len(text("start")):]
     for topic in topics():
-        assert topic in result.output
+        assert re.search(rf"^{topic} ", listing, re.MULTILINE), f"{topic} not listed"
+    assert result.output.splitlines()[-1].startswith(f"{len(topics())} topics")
+
+
+def test_help_all_with_a_topic_is_refused():
+    result = CliRunner().invoke(app, ["help", "--all", "start"])
+    assert result.exit_code == 1
+    assert "--all" in result.output
 
 
 def test_help_all_prints_every_topic_and_ends_on_a_count():
@@ -94,12 +103,13 @@ def test_help_all_prints_every_topic_and_ends_on_a_count():
 # ---- each topic against the code it describes ---------------------------------
 
 
-def test_start_is_the_loop_in_few_lines():
-    """Section 09: the loop in ten lines, so bare help is enough to begin."""
-    body = [line for line in text("start").splitlines()[1:] if line.strip()]
-    assert len(body) <= 40
+def test_start_is_the_loop_in_ten_lines():
+    """Section 09: the loop in ten lines, so bare help is enough to begin.
+    The loop is the numbered list; the rules after it are not the loop."""
+    loop = re.search(r"^1\. .*?(?=\n\n)", text("start"), re.MULTILINE | re.DOTALL).group(0)
+    assert len(loop.splitlines()) <= 10
     for step in ["auditorium template new", "auditorium preview", "auditorium export"]:
-        assert step in text("start")
+        assert step in loop
 
 
 def runtime_formats():

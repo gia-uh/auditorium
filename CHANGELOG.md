@@ -95,7 +95,8 @@
   every format it makes, inside the safe area. `list`, `show` and `new` take
   `--json`.
 - **`auditorium help` gains `start`, `formats`, `attributes` and
-  `templates`**, and `--all` to print every topic. Tests tie each topic to
+  `templates`**, and `--all` to print every topic. Bare `auditorium help`
+  prints `start`, the loop in ten lines, before the list of topics. Tests tie each topic to
   the code: every command a topic names exists, every format's stage and safe
   area match the runtime, every attribute the runtime reads is taught, every
   template and bundled theme is listed, and every HTML snippet builds in

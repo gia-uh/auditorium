@@ -301,6 +301,9 @@ def help_(
     """Print the guide that ships with this version, one topic at a time."""
     from auditorium.help import nearest, topic_path, topics
 
+    if all_ and topic is not None:
+        print("error: --all prints every topic; give a topic or --all, not both.", file=sys.stderr)
+        raise typer.Exit(1)
     if all_:
         known = topics()
         for name in known:
@@ -308,11 +311,13 @@ def help_(
         print(f"{len(known)} topics")
         return
     if topic is None:
+        # Section 09: bare help shows start, the loop, then what else there is.
         known = topics()
+        print(topic_path("start").read_text())
         width = max(len(n) for n in known)
         for name, summary in known.items():
             print(f"{name:<{width}}  {summary}")
-        print(f"{len(known)} topics; start with auditorium help start, auditorium help TOPIC prints one")
+        print(f"{len(known)} topics; auditorium help TOPIC prints one")
         return
     # Only a listed topic: the name becomes a path, and "../x" must not.
     if topic not in topics():
