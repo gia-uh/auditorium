@@ -62,4 +62,7 @@ layouts stack their columns on a phone.
 | story, square, portrait | `auditorium export DIR -f png`: a PNG per beat at the stage size |
 | page | `auditorium run DIR` serves it |
 
-Type minimums and duration bounds per format arrive with the check.
+The check fails type below each format's minimum, in stage pixels: deck,
+explainer, square and portrait 24; story and short 28; page 12.
+`var(--aud-type-small)` passes everywhere. Duration bounds arrive with the
+time rules.

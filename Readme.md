@@ -48,10 +48,12 @@ Start from a template, which marks with `data-placeholder` what you replace:
 uv run auditorium template list                # talk, poster
 uv run auditorium template new talk my-talk    # add --theme dark, --format
 uv run auditorium help start                   # the loop, for you or an agent
+uv run auditorium check my-talk                # every rule, with lines and fixes
 ```
 
 `auditorium help` is the whole guide, versioned with the package: `start`,
-`formats`, `attributes`, `templates`, `layouts`, `components`.
+`formats`, `attributes`, `templates`, `layouts`, `components`, `check`, and
+`help rule NAME` for each rule the check runs.
 
 ```text
 talk/
@@ -103,7 +105,7 @@ template's example. Every template also has a logo slot, an
 | `data-from`, `data-to` on an SVG `<line>` | Anchors (`id:side`): the line follows its boxes on every frame |
 | `<aside class="notes">` | Speaker notes, shown in the presenter view only |
 | `data-cue` | Enters at the moment a phrase is said in the beat's narration. Until narration cues land (#73) it enters at its step's start and logs a warning |
-| `data-placeholder` | Set by templates on content the author must replace. Reserved: the runtime ignores it, and the check (#80) will fail while it remains |
+| `data-placeholder` | Set by templates on content the author must replace. The runtime ignores it; `auditorium check` fails while it remains |
 | `<span class="math">`, `<pre data-lang>` | KaTeX and highlighted code, from vendored copies |
 
 Free JavaScript goes through `auditorium.track(fn, {beat, from, to})`, which

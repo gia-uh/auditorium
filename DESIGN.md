@@ -62,6 +62,12 @@ static/engine.js                               seek(t): the only runtime
   pure function of the published duration and stops, seeks Chromium to each
   one, screenshots, and encodes with ffmpeg. **The exporter** (`exporter.py`)
   seeks to each beat's end state and saves PNG stills.
+- **The check** (`auditorium/check/`) reads a project in passes, cheapest
+  first: structure from the files with a line-keeping parser, then layout in
+  Chromium on a copy served with `data-aud-line` on every element, so a box
+  measured in the live DOM still names its line. It seeks the page like every
+  other surface and never reaches the network. Section 08 of
+  `docs/design/2026-11-10-html-authoring.html` has the rules.
 - **The relay** (`relay.py`) gives `--public` a URL. It forwards the presenter's
   commands to viewers and fetches every file a viewer asks for from the
   presenter's machine over the same socket, so it holds no copy of the project

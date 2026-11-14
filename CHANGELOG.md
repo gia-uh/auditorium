@@ -2,6 +2,24 @@
 
 ## 5.0.0 (unreleased)
 
+### Added
+
+- **`auditorium check DIR`** runs 18 rules over a project, in two passes:
+  structure (no browser: `parse`, `unknown-name`, `external-url`,
+  `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
+  `duplicate-id`) and layout (Chromium, at every stop and once a second on a
+  clock: `overflow`, `overlap`, `off-grid`, `safe-area`, `min-size`,
+  `contrast`, `console-error`, `h-scroll`, `placeholder`, `empty`). It stops
+  after the first pass with errors. Each finding names the file, line,
+  selector, beat and time, what was measured and the edit that fixes it. Text
+  output shows the first 8 errors and ends on the counts; `--json` prints every
+  finding; every run writes `dist/check.json`; exit 1 on any error. Live-data
+  endpoints declared under `[data]` in `auditorium.toml` are served from their
+  fixture, and nothing else reaches the network. The time, reading and audio
+  rules come with milestone 3.
+- `auditorium help check`, and `auditorium help rule NAME` with a broken and a
+  fixed snippet for each rule.
+
 ### Changed
 
 - **Authoring is HTML.** A project is a folder with an `index.html` that loads
@@ -24,7 +42,7 @@
   - `<aside class="notes">` in a section holds speaker notes for the
     presenter view.
   - `data-placeholder` is reserved for templates: the runtime ignores it, and
-    the check (#80) will fail while it remains.
+    `auditorium check` fails while it remains.
   - `<audio data-in data-gain data-duck>` declares audio.
 - **The runtime builds the timeline from the DOM** and publishes
   `window.auditorium`: `format`, `stage`, `grid`, `beats`, `stops`,
