@@ -86,13 +86,14 @@
   the beats covers the stage and stays on through every beat, drawn under
   and over them; a beat change swaps only the content. Layers take no clicks,
   and `check` reports an unknown layer name (#85).
-- **`auditorium check DIR`** runs 21 rules over a project, in two passes:
+- **`auditorium check DIR`** runs 24 rules over a project, in two passes:
   structure (no browser: `parse`, `unknown-name`, `external-url`,
   `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
-  `duration`, `duplicate-id`) and layout (Chromium, at every stop and once a second on a
+  `duration`, `duplicate-id`, `overrun`, `cue-missing`) and layout (Chromium, at every stop and once a second on a
   clock: `overflow`, `overlap`, `off-grid`, `safe-area`, `min-size`,
   `contrast`, `console-error`, `h-scroll`, `placeholder`, `placeholder-asset`,
-  `empty`, and the warning `pop-in` at the first frame of each fading entrance). It stops
+  `empty`, and the warnings `pop-in` at the first frame of each fading entrance
+  and `audio-peak`). It stops
   after the first pass with errors. Each finding names the file, line,
   selector, beat and time, what was measured and the edit that fixes it. Text
   output shows the first 8 errors and ends on the counts; `--json` prints every
@@ -128,6 +129,8 @@
 
 ### Fixed
 
+- **`auditorium check` text output no longer crashes** on a finding that
+  names a beat but no time, such as `overrun`.
 - A seek followed by a new playback in the same frame no longer revives the
   stopped one. Its frame loop used to read the new playing flag as its own,
   reach its nearer target first and stop the deck there, so fast arrow

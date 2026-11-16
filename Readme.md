@@ -45,7 +45,7 @@ Version 5 replaced the Python authoring API (`Deck`, `@deck.scene`,
 Start from a template, which marks with `data-placeholder` what you replace:
 
 ```bash
-uv run auditorium template list                # talk, poster
+uv run auditorium template list                # dashboard, explainer, pitch, poster, report, short, talk
 uv run auditorium template new talk my-talk    # add --theme dark, --format
 uv run auditorium help start                   # the loop, for you or an agent
 uv run auditorium check my-talk                # every rule, with lines and fixes

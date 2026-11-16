@@ -311,3 +311,10 @@ def test_unknown_emphasis_ambient_and_grade_names_are_unknown_names(tmp_path):
     hits = [f for f in check(write_project(tmp_path, body), layout=False).findings if f.rule == "unknown-name"]
     assert sorted(f.fix for f in hits) == ['set data-ambient="aurora"', 'set data-emphasis="focus"',
                                          'set data-grade="grain"']
+
+
+def test_text_names_a_beat_without_a_time():
+    """An overrun finding names its beat but no time; text output must not crash."""
+    from auditorium.check import Report, finding
+    f = finding("overrun", "index.html", 12, "clip is 5 s, beat is 3 s", "shorten it", beat="intro")
+    assert "index.html:12  overrun  error (beat intro)" in Report(Path("."), [f], ["structure"]).text()

@@ -125,8 +125,9 @@ class Report:
             where = f"{f.file}:{f.line}" if f.line else f.file
             when = ""
             if f.beat is not None or f.t is not None:
-                span = f"{f.t:g} s" if f.t_end in (None, f.t) else f"{f.t:g} to {f.t_end:g} s"
-                when = f" (beat {f.beat}, {span})" if f.beat else f" ({span})"
+                span = ("" if f.t is None else f"{f.t:g} s" if f.t_end in (None, f.t)
+                        else f"{f.t:g} to {f.t_end:g} s")
+                when = f" ({', '.join(x for x in (f.beat and f'beat {f.beat}', span) if x)})"
             lines.append(f"{where}  {f.rule}  {f.level}{when}")
             if f.selector:
                 lines.append(f"  {f.selector}")
