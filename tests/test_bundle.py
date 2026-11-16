@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from auditorium.bundle import BundleError, bundle
+from auditorium.bundle import BundleError, bundle, compress
 from auditorium.cli import app
 from auditorium.testing import chromium_path
 from conftest import write_project
@@ -117,7 +117,7 @@ def test_bundle_writes_dist_name_html(media_project):
 def test_each_asset_is_embedded_once(media_project):
     """Two <img> and a CSS background name one file: its bytes appear once."""
     html = bundle(media_project).path.read_text()
-    assert html.count(base64.b64encode(png()).decode()) == 1
+    assert html.count(base64.b64encode(compress(png())).decode()) == 1
 
 
 def test_an_authors_data_src_is_left_as_written(media_project):
@@ -194,6 +194,90 @@ def test_the_cli_refusal_exits_1_and_names_the_file(tmp_path):
     assert "nope.png" in result.output
 
 
+
+# ---- image compression (#94) -------------------------------------------------------
+
+
+def _image(mode="RGB", size=(160, 120)):
+    """A gradient with noise: big as PNG or JPEG, so WebP has something to save."""
+    from PIL import Image
+    import random
+
+    rnd = random.Random(1)
+    im = Image.new(mode, size)
+    im.putdata([(x * 255 // size[0], y * 255 // size[1], rnd.randrange(40), 255)[:len(mode)]
+                for y in range(size[1]) for x in range(size[0])])
+    return im
+
+
+def _encoded(im, fmt, **kw) -> bytes:
+    import io
+
+    out = io.BytesIO()
+    im.save(out, fmt, **kw)
+    return out.getvalue()
+
+
+def _embedded(html: str, key: str) -> bytes:
+    """The bytes the bundle's asset table holds for ``key``."""
+    import json
+    import re
+
+    table = json.loads(re.search(r"window\.__audBundle = (\{.*?\});", html).group(1))
+    return base64.b64decode(table["assets"][key].split(",", 1)[1])
+
+
+def _image_project(tmp_path, files: dict[str, bytes]):
+    imgs = "\n".join(f'<img src="assets/{name}" alt="">' for name in files)
+    folder = write_project(tmp_path / "imgs", f'<section data-beat="one">\n{imgs}\n</section>', fmt="deck")
+    (folder / "assets").mkdir()
+    for name, data in files.items():
+        (folder / "assets" / name).write_bytes(data)
+    return folder
+
+
+def test_a_png_goes_in_as_lossless_webp(tmp_path):
+    from PIL import Image
+    import io
+
+    im = _image("RGBA")
+    original = _encoded(im, "PNG")
+    folder = _image_project(tmp_path, {"chart.png": original})
+    out = bundle(folder)
+    data = _embedded(out.path.read_text(), "assets/chart.png")
+    assert data[8:12] == b"WEBP" and len(data) < len(original)
+    assert "data:image/webp;base64," in out.path.read_text()
+    assert Image.open(io.BytesIO(data)).convert("RGBA").tobytes() == im.tobytes()  # every pixel kept
+    assert out.kinds["image"] == len(data)
+
+
+def test_a_jpeg_goes_in_as_smaller_webp_upright(tmp_path):
+    from PIL import Image
+    import io
+
+    im = _image("RGB", (200, 100))
+    exif = Image.Exif()
+    exif[0x0112] = 6  # stored sideways: a browser turns it 90 degrees
+    original = _encoded(im, "JPEG", quality=95, exif=exif)
+    folder = _image_project(tmp_path, {"photo.jpg": original})
+    data = _embedded(bundle(folder).path.read_text(), "assets/photo.jpg")
+    assert data[8:12] == b"WEBP" and len(data) < len(original)
+    assert Image.open(io.BytesIO(data)).size == (100, 200)
+
+
+def test_an_image_webp_cannot_shrink_goes_in_as_it_is(tmp_path):
+    from PIL import Image
+
+    gif = _encoded(_image("RGB", (16, 16)).convert("P"), "GIF")
+    svg = b'<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"></svg>'
+    frames = [_image("RGB", (32, 32)), Image.new("RGB", (32, 32), (0, 0, 255))]
+    apng = _encoded(frames[0], "PNG", save_all=True, append_images=frames[1:])
+    files = {"a.gif": gif, "b.svg": svg, "anim.png": apng, "broken.png": b"\x89PNG\r\n\x1a\nnot really"}
+    html = bundle(_image_project(tmp_path, files)).path.read_text()
+    for name, data in files.items():
+        assert _embedded(html, f"assets/{name}") == data, name
+
+
 # ---- the file the person gets ------------------------------------------------------
 
 
@@ -206,7 +290,7 @@ async def test_media_resolve_from_disk(media_project, tmp_path):
             const bg = getComputedStyle(document.getElementById('bg')).backgroundImage;
             return {
               images: imgs.map((i) => [i.id, i.naturalWidth]),
-              bg: bg.startsWith('url("data:image/png'),
+              bg: bg.startsWith('url("data:image/webp'),
               bed: document.getElementById('bed').currentSrc.slice(0, 14),
               code: window.built_in_code.src.slice(0, 14),
               fetched: (await window.fetched).answer,

@@ -4,6 +4,20 @@
 
 ### Added
 
+- **`bundle` and `export html` compress images to WebP (#94).** A still PNG
+  goes in as lossless WebP and a JPEG as WebP at quality 85, each only when
+  that is smaller; GIF, SVG, WebP and animated images go in as they are. Code
+  that names the original path still finds the image. Pillow is now a
+  dependency.
+- **Music** (#90): `auditorium music --mood calm --bpm 100 --length 30 -o
+  assets/bed.wav` composes a bed with Euterpe, the optional extra
+  `auditorium[music]`: four-bar loops, each rendered twice with the second
+  pass kept so it tiles with no seam, sparse under the opening and closing
+  and full between, faded in and out. Without `--length` it writes one loop.
+  `render` now lays an `<audio loop>` to the end of the video, fades every
+  clip but the voice out over the last 2 s, and ducks `data-duck` music
+  under the narration with a sidechain compressor. New check rule
+  `audio-peak` warns when the mix clips or the music is louder than the voice.
 - **Check rules `reading-time` and `dead-air` (#96).** On an explainer or a
   short, `reading-time` counts the words on stage at each beat's end and warns
   when the beat lasts under 0.8 or over 2.5 times `words / rate + base` (an

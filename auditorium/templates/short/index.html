@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Short</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<!-- A short: a vertical video, rendered to mp4 (auditorium render .). The
+     beats play in a row, each for its data-d in seconds, and must sum to 15
+     to 60 s. Replace every element marked data-placeholder, then delete the
+     attribute. Keep each beat to one idea and a few words.
+     Narration is optional: give a beat data-say="assets/vo/01.json" (the
+     alignment of assets/vo/01.wav) and its clip plays 0.3 s in, with the
+     music ducked under it; data-cue="a phrase" enters an element when the
+     phrase is said. Times, narration and the mix: auditorium help attributes. -->
+<main class="aud" data-format="short">
+  <!-- The logo slot: on every beat, in the band the layouts leave free.
+       Replace assets/logo.svg with your logo, or delete both. -->
+  <img class="brand" src="assets/logo.svg" alt="Logo" data-placeholder>
+
+  <!-- The hook: the first 3 seconds decide whether anyone watches on. -->
+  <section data-beat="hook" data-d="4" class="title">
+    <span class="kicker" data-placeholder>Who, what</span>
+    <h1 data-enter="words" data-placeholder>A hook in a few words</h1>
+    <!-- The music bed: from the first beat to the end, looped, faded out
+         over the last 2 s, ducked under the narration. Replace
+         assets/bed.wav with your track (auditorium music writes one). -->
+    <audio src="assets/bed.wav" data-in="0" data-gain="0.5" data-duck loop data-placeholder></audio>
+  </section>
+
+  <section data-beat="number" data-d="4" class="stats">
+    <h2 data-placeholder>What the number counts</h2>
+    <div class="stat" data-enter="count"><b data-to="30" data-placeholder>0</b><span data-placeholder>the unit</span></div>
+  </section>
+
+  <section data-beat="point" data-d="4" class="statement">
+    <p data-enter="words" data-placeholder>One sentence the viewer <em>keeps</em>.</p>
+  </section>
+
+  <section data-beat="action" data-d="4" class="title">
+    <h1 data-enter="rise" data-placeholder>What to do next</h1>
+    <p data-in="0.6" data-enter="fade" data-placeholder>where.example.org</p>
+  </section>
+
+</main>
+</body>
+</html>

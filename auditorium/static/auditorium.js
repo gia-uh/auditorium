@@ -605,6 +605,7 @@ export function build(root, { tracked = [], narration = new Map() } = {}) {
         t: start + ms(num(a, "data-in", 0)),
         gain: num(a, "data-gain", 1),
         duck: a.hasAttribute("data-duck"),
+        loop: a.hasAttribute("loop"),
       });
     }
 

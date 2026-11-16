@@ -9,7 +9,8 @@ Everything below writes into the project's `dist/` unless `-o` says where.
     auditorium export my-talk -f html      # the same as bundle
 
 The file holds the runtime, the CSS, the fonts, your scripts and every file
-in `assets/`. Send it, host it anywhere, or double-click it: it presents from
+in `assets/`. PNG and JPEG images go in as WebP when that is smaller (a PNG
+keeps every pixel); the paths in your code stay as they are. Send it, host it anywhere, or double-click it: it presents from
 disk with the arrow keys, space or a tap. Audience sync needs `run`.
 
 It refuses, writing nothing, when the project:

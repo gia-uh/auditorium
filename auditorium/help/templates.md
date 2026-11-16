@@ -12,6 +12,8 @@ DIR` copies it, and the folder is then yours.
 | poster | square, portrait, story | one image: an announcement, an event, a result |
 | report | page | a long document read on a screen or printed to A4: prose, a figure, a table, a chart |
 | dashboard | page | numbers someone checks in a browser: KPI tiles, a chart, a table, filter chips, live data |
+| explainer | explainer | a narrated landscape video of 1 to 6 minutes that explains one idea |
+| short | short | a vertical video of 15 to 60 s for Reels, TikTok or Shorts: music, optional narration |
 
 The first format listed is the default; `--format` picks another, and the
 template refuses one it does not make.
@@ -37,8 +39,9 @@ neon, print, simple, terminal.
 - A dashboard with no endpoint: dashboard; delete the `[data]` table from
   `auditorium.toml` and the fetch from `script.js`, and the page draws the
   rows embedded in it.
-- A video: no template yet. Start from talk or poster, change `data-format`
-  (help formats), and build the beats from help layouts.
+- A video: explainer if it is landscape and narrated, short if it is
+  vertical and under a minute. A narrated short: short, with `data-say` on
+  each beat. A talk recorded as a video: explainer, one beat per slide.
 
 ## What new writes
 
@@ -48,6 +51,7 @@ neon, print, simple, terminal.
 | theme.css | theme variables only: palette, fonts, radius, shadow |
 | assets/logo.svg | the logo slot's placeholder |
 | assets/photo.svg | pitch: the photo's placeholder |
+| assets/bed.wav | short: the music bed's placeholder |
 | script.js, assets/sales.json | dashboard: the drawing and the fixture for its endpoint |
 | auditorium.toml | the template, version, format, language and theme it was made with; the dashboard's `[data]` endpoint |
 | README.md | where the folder came from |

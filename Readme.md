@@ -245,7 +245,13 @@ auditorium bundle examples/talk --no-audio   # leave the audio out
 network, with the file and line of each reference, and writes nothing.
 
 A render is deterministic: two renders of the same project are byte-identical.
-Every `<audio>` is mixed in at its `data-in` and `data-gain`, with each beat's narration clip.
+Every `<audio>` is mixed in at its `data-in` and `data-gain`, with each beat's narration clip;
+`<audio loop>` repeats to the end, and `data-duck` music drops under the voice.
+
+```bash
+# A 30 s music bed composed with Euterpe: pip install "auditorium[music]"
+auditorium music --mood calm --bpm 100 --length 30 -o assets/bed.wav
+```
 
 ## 🌍 Self-hosting a relay
 
