@@ -16,8 +16,8 @@ seconds. Nothing here needs JavaScript.
 | `data-enter` | any element | entrance: fade rise pop flip grow draw words count |
 | `data-exit` | any element | exit, the entrance names played backwards |
 | `data-idle` | any element | while shown: float tilt pulse ken-burns |
-| `data-dur` | with a motion | the motion's length, overriding its default |
-| `data-ease` | with a motion | a CSS easing, overriding its default |
+| `data-dur`, `data-ease` | with a motion | its length and CSS easing, overriding the defaults |
+| `data-lag`, `data-emphasis`, `data-at`, `data-ambient`, `data-grade` | see help motion | stagger, emphasis, layer presets |
 | `data-col` | inside `.grid` | the columns it spans, `1/13` is all twelve |
 | `data-row` | inside `.grid` | the grid row |
 | `data-to` | `<b>` with count | the number it counts up to |
