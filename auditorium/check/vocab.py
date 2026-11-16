@@ -1,7 +1,7 @@
 """The names a project may use, read from the runtime that defines them.
 
-Formats, motions and idles are defined once, in auditorium.js; layouts once, in
-auditorium.css. Reading them from there instead of keeping a second list means
+Formats, motions and idles are defined once, in auditorium.js; layouts and
+layers once, in auditorium.css. Reading them from there instead of keeping a second list means
 a motion added to the runtime is valid in the check the same day, and a test
 cannot pass on a list that drifted from what the browser accepts.
 """
@@ -75,3 +75,10 @@ def layouts() -> list[str]:
     css = (STATIC / "auditorium.css").read_text()
     m = re.search(r"\.aud > section:is\(([^)]*)\)", css)
     return [c.strip().lstrip(".") for c in m.group(1).split(",")]
+
+
+@cache
+def layers() -> list[str]:
+    """The values data-layer may take, from its rules in auditorium.css."""
+    css = (STATIC / "auditorium.css").read_text()
+    return list(dict.fromkeys(re.findall(r'\.aud > \[data-layer="([a-z]+)"\]', css)))

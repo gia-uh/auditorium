@@ -37,7 +37,8 @@ def unknown_name(p: Project) -> Iterator[Finding]:
     for el in p.source.elements:
         for attr, names, what in (("data-enter", vocab.entrances(), "entrance"),
                                   ("data-exit", vocab.entrances(), "exit"),
-                                  ("data-idle", vocab.idles(), "idle")):
+                                  ("data-idle", vocab.idles(), "idle"),
+                                  ("data-layer", vocab.layers(), "layer")):
             value = el.get(attr)
             if value is not None and value not in names:
                 yield _unknown(el, attr, value, names, what)

@@ -138,6 +138,17 @@ html.aud-staged { font-size: calc(min(var(--aud-stage-w), var(--aud-stage-h)) * 
 .aud-built .aud > section:not(.aud-on) { display: none; }
 .aud-built .aud [data-aud-t]:not(.aud-on) { visibility: hidden; }
 
+/* Layers: a direct child of main.aud with data-layer stays on the stage for
+   the whole artifact, drawn background, then the beats (the content layer),
+   then grade. A beat change swaps only the content layer, so an ambient
+   background or a colour grade runs on without a cut. isolation makes .aud
+   the stacking context, so the background layer goes above its fill and
+   under the beats on a page as on a stage. Layers never take a click. */
+.aud { isolation: isolate; }
+.aud > [data-layer] { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.aud > [data-layer="background"] { z-index: -1; }
+.aud > [data-layer="grade"] { z-index: 5; }
+
 /* A page flows at any width and scrolls. */
 html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 

@@ -25,6 +25,7 @@ seconds. Nothing here needs JavaScript.
 | `data-gain` | `<audio>` | its volume, 0 to 1 (read by the audio mix, not yet) |
 | `data-duck` | `<audio>` | lowered under a voice (read by the audio mix, not yet) |
 | `data-placeholder` | any element | template content still to replace; delete when done |
+| `data-layer` | a child of `<main>` | background or grade: stays on through every beat |
 
 An element with none of the time attributes shows for its whole beat. An
 exit without `data-out` ends with a beat that has `data-d`; in a deck, give
@@ -87,6 +88,21 @@ A line whose ends follow two elements, by id, through every motion.
     <line data-from="loss:right" data-to="grad:left" data-step="1" data-enter="draw" stroke="currentColor" stroke-width="4"/>
   </svg>
 </section>
+```
+
+## Layers
+
+A `<div data-layer>` beside the beats covers the whole stage and stays on
+from the first beat to the last: `background` is drawn under every beat,
+`grade` over it (a tint, a vignette). A beat change swaps only the beats, so
+a drifting background or a grade never cuts. Layers take no clicks.
+
+```html
+<main class="aud" data-format="explainer">
+  <div data-layer="background" style="background: radial-gradient(#1e3a8a, #0f172a)"></div>
+  <section data-beat="hook" data-d="4" class="title"><h1>Every beat sits on it</h1></section>
+  <div data-layer="grade" style="box-shadow: inset 0 0 200px rgb(0 0 0 / 0.5)"></div>
+</main>
 ```
 
 ## Audio

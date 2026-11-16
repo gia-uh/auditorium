@@ -19,7 +19,9 @@ Every run also writes every finding to `DIR/dist/check.json`.
 2. **layout** opens the project in Chromium, seeks it to every stop (and once
    a second in between on a clock) and measures what shows: overflow, overlap,
    the grid, the safe area, type size, contrast, script errors, sideways
-   scrolling on a phone, leftover placeholders, empty beats.
+   scrolling on a phone, leftover placeholders, empty beats. It then seeks
+   to the first frame of every entrance that fades in, where nothing should
+   show yet (pop-in, a warning).
 
 The check stops after the first pass with errors: a broken tag moves every
 box, so measuring them first would only add noise. Fix what it shows, run it
@@ -67,6 +69,7 @@ Fix the first finding first. Later ones are often its consequence.
 | h-scroll | layout | a page that scrolls sideways at 390 px |
 | placeholder | layout | template text still marked data-placeholder |
 | empty | layout | a beat that shows nothing, a chart with no bars |
+| pop-in | layout | an element at full opacity when its entrance starts (warning) |
 
 `auditorium help rule NAME` prints one rule with a broken and a fixed snippet.
 
