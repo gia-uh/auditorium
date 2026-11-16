@@ -9,21 +9,27 @@ clock or wait for a press. `template new --format` sets it for you.
 |---|---|---|---|---|
 | deck | 1920 × 1080 | 60 80 60 80 | presses | a talk the presenter advances |
 | explainer | 1920 × 1080 | 60 80 60 80 | clock | a landscape video, 1 to 6 minutes |
-| short | 1080 × 1920 | 250 60 340 120 | clock | a vertical video, 15 to 60 s |
-| story | 1080 × 1920 | 250 60 340 60 | presses | a vertical still or slides for a story |
-| square | 1080 × 1080 | 60 60 60 60 | presses | a post in a feed |
-| portrait | 1080 × 1350 | 70 60 70 60 | presses | a taller post in a feed |
+| short | 1080 × 1920 | 270 120 670 120 | clock | a vertical video, 15 to 60 s |
+| story | 1080 × 1920 | 270 120 670 120 | one beat | a vertical still for a story |
+| square | 1080 × 1080 | 60 60 60 60 | one beat | a post in a feed |
+| portrait | 1080 × 1350 | 70 60 70 60 | one beat | a taller post in a feed |
 | page | none | none | none | a report or dashboard that flows at any width |
 
-Sizes are CSS pixels. The safe areas are provisional until they are measured
-against each platform; keep content inside them and they will stay right.
+Sizes are CSS pixels. A story's and a short's safe area clears the app bars
+and buttons of Instagram, Facebook, TikTok and YouTube Shorts at once (the
+widest band each of them documents), so one file posts to all of them. A
+feed post, a slide and a landscape video have nothing over them; their safe
+area is a margin.
 
-## Clock or presses
+## Clock, presses or one beat
 
 On a clock (`explainer`, `short`) every beat needs `data-d`, its length in
-seconds, and the video is the beats in a row. On presses, a beat waits for
-the presenter; `data-step` makes an element wait for the Nth press inside
-its beat. A beat with no timed element is one still: a poster is one beat.
+seconds, and the video is the beats in a row. A short's beats must sum to 15
+to 60 s; aim an explainer at 1 to 6 minutes. On presses (`deck`), a beat waits
+for the presenter; `data-step` makes an element wait for the Nth press inside
+its beat. A poster (`square`, `portrait`, `story`) is one still, so it has one
+beat. The `duration` rule fails a short outside its bounds and a poster with a
+second beat.
 
 ```html
 <main class="aud" data-format="short">
@@ -64,5 +70,4 @@ layouts stack their columns on a phone.
 
 The check fails type below each format's minimum, in stage pixels: deck,
 explainer, square and portrait 24; story and short 28; page 12.
-`var(--aud-type-small)` passes everywhere. Duration bounds arrive with the
-time rules.
+`var(--aud-type-small)` passes everywhere.

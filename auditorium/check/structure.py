@@ -180,6 +180,28 @@ def time_attrs(p: Project) -> Iterator[Finding]:
                           "keep one: data-cue for narration, data-in for a time", selector=el.selector())
 
 
+def duration(p: Project) -> Iterator[Finding]:
+    """A timed format outside its length, or a poster with more beats than one."""
+    b = vocab.bounds().get(p.format, {})
+    if "seconds" in b and p.main is not None:
+        lengths = [_num(s, "data-d") for s in p.sections]
+        if None not in lengths:  # a missing or bad data-d is time-attrs' finding
+            low, high = b["seconds"]
+            total = sum(lengths)
+            if not low <= total <= high:
+                want = f"add beats or lengthen them by {low - total:g} s" if total < low else \
+                    f"cut beats or shorten them by {total - high:g} s"
+                yield finding("duration", "index.html", p.main.line,
+                              f"the beats sum to {total:g} s; a {p.format} lasts {low:g} to {high:g} s",
+                              f"{want} (the data-d of each <section>)", selector=p.main.selector())
+    if "beats" in b and len(p.sections) > b["beats"]:
+        extra = p.sections[b["beats"]]
+        yield finding("duration", "index.html", extra.line,
+                      f"a {p.format} is one image, and this is beat {b['beats'] + 1} of {len(p.sections)}",
+                      'keep one <section>, or use data-format="deck" for slides',
+                      selector=extra.selector(), beat=extra.get("data-beat"))
+
+
 def duplicate_id(p: Project) -> Iterator[Finding]:
     seen: dict[str, int] = {}
     for el in p.source.elements:
@@ -195,7 +217,7 @@ def duplicate_id(p: Project) -> Iterator[Finding]:
 
 
 STRUCTURE = [parse, unknown_name, external_url, missing_asset, wall_clock, bare_transition,
-             time_attrs, duplicate_id]
+             time_attrs, duration, duplicate_id]
 
 
 def run(p: Project) -> list[Finding]:

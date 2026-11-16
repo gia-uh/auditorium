@@ -21,8 +21,7 @@ With no layout class a beat is a centred column, and `<div class="grid">` with
 | table | rows and columns of data |
 | chart | a bar chart |
 
-Side by side means 3 in a deck, 2 in square and portrait, 1 in story and
-short. Write at most 3 cards or stats a beat, or split them over two beats.
+Side by side means 3 in a deck and 2 in square, portrait, story and short. Write at most 3 cards or stats a beat, or split them over two beats.
 
 ## title
 

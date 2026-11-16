@@ -34,7 +34,8 @@ WHERE = {
     "parse": ("index.html", 15), "unknown-name": ("index.html", 15),
     "external-url": ("index.html", 15), "missing-asset": ("index.html", 15),
     "wall-clock": ("script.js", 3), "bare-transition": ("theme.css", 2),
-    "time-attrs": ("index.html", 14), "duplicate-id": ("index.html", 16),
+    "time-attrs": ("index.html", 14), "duration": ("index.html", 10),
+    "duplicate-id": ("index.html", 16),
     "overflow": ("index.html", 15), "overlap": ("index.html", 17),
     "off-grid": ("index.html", 16), "safe-area": ("index.html", 15),
     "min-size": ("index.html", 15), "contrast": ("index.html", 15),
@@ -95,6 +96,24 @@ def test_structure_errors_stop_the_layout_pass():
     assert "layout not run" in report.summary()
 
 
+@pytest.mark.parametrize("fmt, lengths, fires", [
+    ("short", [10, 5], False), ("short", [30, 30], False), ("short", [40, 21], True),
+    ("short", [7, 7.9], True), ("explainer", [5], False), ("deck", [], False),
+])
+def test_duration_holds_a_short_to_15_to_60_seconds(fmt, lengths, fires, tmp_path):
+    body = "".join(f'<section data-beat="b{i}" data-d="{d}" class="statement"><p>Beat</p></section>'
+                   for i, d in enumerate(lengths)) or '<section class="statement"><p>Beat</p></section>' * 3
+    report = check(write_project(tmp_path, body, fmt=fmt), layout=False)
+    assert ("duration" in {f.rule for f in report.findings}) is fires, report.text()
+
+
+@pytest.mark.parametrize("fmt", ["square", "portrait", "story"])
+def test_duration_points_at_a_posters_second_beat(fmt, tmp_path):
+    body = '<section data-beat="one"><p>A</p></section>\n<section data-beat="two"><p>B</p></section>'
+    hits = [f for f in check(write_project(tmp_path, body, fmt=fmt), layout=False).findings if f.rule == "duration"]
+    assert [f.beat for f in hits] == ["two"]
+
+
 # ---- and on nothing that is right ---------------------------------------------
 
 
@@ -120,10 +139,15 @@ def snippet(rule, which):
     return re.search(rf"## {which}\n\n```html\n(.*?)```", text, re.DOTALL).group(1)
 
 
+# The format a rule's help snippets are checked in, where a deck cannot break it.
+SNIPPET_FORMAT = {"duration": "square"}
+
+
 @pytest.mark.parametrize("rule", STRUCTURE)
 def test_a_structure_rules_help_snippets_break_and_fix_it(rule, tmp_path):
-    broken = write_project(tmp_path / "broken", snippet(rule, "Broken"), fmt="deck")
-    fixed = write_project(tmp_path / "fixed", snippet(rule, "Fixed"), fmt="deck")
+    fmt = SNIPPET_FORMAT.get(rule, "deck")
+    broken = write_project(tmp_path / "broken", snippet(rule, "Broken"), fmt=fmt)
+    fixed = write_project(tmp_path / "fixed", snippet(rule, "Fixed"), fmt=fmt)
     for folder in (broken, fixed):
         # Snippets name assets/ files as a real project would hold them.
         for rel in re.findall(r'src="(assets/[^"]+)"', (folder / "index.html").read_text()):

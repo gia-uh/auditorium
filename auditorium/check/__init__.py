@@ -55,6 +55,7 @@ _RULES = [
     Rule("wall-clock", "structure", "error", "requestAnimationFrame, timers, Date.now, performance.now or Math.random in author code"),
     Rule("bare-transition", "structure", "error", "A CSS transition in author CSS (D3)"),
     Rule("time-attrs", "structure", "error", "A timed beat without data-d, data-in after data-out, data-cue with data-in"),
+    Rule("duration", "structure", "error", "A short outside 15 to 60 s, a poster with more than one beat"),
     Rule("duplicate-id", "structure", "error", "Two elements with one id"),
     # layout, in Chromium at each stop and at sampled times
     Rule("overflow", "layout", "error", "Text clipped by its box or past the stage"),

@@ -544,8 +544,15 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 /* ---- What each format sets ----
  * The safe area is the inset that platform chrome covers (the app bars over a
  * story or a short); a layout keeps its content inside it plus --aud-inset.
- * The insets are the placeholders of the 2026-11-05 spec's format table until
- * the formats issue (#83) measures them. --aud-cols is how many cards, stats
+ * Vertical formats (story, short) keep out of the union of the bands each
+ * platform documents at 1080 x 1920, as checked for #83 in November 2026:
+ * Meta's single 9:16 zone for Stories and Reels (14 % top = 269 px, 35 %
+ * bottom = 672 px, 6 % sides = 65 px) and TikTok's in-feed template (240 px
+ * top, 660 px bottom, 120 px sides, buttons on the right). YouTube publishes
+ * no figure; third-party overlays fall inside this union. Nothing covers a
+ * feed post, a projected slide or a landscape player, so their insets are
+ * margins; a portrait post's 60 px sides also clear the ~34 px each side the
+ * 3:4 profile grid crops. --aud-cols is how many cards, stats
  * or columns sit side by side; the type scale is in rem, which follows the
  * stage (see html.aud-staged above). A deck is the default, so a page with no
  * data-format still gets one.
@@ -581,20 +588,17 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 }
 .aud[data-format="story"],
 .aud[data-format="short"] {
-    --aud-safe-top: 250px;
-    --aud-safe-right: 60px;
-    --aud-safe-bottom: 340px;
-    --aud-safe-left: 60px;
-    --aud-cols: 1;
+    --aud-safe-top: 270px;
+    --aud-safe-right: 120px;
+    --aud-safe-bottom: 670px;
+    --aud-safe-left: 120px;
+    --aud-cols: 2;
     --aud-columns: 1;
     --aud-type-display: 3rem;
     --aud-type-title: 2.2rem;
     --aud-type-body: 1.35rem;
     --aud-type-small: 0.95rem;
 }
-/* The spec's placeholder gives a short a wider band on the left; #83 checks
-   it against the platforms, whose action buttons sit on the right. */
-.aud[data-format="short"] { --aud-safe-left: 120px; }
 /* A page has no stage and no chrome over it; it reflows to one column on a
    phone, where the check measures it at 390 px. */
 .aud[data-format="page"] {
