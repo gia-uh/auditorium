@@ -9,7 +9,10 @@ value says where the file comes from:
   ``size`` for the viewport and a ``state``, JavaScript run in the page first
   (open a menu, sign in, scroll a list) so one URL gives several captures.
 - ``generate``: a request for an image: ``prompt``, ``size``, ``seed`` and
-  ``provider``. No provider ships here; the entry stays a placeholder until a
+  ``provider``. A provider is a plugin: an installed package that registers
+  one function under the ``auditorium.image_providers`` entry point group,
+  named as the manifest names it (``ImageProvider`` gives the signature). None
+  ships here, so a request stays a placeholder until a provider makes it or a
   file with its hash is in the cache.
 
 Every resolved file lands in ``.auditorium/cache/`` under the hash of its
@@ -30,12 +33,14 @@ import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 MANIFEST = "assets.yaml"
 CACHE = Path(".auditorium") / "cache"
 KINDS = ("file", "capture", "generate")
 DEFAULT_SIZE = (1280, 720)
 CAPTURE_SIZE = (1440, 900)
+PROVIDERS = "auditorium.image_providers"
 _PLACEHOLDER_TYPES = {".png": "png", ".jpg": "jpeg", ".jpeg": "jpeg", ".svg": "svg"}
 
 
@@ -45,6 +50,26 @@ class ManifestError(ValueError):
     def __init__(self, problems: list[str]):
         super().__init__("; ".join(problems))
         self.problems = problems
+
+
+class ImageProvider(Protocol):
+    """The one function a provider plugin registers under ``auditorium.image_providers``.
+
+    It returns the image's bytes in ``format`` (``png`` or ``jpeg``, from the
+    key's suffix) at ``size`` pixels; ``seed`` is None when the entry has none.
+    Anything it raises leaves the entry a placeholder, with the message as the
+    reason.
+    """
+
+    def __call__(self, prompt: str, *, size: tuple[int, int], seed: int | None,
+                 format: str) -> bytes: ...
+
+
+def providers() -> dict[str, ImageProvider]:
+    """The installed image providers, by the name the manifest's ``provider`` uses."""
+    from importlib.metadata import entry_points
+
+    return {ep.name: ep.load() for ep in entry_points(group=PROVIDERS)}
 
 
 @dataclass
@@ -170,8 +195,7 @@ def resolve(folder: Path) -> list[Outcome]:
             captures.append(entry)
             outcomes.append(Outcome(entry.key, entry.kind, "resolved"))
         else:
-            outcomes.append(Outcome(entry.key, entry.kind, "placeholder",
-                                    f"no image provider is enabled for {entry.spec.get('provider') or 'this request'}"))
+            outcomes.append(_generate(folder, entry))
     pending = [o for o in outcomes if o.status == "placeholder"]
     if captures or any(_PLACEHOLDER_TYPES.get(Path(o.key).suffix.lower()) not in (None, "svg") for o in pending):
         import asyncio
@@ -182,6 +206,24 @@ def resolve(folder: Path) -> list[Outcome]:
             entry = next(e for e in entries if e.key == o.key)
             _write(folder / o.key, _placeholder_svg(entry, o.detail).encode())
     return outcomes
+
+
+def _generate(folder: Path, entry: Entry) -> Outcome:
+    name = entry.spec.get("provider")
+    installed = providers()
+    if not name or name not in installed:
+        have = ", ".join(sorted(installed)) or "none"
+        return Outcome(entry.key, entry.kind, "placeholder",
+                       f"no image provider named {name or '(none given)'} is installed (installed: {have})")
+    try:
+        data = installed[name](str(entry.spec["generate"]), size=entry.size, seed=entry.spec.get("seed"),
+                               format=_PLACEHOLDER_TYPES[entry.suffix])
+    except Exception as exc:  # a provider's failure is the entry's, not the run's
+        return Outcome(entry.key, entry.kind, "placeholder", f"{name}: {exc}")
+    target = folder / CACHE / f"{entry_hash(folder, entry)}{entry.suffix}"
+    target.write_bytes(data)
+    _place(folder, entry, target)
+    return Outcome(entry.key, entry.kind, "resolved")
 
 
 def _place(folder: Path, entry: Entry, cached_file: Path) -> None:
