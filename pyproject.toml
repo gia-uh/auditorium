@@ -24,6 +24,11 @@ record = [
     "pypdf>=5",
     "tqdm>=4.67.3",
 ]
+# Music beds for auditorium music (#90). Euterpe is not on PyPI under its own
+# name (the PyPI project "euterpe" is unrelated), so it is pinned to a commit.
+music = [
+    "euterpe @ git+https://github.com/gia-uh/euterpe@45f21d8022da13fdb3ae6e81fc1630dc22261d41",
+]
 dev = [
     "pytest>=8",
     "ruff>=0.4",
@@ -32,6 +37,9 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true  # the music extra's Euterpe pin
 
 [tool.hatch.build.targets.wheel]
 packages = ["auditorium"]
@@ -43,6 +51,7 @@ include = [
 
 [dependency-groups]
 dev = [
+    "euterpe @ git+https://github.com/gia-uh/euterpe@45f21d8022da13fdb3ae6e81fc1630dc22261d41",
     "httpx>=0.28.1",
     "playwright>=1.62",
     "pypdf>=5",

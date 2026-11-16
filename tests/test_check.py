@@ -43,6 +43,7 @@ WHERE = {
     "console-error": ("index.html", 18), "h-scroll": ("index.html", 15),
     "placeholder": ("index.html", 15), "placeholder-asset": ("index.html", 15),
     "empty": ("index.html", 14), "pop-in": ("index.html", 15),
+    "audio-peak": ("index.html", 16),
 }
 
 CLEAN = sorted([*TEMPLATES.glob("*/example"), *(ROOT / "examples").iterdir()])
@@ -60,10 +61,10 @@ def test_every_rule_has_a_fixture_a_help_page_and_a_place():
 
 def test_the_layout_rules_are_the_ones_the_browser_measures():
     """audit.js measures most layout rules; console-error is the page's own
-    log, and placeholder and placeholder-asset need only the source and
-    assets.yaml, all read in Python."""
+    log, placeholder and placeholder-asset need only the source and
+    assets.yaml, all read in Python, and audio-peak mixes with ffmpeg."""
     measured = set(re.search(r"const RULES = \[(.*?)\]", AUDIT).group(1).replace('"', "").replace(" ", "").split(","))
-    assert measured | {"console-error", "placeholder", "placeholder-asset"} == set(LAYOUT)
+    assert measured | {"console-error", "placeholder", "placeholder-asset", "audio-peak"} == set(LAYOUT)
 
 
 # ---- each rule fires on its fixture, at its line --------------------------------
@@ -165,8 +166,9 @@ def test_a_structure_rules_help_snippets_break_and_fix_it(rule, tmp_path):
 
 
 # placeholder-asset turns on assets.yaml, which a snippet of HTML cannot carry;
-# its fixture and tests/test_assets.py hold it.
-SNIPPET_LAYOUT = [r for r in LAYOUT if r != "placeholder-asset"]
+# its fixture and tests/test_assets.py hold it. audio-peak needs audio files,
+# which its own snippet test below writes.
+SNIPPET_LAYOUT = [r for r in LAYOUT if r not in ("placeholder-asset", "audio-peak")]
 
 
 def test_the_layout_rules_fixed_snippets_pass_together(tmp_path):
@@ -182,6 +184,19 @@ def test_the_layout_rules_broken_snippets_fire_together(tmp_path):
     body = "\n".join(snippet(r, "Broken") for r in rules)
     report = check(write_project(tmp_path / "broken", body, fmt="deck"))
     assert set(rules) <= {f.rule for f in report.findings}, report.text()
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
+def test_audio_peaks_help_snippets_break_and_fix_it(tmp_path):
+    """The snippets name the fixture's bed, a full-scale tone, under a voice."""
+    reports = {}
+    for which in ("Broken", "Fixed"):
+        folder = write_project(tmp_path / which, snippet("audio-peak", which), fmt="explainer")
+        write_narration(folder, "claim", [("Small", 0.0), ("steps", 0.4), ("win.", 0.8)], 1.2, rate=8000)
+        shutil.copy(FIXTURES / "audio-peak" / "assets" / "bed.wav", folder / "assets" / "bed.wav")
+        reports[which] = check(folder)
+    assert "audio-peak" in {f.rule for f in reports["Broken"].findings}, reports["Broken"].text()
+    assert reports["Fixed"].findings == [], reports["Fixed"].text()
 
 
 def test_help_rule_prints_one_rule_and_lists_them_all():

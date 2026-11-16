@@ -122,7 +122,7 @@ async def test_an_entrance_holds_its_start_value_until_data_in(browser_page, ser
 async def test_audio_is_published_at_its_absolute_time(browser_page, served):
     await load(browser_page, served(PROJECTS / "timed"), size=(1080, 1920))
     audio = await browser_page.evaluate("() => window.auditorium.audio")
-    assert audio == [{"src": "assets/bed.wav", "t": 5000, "gain": 0.5, "duck": True}]
+    assert audio == [{"src": "assets/bed.wav", "t": 5000, "gain": 0.5, "duck": True, "loop": False}]
 
 
 # ---- presented decks: steps -------------------------------------------------

@@ -9,6 +9,15 @@
   that is smaller; GIF, SVG, WebP and animated images go in as they are. Code
   that names the original path still finds the image. Pillow is now a
   dependency.
+- **Music** (#90): `auditorium music --mood calm --bpm 100 --length 30 -o
+  assets/bed.wav` composes a bed with Euterpe, the optional extra
+  `auditorium[music]`: four-bar loops, each rendered twice with the second
+  pass kept so it tiles with no seam, sparse under the opening and closing
+  and full between, faded in and out. Without `--length` it writes one loop.
+  `render` now lays an `<audio loop>` to the end of the video, fades every
+  clip but the voice out over the last 2 s, and ducks `data-duck` music
+  under the narration with a sidechain compressor. New check rule
+  `audio-peak` warns when the mix clips or the music is louder than the voice.
 - **Image providers as plugins (#93).** A `generate` entry in `assets.yaml`
   resolves through the provider it names: one function, registered by an
   installed package under the `auditorium.image_providers` entry point group,
