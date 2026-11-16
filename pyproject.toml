@@ -61,6 +61,9 @@ dev = [
     "scipy>=1.13",
     "soundfile>=0.13",
 ]
+docs = [
+    "scriptorium[pdf]",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -69,3 +72,6 @@ asyncio_mode = "auto"
 [tool.ruff]
 # Vendored code is kept as upstream wrote it, so a refresh is a plain copy.
 extend-exclude = ["auditorium/_vendor"]
+
+[tool.uv.sources]
+scriptorium = { git = "https://github.com/apiad/scriptorium", rev = "v0.14.0" }

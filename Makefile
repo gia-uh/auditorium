@@ -1,4 +1,4 @@
-.PHONY: test lint docs know-how relay relay-install relay-update relay-uninstall relay-status relay-logs
+.PHONY: test lint docs book book-check know-how relay relay-install relay-update relay-uninstall relay-status relay-logs
 
 # The gates. CI runs all three on every PR (.github/workflows/tests.yml).
 # Browser tests need `uv run playwright install chromium`; the encode tests
@@ -12,8 +12,32 @@ lint:
 # rift lints the agent docs (.rift.yaml). The PyPI package named rift is an
 # unrelated project, so the default installs it from GitHub at a pinned tag;
 # set RIFT=rift to use a local install.
-RIFT ?= uvx -q --from git+https://github.com/apiad/rift@v0.8.1 rift
+RIFT ?= uvx -q --from git+https://github.com/apiad/rift@v0.9.0 rift
 docs:
+	$(RIFT) check
+
+# The book (docs/), built with every block executed: the site, the PDF and the
+# gallery of exported examples, all into docs/site/, which CI publishes to
+# GitHub Pages. It starts from an empty run cache so every block runs against
+# the code as it is; the second render (the PDF) reuses the first one's runs.
+SCRIPTORIUM = uv run scriptorium
+book:
+	rm -rf docs/site docs/build docs/.scriptorium
+	$(SCRIPTORIUM) render docs/scriptorium.yaml --only site
+	$(SCRIPTORIUM) render docs/scriptorium.yaml --only print
+	cp -r docs/build/gallery docs/site/gallery
+	cp docs/auditorium.pdf docs/CNAME docs/site/
+
+# scriptorium prints a failing block's output on the page and still exits 0,
+# so the grep is what fails the build. tangle --test runs per chapter, because
+# given the YAML it finds no blocks and passes. A file under docs/examples/
+# that no chapter exports is an orphan tangle cannot see. Every tangled
+# project must pass auditorium check, and rift finds every command in the book.
+book-check: book
+	! grep -l 'class="output error"' docs/site/*.html
+	for c in docs/chapters/*.md; do $(SCRIPTORIUM) tangle --test $$c -d docs || exit 1; done
+	for e in $$(find docs/examples -type f ! -name __init__.py ! -path '*/dist/*'); do grep -q "export=$${e#docs/}" docs/chapters/*.md || { echo "$$e is not tangled from the book"; exit 1; }; done
+	for p in docs/examples/*/; do uv run auditorium check $$p > /dev/null || { echo "$$p fails auditorium check"; exit 1; }; done
 	$(RIFT) check
 
 know-how:

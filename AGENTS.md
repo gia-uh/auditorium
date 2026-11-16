@@ -36,11 +36,13 @@ commit that adds code or content.
 | module docstrings and file-head comments | what each module does and why it is shaped that way |
 | `CHANGELOG.md`, git log | what changed and when |
 | `examples/` | projects that double as living documentation |
+| `docs/chapters/`, `docs/scriptorium.yaml` | the book: the user's and developer's guide, built and published by `make book` |
 
 ## Working here
 
 The gates are `make test`, `make lint` and `make docs` (`rift check` over the agent
-docs). CI runs all three on every PR.
+docs, and the CLI commands the book must name). CI runs all three on every PR,
+and `make book-check` builds the book with every block executed.
 
 Print the know-how menu with `make know-how` (or `grep -m1 -H '^when:' know-how/*.md`)
 and read the docs whose `when:` matches your task.

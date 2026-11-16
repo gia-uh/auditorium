@@ -41,3 +41,24 @@ rules:
       as: regex
       case_insensitive: true
 
+
+  # The book (docs/) is the user's guide. A command it never names is a command
+  # nobody learns about, and nothing else notices when one is added. The
+  # extractors read the commands from where Typer declares them.
+  - name: "every auditorium command is named in the book"
+    extract:
+      file: "auditorium/cli.py"
+      regex: '@app\.command\((?:name="([a-z]+)")?\)\ndef ([a-z]+)'
+      sub: ['^', 'auditorium ']
+    require:
+      in: "docs/chapters/*.md"
+      as: word
+
+  - name: "every template subcommand is named in the book"
+    extract:
+      file: "auditorium/cli.py"
+      regex: '@template_app\.command\("([a-z]+)"\)'
+      sub: ['^', 'auditorium template ']
+    require:
+      in: "docs/chapters/*.md"
+      as: word

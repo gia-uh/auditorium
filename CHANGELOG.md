@@ -4,6 +4,17 @@
 
 ### Added
 
+- **The book and the gallery (#131).** `docs/` is a scriptorium book: a Quick
+  Start, one User Guide chapter per template (talk, poster, pitch, report,
+  dashboard, explainer, short) and a Developer Guide, every command executed
+  when it builds, with screenshots of the preview, the editor and the
+  presenter view taken by the build. The gallery exports every template's
+  example with `auditorium export -f html`. `make book` builds the site, the
+  PDF and the gallery; `make book-check` also fails on a failed block, a
+  drifted or orphan example, or a CLI command the book never names. CI
+  publishes it to auditorium.uhgia.org on every merge to main, replacing the
+  4.x pages. The Readme's walkthrough now points at the book.
+
 - **`bundle` and `export html` compress images to WebP (#94).** A still PNG
   goes in as lossless WebP and a JPEG as WebP at quality 85, each only when
   that is smaller; GIF, SVG, WebP and animated images go in as they are. Code
