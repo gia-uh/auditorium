@@ -7,8 +7,9 @@ structural error makes geometry findings noise.
 - **structure** reads the files and never starts a browser (``structure.py``).
 - **layout** seeks Chromium to every stop and to sampled times in between and
   measures the live DOM (``layout.py`` and ``audit.js``).
-- **time** and **reading** (narration, reading rate, dead air, seek-stable) come
-  with milestone 3 of the spec; their rules join this registry then.
+- **time**: overrun and cue-missing (narration, #73) read files only and run
+  with the structure pass. The reading rules (reading rate, dead air,
+  seek-stable) join this registry when they land.
 
 Every finding names the file, the line, the rule, what was measured and the
 edit that fixes it in the file's own terms. ``RULES`` is the registry: a rule
@@ -57,6 +58,10 @@ _RULES = [
     Rule("time-attrs", "structure", "error", "A timed beat without data-d, data-in after data-out, data-cue with data-in"),
     Rule("duration", "structure", "error", "A short outside 15 to 60 s, a poster with more than one beat"),
     Rule("duplicate-id", "structure", "error", "Two elements with one id"),
+    # time: narration (#73). They read the alignment and the clip's header and
+    # need no browser, so they run with the structure pass.
+    Rule("overrun", "structure", "error", "A narration clip longer than its beat minus 0.3 s"),
+    Rule("cue-missing", "structure", "error", "A data-cue phrase that is not in its beat's narration"),
     # layout, in Chromium at each stop and at sampled times
     Rule("overflow", "layout", "error", "Text clipped by its box or past the stage"),
     Rule("overlap", "layout", "error", "Two text boxes, or text and an image, intersecting"),

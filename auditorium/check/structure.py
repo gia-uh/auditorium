@@ -11,6 +11,7 @@ import re
 from collections.abc import Iterator
 
 from auditorium.check import Finding, finding
+from auditorium import narration
 from auditorium.check import vocab
 from auditorium.check.project import Project, is_external, strip_css_comments, strip_js_comments
 
@@ -170,7 +171,8 @@ def _num(el, attr) -> float | None:
 def time_attrs(p: Project) -> Iterator[Finding]:
     timed = vocab.formats().get(p.format)
     for section in p.sections:
-        if timed and not section.has("data-d"):
+        # A narrated beat without data-d takes its length from the clip.
+        if timed and not section.has("data-d") and not section.has("data-say"):
             yield finding("time-attrs", "index.html", section.line,
                           f"a {p.format} plays on a clock, and this beat has no length",
                           'add data-d="N" to the <section>: its length in seconds',
@@ -196,7 +198,7 @@ def duration(p: Project) -> Iterator[Finding]:
     """A timed format outside its length, or a poster with more beats than one."""
     b = vocab.bounds().get(p.format, {})
     if "seconds" in b and p.main is not None:
-        lengths = [_num(s, "data-d") for s in p.sections]
+        lengths = [_length(p, s) for s in p.sections]
         if None not in lengths:  # a missing or bad data-d is time-attrs' finding
             low, high = b["seconds"]
             total = sum(lengths)
@@ -214,6 +216,83 @@ def duration(p: Project) -> Iterator[Finding]:
                       selector=extra.selector(), beat=extra.get("data-beat"))
 
 
+def _length(p: Project, section) -> float | None:
+    """A beat's data-d, or the length its narration clip gives it."""
+    if section.has("data-d") or not section.has("data-say"):
+        return _num(section, "data-d")
+    try:
+        return narration.beat_seconds(narration.load(p.folder, section.get("data-say")))
+    except (OSError, narration.NarrationError):
+        return None
+
+
+def _narrations(p: Project):
+    """(section, Narration or None, problem or None) for each beat with data-say.
+    A missing alignment file is missing-asset's finding, so it has no problem."""
+    for section in p.sections:
+        value = section.get("data-say")
+        if not value:
+            continue
+        try:
+            yield section, narration.load(p.folder, value), None
+        except FileNotFoundError:
+            yield section, None, None
+        except (OSError, narration.NarrationError) as e:
+            yield section, None, str(e)
+
+
+def overrun(p: Project) -> Iterator[Finding]:
+    """A clip that leaves less than MARGIN seconds of its beat after the voice."""
+    for section, n, _ in _narrations(p):
+        if n is None or not (p.folder / n.clip).is_file():
+            continue
+        d = _num(section, "data-d")
+        if d is None:
+            continue  # the clip sets the length
+        clip = narration.clip_seconds(p.folder, n)
+        if narration.LEAD + clip > d - narration.MARGIN:
+            need = round(narration.LEAD + clip + narration.TAIL, 2)
+            yield finding("overrun", "index.html", section.line,
+                          f"{n.clip} lasts {clip:.2f} s and starts at {narration.LEAD:g} s, "
+                          f"so it ends {narration.LEAD + clip - d:+.2f} s from the end of a {d:g} s beat; "
+                          f"leave at least {narration.MARGIN:g} s",
+                          f'set data-d="{need:g}", or delete data-d so the clip sets the length',
+                          selector=section.selector(), beat=section.get("data-beat"))
+
+
+def cue_missing(p: Project) -> Iterator[Finding]:
+    """A data-cue phrase that its beat's narration never says, or a cue with no narration."""
+    said = {id(s): (n, problem) for s, n, problem in _narrations(p)}
+    for section, (n, problem) in ((s, said[id(s)]) for s in p.sections if id(s) in said):
+        if problem:
+            yield finding("cue-missing", "index.html", section.line, problem,
+                          "regenerate the alignment with character or word times, as the TTS "
+                          "service or aligner writes it", selector=section.selector(),
+                          beat=section.get("data-beat"))
+        elif n is not None and not (p.folder / n.clip).is_file():
+            yield finding("missing-asset", "index.html", section.line,
+                          f"{n.clip}, the clip of {n.alignment}, is not in the project",
+                          f'add the clip at {n.clip}, or name it with "audio" in {n.alignment}',
+                          selector=section.selector(), beat=section.get("data-beat"))
+    for el in p.source.elements:
+        phrase = el.get("data-cue")
+        if phrase is None:
+            continue
+        beat = next((a for a in el.ancestors() if a.tag == "section"), None)
+        n, problem = said.get(id(beat), (None, None)) if beat is not None else (None, None)
+        if beat is None or not beat.has("data-say"):
+            yield finding("cue-missing", "index.html", el.line,
+                          f'data-cue="{phrase}" waits for a phrase, and its beat has no narration',
+                          'add data-say="assets/vo/NAME.json" to the <section>, or use data-in="N"',
+                          selector=el.selector())
+        elif n is not None and n.cue(phrase) is None:
+            yield finding("cue-missing", "index.html", el.line,
+                          f'"{phrase}" is not said in {n.alignment}',
+                          "copy the phrase as the narration says it, or regenerate the clip "
+                          "from a script that says it", selector=el.selector(),
+                          beat=beat.get("data-beat"))
+
+
 def duplicate_id(p: Project) -> Iterator[Finding]:
     seen: dict[str, int] = {}
     for el in p.source.elements:
@@ -229,7 +308,7 @@ def duplicate_id(p: Project) -> Iterator[Finding]:
 
 
 STRUCTURE = [parse, unknown_name, external_url, missing_asset, wall_clock, bare_transition,
-             time_attrs, duration, duplicate_id]
+             time_attrs, duration, duplicate_id, overrun, cue_missing]
 
 
 def run(p: Project) -> list[Finding]:

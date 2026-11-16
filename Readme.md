@@ -104,7 +104,8 @@ template's example. Every template also has a logo slot, an
 | `data-col`, `data-row` | Placement on the twelve-column grid of a `.grid` |
 | `data-from`, `data-to` on an SVG `<line>` | Anchors (`id:side`): the line follows its boxes on every frame |
 | `<aside class="notes">` | Speaker notes, shown in the presenter view only |
-| `data-cue` | Enters at the moment a phrase is said in the beat's narration. Until narration cues land (#73) it enters at its step's start and logs a warning |
+| `data-say` on a `<section>` | The beat's narration: an alignment JSON with character or word times, and its clip. The clip starts 0.3 s in; without `data-d` it sets the beat's length (`auditorium help attributes`) |
+| `data-cue` | Instead of `data-in`: enters when the beat's narration says this phrase |
 | `data-placeholder` | Set by templates on content the author must replace. The runtime ignores it; `auditorium check` fails while it remains |
 | `data-layer` | On a child of `<main>`: `background` or `grade`. It covers the stage through every beat, under or over them |
 | `data-camera` on `<div class="camera">` | Pans, zooms and tilts over its first child, such as a captured page: `"0: y=10; 3: x=30 y=60 zoom=1.8 tilt=8"` |
@@ -239,7 +240,7 @@ auditorium bundle examples/talk --no-audio   # leave the audio out
 network, with the file and line of each reference, and writes nothing.
 
 A render is deterministic: two renders of the same project are byte-identical.
-The first `<audio>` in the page is mixed in at its `data-in`.
+Every `<audio>` is mixed in at its `data-in` and `data-gain`, with each beat's narration clip.
 
 ## 🌍 Self-hosting a relay
 
