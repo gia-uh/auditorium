@@ -4,6 +4,18 @@
 
 ### Added
 
+- **Templates `pitch`, `report` and `dashboard` (#106).** `pitch` is a deck
+  of big statements, stats, a photo and partner logos. `report` is a page
+  that prints to A4 through `export pdf`. `dashboard` is a page of KPI
+  tiles, a bar chart, a table and filter chips, drawn by its `script.js` from
+  rows embedded in the page and from an endpoint declared under `[data]` in
+  `auditorium.toml`. Each ships a finished `example/` with zero check
+  findings, and `help templates` says when to pick each. `new` keeps a
+  template's own `auditorium.toml` entries. `render` and `export` answer
+  declared endpoints from their fixtures and wait for them, so a PDF shows the
+  data it was made with. The stylesheet gains a `chips` component and an A4
+  print stylesheet for pages, and a page's sections with no layout are inset
+  prose.
 - **Narration** (#73): `data-say` on a beat names a clip and its alignment
   JSON (ElevenLabs character times, or word times from an aligner); the clip
   starts 0.3 s in, and without `data-d` it sets the beat's length, so a

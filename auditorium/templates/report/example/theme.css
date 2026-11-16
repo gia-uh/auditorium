@@ -1,0 +1,8 @@
+/* The finished report's palette. Variables only: layout, type sizes and motion
+   come from auditorium.css. */
+:root {
+  --aud-slide-bg: #ffffff;
+  --aud-fg: #1f2937;
+  --aud-muted: #4b5563;
+  --aud-accent: #0f766e;
+}

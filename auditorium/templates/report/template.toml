@@ -1,0 +1,3 @@
+summary = "a long document with figures, printed to A4"
+for = "A report, a brief or a write-up someone reads on a screen or on paper: a title, sections of prose, a figure, a table, a chart. Exported as an A4 PDF."
+formats = ["page"]

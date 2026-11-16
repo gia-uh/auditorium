@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiosk sales, 2026</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<main class="aud" data-format="page">
+  <img class="brand" src="assets/logo.svg" alt="Kiosk cooperative">
+
+  <section data-beat="title" class="title">
+    <span class="kicker">Kiosk cooperative, 2026</span>
+    <h1>Sales by region</h1>
+    <div class="chips" id="chips">
+      <button type="button" data-group="all" aria-pressed="true">Year</button>
+      <button type="button" data-group="Q1" aria-pressed="false">Q1</button>
+      <button type="button" data-group="Q2" aria-pressed="false">Q2</button>
+      <button type="button" data-group="Q3" aria-pressed="false">Q3</button>
+      <button type="button" data-group="Q4" aria-pressed="false">Q4</button>
+    </div>
+  </section>
+
+  <section data-beat="kpis" class="stats">
+    <div class="stat"><b id="kpi-value">0</b><span>sales, in pesos</span></div>
+    <div class="stat"><b id="kpi-count">0</b><span>orders</span></div>
+    <div class="stat"><b id="kpi-ratio">0</b><span>pesos per order</span></div>
+  </section>
+
+  <section data-beat="chart" class="chart">
+    <h2>Sales by region</h2>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section data-beat="table" class="table">
+    <h2>Every region</h2>
+    <table>
+      <thead><tr><th>region</th><th>sales</th><th>orders</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+
+</main>
+<script type="application/json" id="data">
+[
+  {"group": "Q1", "label": "North", "value": 41000, "count": 520},
+  {"group": "Q1", "label": "South", "value": 30000, "count": 410},
+  {"group": "Q1", "label": "East", "value": 22000, "count": 300},
+  {"group": "Q1", "label": "West", "value": 15000, "count": 220},
+  {"group": "Q2", "label": "North", "value": 45500, "count": 570},
+  {"group": "Q2", "label": "South", "value": 31000, "count": 420},
+  {"group": "Q2", "label": "East", "value": 26000, "count": 340},
+  {"group": "Q2", "label": "West", "value": 17500, "count": 250},
+  {"group": "Q3", "label": "North", "value": 52000, "count": 630},
+  {"group": "Q3", "label": "South", "value": 36500, "count": 470},
+  {"group": "Q3", "label": "East", "value": 24000, "count": 310},
+  {"group": "Q3", "label": "West", "value": 21000, "count": 290},
+  {"group": "Q4", "label": "North", "value": 60000, "count": 700},
+  {"group": "Q4", "label": "South", "value": 38000, "count": 490},
+  {"group": "Q4", "label": "East", "value": 30000, "count": 380},
+  {"group": "Q4", "label": "West", "value": 26000, "count": 340}
+]
+</script>
+<script src="script.js"></script>
+</body>
+</html>
