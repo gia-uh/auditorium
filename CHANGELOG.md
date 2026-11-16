@@ -10,8 +10,10 @@
   that names the original path still finds the image. Pillow is now a
   dependency.
 - **Music** (#90): `auditorium music --mood calm --bpm 100 --length 30 -o
-  assets/bed.wav` composes a bed with Euterpe, the optional extra
-  `auditorium[music]`: four-bar loops, each rendered twice with the second
+  assets/bed.wav` composes a bed with Euterpe, which ships vendored inside
+  auditorium (#132); the optional extra `auditorium[music]` adds the numpy,
+  scipy and soundfile it needs, and nothing is installed from git, so the
+  package can go to PyPI. Four-bar loops, each rendered twice with the second
   pass kept so it tiles with no seam, sparse under the opening and closing
   and full between, faded in and out. Without `--length` it writes one loop.
   `render` now lays an `<audio loop>` to the end of the video, fades every

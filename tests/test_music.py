@@ -38,7 +38,7 @@ def test_without_euterpe_the_command_says_what_to_install(monkeypatch, tmp_path)
     assert not (tmp_path / "bed.wav").exists()
 
 
-euterpe = pytest.importorskip("euterpe")
+euterpe = pytest.importorskip("auditorium._vendor.euterpe")
 
 
 @pytest.mark.parametrize("mood", sorted(music.MOODS))
@@ -54,7 +54,7 @@ def test_a_loop_tiles_without_a_seam():
     the tails of the pass before (a first pass starts at exactly 0)."""
     import numpy as np
 
-    from euterpe.sound.core import RATE
+    from auditorium._vendor.euterpe.sound.core import RATE
 
     x = music.loop("calm", 240, "sparse")
     assert len(x) == pytest.approx(music.loop_seconds(240) * RATE, abs=1)
