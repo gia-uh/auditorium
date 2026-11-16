@@ -1,4 +1,4 @@
-"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``run``, ``preview``, ``render``, ``sheet``, ``bundle``, ``export``, ``relay``.
+"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``assets``, ``run``, ``preview``, ``render``, ``sheet``, ``bundle``, ``export``, ``relay``.
 
 Every command but ``template``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
@@ -223,6 +223,38 @@ def sheet(
         print(f"frame {tile['frame']:>6}  {tile['t'] / 1000:>8.3f} s  {tile['title']}"
               + ("" if tile["beat"] else "  (between)"))
     print(f"{len(tiles)} tiles in {output}; auditorium render --from F --to F+1 reproduces frame F")
+
+
+@app.command()
+def assets(
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
+    as_json: bool = typer.Option(False, "--json", help="Print each entry's outcome as JSON"),
+) -> None:
+    """Resolve assets.yaml: copy files, capture pages, and draw a placeholder for what cannot resolve."""
+    import json
+
+    from auditorium.assets import MANIFEST, ManifestError, resolve
+
+    folder = _project(project)
+    try:
+        outcomes = resolve(folder)
+    except ManifestError as exc:
+        for problem in exc.problems:
+            console.print(f"[red]error:[/] {problem}", highlight=False, soft_wrap=True)
+        console.print(f"{len(exc.problems)} problems in {MANIFEST}, nothing resolved")
+        raise typer.Exit(1)
+    placeholders = [o for o in outcomes if o.status == "placeholder"]
+    resolved = len(outcomes) - len(placeholders)
+    # Plain print: keys and reasons are the author's text, which may hold [brackets].
+    if as_json:
+        print(json.dumps({"resolved": resolved, "placeholders": len(placeholders),
+                          "entries": [o.as_dict() for o in outcomes]}, indent=2))
+    else:
+        for o in outcomes:
+            print(f"{o.status:<11}  {o.key}  ({o.kind})" + (f"  {o.detail}" if o.detail else ""))
+        print(f"{resolved} resolved, {len(placeholders)} placeholders, {len(outcomes)} entries")
+    if placeholders:
+        raise typer.Exit(1)
 
 
 @app.command()

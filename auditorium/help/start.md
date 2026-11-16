@@ -19,7 +19,8 @@ Rules that hold everywhere:
 
 - Times are seconds, written where the element is (`help attributes`).
 - Colours come from theme variables; never a hex colour inside a beat.
-- Nothing from the network: images, fonts and audio live in `assets/`.
+- Nothing from the network: images, fonts and audio live in `assets/`;
+  pages and files from elsewhere come in through `assets.yaml` (`help assets`).
 - Custom JS is a function of time through `auditorium.track()`, never a
   timer or a `requestAnimationFrame` loop.
 

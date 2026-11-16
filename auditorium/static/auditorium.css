@@ -890,3 +890,28 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 .aud .icon-star { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M12 3l2.8 5.8 6.2.9-4.5 4.4 1.1 6.2L12 17.4l-5.6 2.9 1.1-6.2L3 9.7l6.2-.9z%27/%3E%3C/svg%3E"); }
 .aud .icon-mail { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Crect x=%273%27 y=%275%27 width=%2718%27 height=%2714%27 rx=%271%27/%3E%3Cpath d=%27M3 6l9 7 9-7%27/%3E%3C/svg%3E"); }
 .aud .icon-idea { --aud-icon: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27 fill=%27none%27 stroke=%27black%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M9 18h6M10 21h4%27/%3E%3Cpath d=%27M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z%27/%3E%3C/svg%3E"); }
+
+/* camera: a window over a captured page or any large picture, its first
+   child, which data-camera pans, zooms and tilts (help attributes). The
+   window needs a size: 16:9 of its width, or the height the author sets,
+   shrunk to what is left when a stacking layout (figure, photo) is full. */
+.camera {
+    position: relative;
+    overflow: hidden;
+    container-type: size;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    flex: 0 1 auto;
+    min-height: 0;
+}
+.camera > * {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+    transform-origin: 0 0;
+    transform: translate(50cqw, 50cqh) translate(-50%, -50%);
+}

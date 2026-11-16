@@ -95,7 +95,8 @@ def missing_asset(p: Project) -> Iterator[Finding]:
                           selector=ref.element.selector() if ref.element else None)
         elif not path.is_file():
             near = _near_file(p, path)
-            fix = (f'point to "{near}"' if near else
+            fix = ("it is an entry in assets.yaml: run auditorium assets" if not runtime and _in_manifest(p, path)
+                   else f'point to "{near}"' if near else
                    f"add the file at {path.relative_to(root).as_posix() if not runtime else ref.url}, "
                    "or remove the reference")
             yield finding("missing-asset", ref.file, ref.line, f"{ref.url} is not in the project", fix,
@@ -105,6 +106,16 @@ def missing_asset(p: Project) -> Iterator[Finding]:
             yield finding("missing-asset", "auditorium.toml", None,
                           f"the fixture for {url} is not in the project",
                           "add the JSON file the [data] entry names as fixture")
+
+
+def _in_manifest(p: Project, path) -> bool:
+    from auditorium.assets import ManifestError, load
+
+    try:
+        keys = {e.key for e in load(p.folder)}
+    except ManifestError:
+        return False
+    return path.resolve().relative_to(p.folder.resolve()).as_posix() in keys
 
 
 def _near_file(p: Project, path) -> str | None:
@@ -226,7 +237,7 @@ def run(p: Project) -> list[Finding]:
 
 
 def placeholders(p: Project) -> list[Finding]:
-    """The placeholder rule. Reported with the layout pass, where the spec puts
+    """The placeholder and placeholder-asset rules. Reported with the layout pass, where the spec puts
     it: it needs no browser, but a fresh template is all placeholders, and its
     structure should be judged first."""
     out = []
@@ -243,4 +254,29 @@ def placeholders(p: Project) -> list[Finding]:
             out.append(finding("placeholder", ref.file, ref.line, f"{ref.url} is a template placeholder asset",
                                "put the real file in assets/ and point to it",
                                selector=ref.element.selector() if ref.element else None))
+    out += _placeholder_assets(p)
     return out
+
+
+def _placeholder_assets(p: Project) -> Iterator[Finding]:
+    """References to an assets.yaml entry that nothing has resolved: its key
+    holds a labelled placeholder, or nothing yet."""
+    from auditorium.assets import unresolved
+
+    pending = unresolved(p.folder)
+    root = p.folder.resolve()
+    for ref in p.refs:
+        path = None if is_external(ref.url) else p.resolve(ref)
+        if path is None or not path.resolve().is_relative_to(root):
+            continue
+        key = path.resolve().relative_to(root).as_posix()
+        if key in pending:
+            entry = pending[key]
+            fix = {"file": f"put the file at {entry.spec.get('file')}, or fix that path in assets.yaml, "
+                           "then run auditorium assets",
+                   "capture": "run auditorium assets, and if the capture fails, fix its URL or state",
+                   "generate": "run auditorium assets with an image provider, or replace the entry with "
+                               "file: and a real image"}[entry.kind]
+            yield finding("placeholder-asset", ref.file, ref.line,
+                          f"{ref.url} is the {entry.kind} entry in assets.yaml, not resolved yet",
+                          fix, selector=ref.element.selector() if ref.element else None)

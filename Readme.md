@@ -107,6 +107,7 @@ template's example. Every template also has a logo slot, an
 | `data-cue` | Enters at the moment a phrase is said in the beat's narration. Until narration cues land (#73) it enters at its step's start and logs a warning |
 | `data-placeholder` | Set by templates on content the author must replace. The runtime ignores it; `auditorium check` fails while it remains |
 | `data-layer` | On a child of `<main>`: `background` or `grade`. It covers the stage through every beat, under or over them |
+| `data-camera` on `<div class="camera">` | Pans, zooms and tilts over its first child, such as a captured page: `"0: y=10; 3: x=30 y=60 zoom=1.8 tilt=8"` |
 | `<span class="math">`, `<pre data-lang>` | KaTeX and highlighted code, from vendored copies |
 
 Free JavaScript goes through `auditorium.track(fn, {beat, from, to})`, which
@@ -117,6 +118,24 @@ loop cannot.
 The page publishes what it built as `window.auditorium`: `format`, `stage`,
 `grid`, `beats`, `stops`, `duration`, `audio`, `seek(t)` and `goto(beat, step)`,
 with times in integer milliseconds.
+
+## 🖼️ Assets
+
+Files from outside the folder, screenshots of web pages and generated images
+are entries in `assets.yaml`, keyed by the path the page uses:
+
+```yaml
+assets/logo.svg: {file: ~/brand/logo.svg}
+assets/dash.png: {capture: http://localhost:8000/app, size: [1440, 900], state: "document.querySelector('#menu').click()"}
+assets/hero.png: {generate: a ball rolling downhill, size: [1280, 720], seed: 7, provider: NAME}
+```
+
+`auditorium assets examples/talk` resolves them into `.auditorium/cache/`,
+keyed by each entry's hash, and copies each to its key; an entry already
+cached is never fetched again, and no other command touches the network. An
+entry that cannot resolve gets a labelled placeholder at its size, and
+`auditorium check` fails on it (`placeholder-asset`). No image provider ships
+enabled. `auditorium help assets` has the details.
 
 ## 🧱 Layouts and components
 
