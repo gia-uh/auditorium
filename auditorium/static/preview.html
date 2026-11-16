@@ -14,12 +14,16 @@
         <iframe id="stage-frame" src="/?embed" title="stage"></iframe>
     </div>
 
+    <!-- Only shown under `preview --edit`, when /_auditorium/edit answers. -->
+    <aside id="edit-panel" hidden></aside>
+
     <div id="preview-bar">
         <button id="playpause" title="Play / pause (space)">▶</button>
         <div id="scrub-wrap">
             <input type="range" id="scrub" min="0" max="0" step="1" value="0">
             <div id="beat-ticks"></div>
             <div id="loop-band"></div>
+            <div id="edit-handles"></div>
         </div>
         <span id="time-readout" class="readout">00:00.000 / 00:00.000</span>
         <span id="frame-readout" class="readout">frame 0 / 0</span>
@@ -29,6 +33,7 @@
 
     <script type="module">
     import { connect, formatTime } from "/_auditorium/client.js";
+    import { startEditor } from "/_auditorium/editor.js";
 
     const frame = document.getElementById('stage-frame');
     const viewport = document.getElementById('preview-viewport');
@@ -46,6 +51,11 @@
     let reloads = 0;
     let aud = null;     // the page's window.auditorium
     let player = null;  // its player: playback, beats, render frame numbers
+    let scale = 1;      // the stage's scale in the viewport
+    const panel = document.getElementById('edit-panel');
+    const editor = startEditor({
+        panel, handles: document.getElementById('edit-handles'), frame, scale: () => scale,
+    });
 
     // Stepping works in TIMELINE frames: they are what seek(t) addresses, and
     // the index is authoritative with time derived from it, so stepping
@@ -73,9 +83,9 @@
     function fitStage() {
         const { w, h } = stageSize();
         const bar = document.getElementById('preview-bar').offsetHeight;
-        const availW = window.innerWidth;
+        const availW = window.innerWidth - (panel.hidden ? 0 : panel.offsetWidth);
         const availH = window.innerHeight - bar;
-        const scale = Math.min(availW / w, availH / h);
+        scale = Math.min(availW / w, availH / h);
         // Translate before scale in the composite, so the offsets are in the
         // viewport's own pixels and the letterboxing is even on both sides.
         const dx = (availW - w * scale) / 2;
@@ -84,6 +94,7 @@
         frame.style.height = h + 'px';
         frame.style.transform = 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')';
         viewport.style.height = availH + 'px';
+        viewport.style.width = availW + 'px';
     }
 
     function drawTicks() {
@@ -163,6 +174,8 @@
         scrub.max = player.duration;
         drawTicks();
         drawLoopBand();
+        const ed = await editor;
+        if (ed) ed.attach(aud, frame.contentWindow.document);
         fitStage();
         player.seekTo(Math.min(held, player.duration));
     }
@@ -222,6 +235,7 @@
         playPause,
         stepFrames,
         reload,
+        editor,
     };
 
     connect({

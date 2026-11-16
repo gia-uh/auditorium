@@ -18,8 +18,8 @@ import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -73,11 +73,14 @@ class Presentation:
 
 
 def create_app(project: Path | None = None, presenter_mode: bool = False,
-               annotate: bool = False) -> FastAPI:
+               annotate: bool = False, edit: bool = False) -> FastAPI:
     """Serve ``project`` (a folder holding index.html), or nothing but the runtime.
 
     ``annotate`` serves index.html with ``data-aud-line`` on every element, so
     the check can say which line of the file an element it measured came from.
+    ``edit`` turns on editing in preview: index.html is served with
+    ``data-aud-pos`` on every element and ``/_auditorium/edit`` accepts writes.
+    Off by default, because it lets any page that reaches the port write files.
     """
     app = FastAPI()
     app.state.project = Path(project).resolve() if project is not None else None
@@ -86,6 +89,10 @@ def create_app(project: Path | None = None, presenter_mode: bool = False,
     # In independent mode: one Presentation per tab, stored in a dict
     app.state.shared_pres = Presentation() if presenter_mode else None
     app.state.sessions: dict[str, Presentation] = {}
+    app.state.edit = edit and project is not None
+    # mtime_ns of each file the editor wrote, so a watcher can skip the change
+    # the editor already reloaded the pages for.
+    app.state.edited: dict[str, int] = {}
 
     @app.on_event("startup")
     async def _capture_loop() -> None:
@@ -105,6 +112,10 @@ def create_app(project: Path | None = None, presenter_mode: bool = False,
             from auditorium.check.source import annotate as with_lines
 
             html = with_lines(html)
+        if app.state.edit:
+            from auditorium.edit import positions, read
+
+            html = positions(read(app.state.project / "index.html"))
         # Injected into the page rather than sent over the socket, because the
         # audience has to decide whether to autoplay at load time. Waiting for
         # hello_ack would race it: in shared mode an autoplaying audience and a
@@ -131,6 +142,9 @@ def create_app(project: Path | None = None, presenter_mode: bool = False,
         if not app.state.presenter_mode:
             return HTMLResponse("Presenter mode not enabled. Start with --presenter.", status_code=403)
         return HTMLResponse((STATIC_DIR / "presenter.html").read_text())
+
+    if app.state.edit:
+        _edit_routes(app)
 
     @app.websocket("/ws")
     async def websocket_endpoint(ws: WebSocket) -> None:
@@ -169,6 +183,88 @@ def create_app(project: Path | None = None, presenter_mode: bool = False,
         # Last, so the routes above win over a file of the same name.
         app.mount("/", StaticFiles(directory=str(app.state.project)), name="project")
     return app
+
+
+def _edit_routes(app: FastAPI) -> None:
+    """``/_auditorium/edit``: what the editor needs, and the writes it makes.
+
+    Every write answers with the structure pass of the check over the folder
+    and pushes a reload to every page, so a broken edit shows at once.
+    """
+    from auditorium import edit
+    from auditorium.check import vocab
+
+    project: Path = app.state.project
+
+    def failed(e: edit.EditError) -> JSONResponse:
+        return JSONResponse({"error": str(e)}, status_code=e.status)
+
+    async def saved(path: Path, text: str) -> JSONResponse:
+        from auditorium.check import check
+
+        edit.write(path, text)
+        app.state.edited[str(path)] = path.stat().st_mtime_ns
+        report = check(project, layout=False)
+        await reload_project(app)
+        return JSONResponse({"file": path.name, "check": report.as_dict(), "summary": report.summary()})
+
+    @app.get(RUNTIME_PATH + "/edit")
+    async def edit_info() -> JSONResponse:
+        theme = edit.read(project / "theme.css")
+        return JSONResponse({
+            "files": [n for n in edit.FILES if (project / n).exists()],
+            "motions": {"data-enter": vocab.entrances(), "data-exit": vocab.entrances(),
+                        "data-idle": vocab.idles()},
+            "theme": edit.theme_vars(theme),
+        })
+
+    @app.get(RUNTIME_PATH + "/edit/source/{name}")
+    async def edit_source(name: str):
+        try:
+            path = edit.path_of(project, name)
+        except edit.EditError as e:
+            return failed(e)
+        return JSONResponse({"file": name, "text": edit.read(path)})
+
+    @app.put(RUNTIME_PATH + "/edit/source/{name}")
+    async def save_source(name: str, request: Request):
+        try:
+            path = edit.path_of(project, name)
+            body = await request.json()
+            return await saved(path, str(body["text"]))
+        except edit.EditError as e:
+            return failed(e)
+
+    @app.post(RUNTIME_PATH + "/edit/text")
+    async def edit_text(request: Request):
+        body = await request.json()
+        try:
+            path = edit.path_of(project, "index.html")
+            text = edit.set_text(edit.read(path), int(body["pos"]), str(body["old"]), str(body["text"]))
+            return await saved(path, text)
+        except edit.EditError as e:
+            return failed(e)
+
+    @app.post(RUNTIME_PATH + "/edit/attr")
+    async def edit_attr(request: Request):
+        body = await request.json()
+        value = body.get("value")
+        try:
+            path = edit.path_of(project, "index.html")
+            text = edit.set_attr(edit.read(path), int(body["pos"]), str(body["name"]),
+                                 None if value is None else str(value))
+            return await saved(path, text)
+        except edit.EditError as e:
+            return failed(e)
+
+    @app.post(RUNTIME_PATH + "/edit/theme")
+    async def edit_theme(request: Request):
+        body = await request.json()
+        try:
+            path = edit.path_of(project, "theme.css")
+            return await saved(path, edit.set_var(edit.read(path), str(body["name"]), str(body["value"])))
+        except edit.EditError as e:
+            return failed(e)
 
 
 async def _handle_independent_session(app: FastAPI, ws: WebSocket, hello: dict) -> None:

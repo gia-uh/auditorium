@@ -106,3 +106,42 @@ ht: 1080px;
 .aud-dot-connected { background: #22c55e; }
 .aud-dot-disconnected { background: #ef4444; }
 .aud-dot-connecting { background: #f97316; }
+
+/* Editing in preview (--edit): a panel at the right, handles on the scrubber. */
+#edit-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 3rem;
+    width: min(22rem, 40vw);
+    overflow-y: auto;
+    padding: 0.75rem;
+    background: #111827;
+    color: #d1d5db;
+    font-family: system-ui, sans-serif;
+    font-size: 0.8rem;
+    border-left: 1px solid #374151;
+}
+#edit-panel[hidden] { display: none; }
+#edit-panel section { margin-top: 1rem; }
+#edit-panel h3 { font-size: 0.8rem; color: #f9fafb; margin-bottom: 0.4rem; }
+#edit-panel input, #edit-panel select, #edit-panel textarea, #edit-panel button {
+    background: #1f2937; color: #f9fafb; border: 1px solid #374151;
+    border-radius: 0.25rem; padding: 0.2rem 0.35rem; font: inherit;
+}
+.edit-field { display: grid; grid-template-columns: 9rem 1fr; gap: 0.4rem; align-items: center; margin: 0.2rem 0; }
+.edit-field span { font-family: monospace; overflow: hidden; text-overflow: ellipsis; }
+.edit-add { width: 100%; margin-top: 0.3rem; }
+.edit-row { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+#edit-text { width: 100%; height: 16rem; font-family: monospace; font-size: 0.75rem; white-space: pre; }
+.edit-dim { color: #6b7280; }
+.edit-findings { font-family: monospace; padding: 0.4rem; border-radius: 0.25rem; background: #1f2937; }
+.edit-ok { border-left: 3px solid #22c55e; }
+.edit-bad { border-left: 3px solid #ef4444; }
+#edit-handles { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.edit-handle {
+    position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -3px;
+    background: #38bdf8; border-radius: 2px; cursor: ew-resize; pointer-events: auto;
+}
+.edit-handle.edit-data-out { background: #f472b6; }
+.edit-overlay { position: fixed; z-index: 200; font: 16px system-ui, sans-serif; }

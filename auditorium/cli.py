@@ -115,6 +115,7 @@ def _serve(
     relay_host: str = "",
     public_name: str | None = None,
     landing: str = "/",
+    edit: bool = False,
 ) -> None:
     """Serve, and optionally open, a project.
 
@@ -124,7 +125,7 @@ def _serve(
     """
     from auditorium.server import create_app
 
-    application = create_app(folder, presenter_mode=presenter)
+    application = create_app(folder, presenter_mode=presenter, edit=edit)
     _print_banner(folder, host, port, presenter, landing)
 
     if watch:
@@ -160,9 +161,10 @@ def preview(
     port: int = typer.Option(8000, help="Port to bind to"),
     open_browser: bool = typer.Option(True, "--open/--no-open", help="Open browser automatically"),
     watch: bool = typer.Option(True, "--watch/--no-watch", help="Watch the folder and hot-reload"),
+    edit: bool = typer.Option(False, "--edit", help="Edit text, data- attributes, theme variables and source in place"),
 ) -> None:
     """Open the authoring preview: scrubber, frame stepping, loop-a-range."""
-    _serve(_project(project), host, port, open_browser, watch, landing="/preview")
+    _serve(_project(project), host, port, open_browser, watch, landing="/preview", edit=edit)
 
 
 @app.command()
@@ -549,6 +551,18 @@ def watch_filter(folder: Path):
     return _filter
 
 
+def _edited_only(application, changes) -> bool:
+    """Whether every changed file is one the preview editor wrote, unchanged since."""
+    import os
+
+    edited = getattr(application.state, "edited", {})
+    try:
+        return bool(changes) and all(
+            edited.get(str(Path(p).resolve())) == os.stat(p).st_mtime_ns for _, p in changes)
+    except OSError:
+        return False
+
+
 def _setup_watcher(application, folder: Path) -> None:
     """Watch the project folder and tell every client to reload on a change."""
     import threading
@@ -556,7 +570,9 @@ def _setup_watcher(application, folder: Path) -> None:
     from watchfiles import watch as watch_files
 
     def _watch():
-        for _changes in watch_files(folder, watch_filter=watch_filter(folder)):
+        for changes in watch_files(folder, watch_filter=watch_filter(folder)):
+            if _edited_only(application, changes):
+                continue  # the editor wrote it and already reloaded the pages
             console.print("[yellow]⟳[/] Change detected, reloading...")
             loop = getattr(application.state, "loop", None)
             if loop and loop.is_running():
