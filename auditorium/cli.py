@@ -1,4 +1,4 @@
-"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``run``, ``preview``, ``render``, ``bundle``, ``export``, ``relay``.
+"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``run``, ``preview``, ``render``, ``sheet``, ``bundle``, ``export``, ``relay``.
 
 Every command but ``template``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
@@ -189,6 +189,37 @@ def render(
         start_frame=from_frame, end_frame=to_frame,
     ))
     console.print(f"[green]✓[/] Rendered to [bold]{output}[/]")
+
+
+@app.command()
+def sheet(
+    project: Path = typer.Argument(..., help="Project folder (or its index.html)"),
+    output: Path = typer.Option(None, "-o", "--output", help="Output PNG (default: dist/sheet.png)"),
+    between: int = typer.Option(3, "--between", help="Frames tiled between one beat's tile and the next"),
+    beats_only: bool = typer.Option(False, "--beats", help="One tile per beat, nothing between (--between 0)"),
+    notes: bool = typer.Option(False, "--notes", help="Print each beat's speaker notes under its tile"),
+    fps: int = typer.Option(30, "--fps", help="Frames per second the frame numbers count in"),
+    size: str = typer.Option(None, "--size", help="Frame size, WIDTHxHEIGHT or a preset (default: the format's stage)"),
+    as_json: bool = typer.Option(False, "--json", help="Print the tiles as JSON"),
+) -> None:
+    """Tile the frame at each beat's end, and frames between, into one labelled PNG."""
+    import json
+
+    from auditorium.sheet import contact_sheet
+
+    folder = _project(project)
+    dims = _size(size)
+    output = output or folder / "dist" / "sheet.png"
+    tiles = asyncio.run(contact_sheet(
+        folder, output, fps=fps, size=dims, between=0 if beats_only else between, notes=notes,
+    ))
+    if as_json:
+        print(json.dumps({"sheet": str(output), "tiles": tiles}, indent=2))
+        return
+    for tile in tiles:
+        print(f"frame {tile['frame']:>6}  {tile['t'] / 1000:>8.3f} s  {tile['title']}"
+              + ("" if tile["beat"] else "  (between)"))
+    print(f"{len(tiles)} tiles in {output}; auditorium render --from F --to F+1 reproduces frame F")
 
 
 @app.command()

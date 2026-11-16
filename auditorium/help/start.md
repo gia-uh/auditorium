@@ -10,7 +10,7 @@ Python to write.
    delete the attribute; keep the classes. More beats: `help layouts`.
 4. Check: `auditorium check my-talk` until it prints 0 errors; each finding
    names a line and its fix (`help check`). Look: `auditorium preview my-talk`,
-   or `auditorium export my-talk -f png` for each beat in `my-talk/dist/`.
+   or `auditorium sheet my-talk` for every beat in one `dist/sheet.png`.
 5. Ship: `auditorium run my-talk` presents live (`--public` for a URL),
    `auditorium render my-talk` a video, `auditorium bundle my-talk` one HTML
    file, `auditorium export my-talk -f pdf` a PDF (`help export`).

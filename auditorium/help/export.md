@@ -1,4 +1,4 @@
-# export: one HTML file, a PDF, PNG stills
+# export: one HTML file, a PDF, PNG stills, a contact sheet
 
 Everything below writes into the project's `dist/` unless `-o` says where.
 
@@ -39,3 +39,15 @@ A4. Text stays text: it can be selected and searched.
     auditorium export my-talk -f png --size 720p   # another size
 
 Each still is the beat at its end, the frame a render shows there.
+
+## A contact sheet
+
+    auditorium sheet my-talk                   # my-talk/dist/sheet.png
+    auditorium sheet my-talk --between 6       # more frames between beats (default 3)
+    auditorium sheet my-talk --beats --notes   # storyboard: one tile per beat, notes under it
+    auditorium sheet my-talk --json            # the tiles as JSON
+
+One image of the whole render: each beat at its end, and frames evenly spaced
+in time between one beat and the next. Each tile is labelled with its frame
+number, its time and its beat. Look at it after every change. A frame that
+looks wrong is `render --from F --to F+1`, or `preview` at that time.
