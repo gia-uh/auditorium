@@ -33,6 +33,15 @@
   across, so a row of three still fits the 980 px left between the bands.
 - `auditorium help check`, and `auditorium help rule NAME` with a broken and a
   fixed snippet for each rule.
+- **`auditorium preview DIR --edit`** edits in place: a click on a text
+  makes it editable (an overlay for SVG text) and the server replaces exactly
+  that text range in `index.html`; a selected element shows its `data-`
+  attributes as fields, with valid motion names as choices and `data-in` and
+  `data-out` as handles on the scrubber; the variables of `theme.css` get
+  colour pickers and number fields; a source pane saves `index.html`,
+  `theme.css` and `script.js`. Each write reloads the page and answers with the
+  structure pass of the check. Off by default; no writes outside the project
+  folder.
 
 ### Fixed
 

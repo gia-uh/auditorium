@@ -150,6 +150,14 @@ The frame counter reports **rendered** frames, including the dwell a render
 spends on each stop of a deck, so the number beside the scrubber is one you can
 pass to `--from` / `--to`.
 
+`auditorium preview DIR --edit` also edits in place: click a text on the stage
+to type over it, change a selected element's `data-` attributes (motion names
+as choices, `data-in` and `data-out` as handles on the scrubber), set the
+variables of `theme.css`, or edit `index.html`, `theme.css` and `script.js` in a
+source pane. Each write changes only the bytes it names, reloads the stage and
+runs the structure pass of `auditorium check`. It is off by default, and the
+server writes nothing outside the project folder.
+
 ## 🎤 Presenting
 
 ```bash
