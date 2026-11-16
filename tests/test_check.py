@@ -277,3 +277,12 @@ def test_an_unknown_layer_is_an_unknown_name(tmp_path):
     body = '<div data-layer="backdrop"></div>\n<section data-beat="b" data-d="2"><p>Beat</p></section>'
     hits = [f for f in check(write_project(tmp_path, body), layout=False).findings if f.rule == "unknown-name"]
     assert [f.fix for f in hits] == ['set data-layer="background"']
+
+
+def test_unknown_emphasis_ambient_and_grade_names_are_unknown_names(tmp_path):
+    body = ('<div data-layer="background" data-ambient="aurorra"></div>\n'
+            '<section data-beat="b" data-d="2"><p data-emphasis="focs">Beat</p></section>\n'
+            '<div data-layer="grade" data-grade="vignette grian"></div>')
+    hits = [f for f in check(write_project(tmp_path, body), layout=False).findings if f.rule == "unknown-name"]
+    assert sorted(f.fix for f in hits) == ['set data-ambient="aurora"', 'set data-emphasis="focus"',
+                                         'set data-grade="grain"']

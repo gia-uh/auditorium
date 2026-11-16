@@ -486,3 +486,155 @@ async def test_layers_take_no_clicks(browser_page, served, tmp_path):
         return document.elementFromPoint(r.left + 2, r.top + r.height / 2).id;
     }""")
     assert hit == "second"
+
+
+# ---- data-lag, stagger, data-emphasis, idle phases --------------------------------
+
+LAGGED = """
+<section data-beat="a" data-d="3">
+  <ul id="lagged" data-enter="fade" data-lag="0.3">
+    <li id="l1">one</li><li id="l2">two</li><li id="l3">three</li>
+  </ul>
+</section>"""
+
+
+async def test_data_lag_enters_the_children_one_after_another(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, LAGGED)))
+    await seek(browser_page, 250)
+    assert await opacity(browser_page, "#l1") > 0.05
+    assert await opacity(browser_page, "#l2") == pytest.approx(0.0)
+    assert await opacity(browser_page, "#l3") == pytest.approx(0.0)
+    await seek(browser_page, 700)
+    assert await opacity(browser_page, "#l2") > 0.05
+    assert await opacity(browser_page, "#l3") > 0.05
+    await seek(browser_page, 1200)
+    for sel in ("#l1", "#l2", "#l3"):
+        assert await opacity(browser_page, sel) == pytest.approx(1.0)
+    # The list itself does not fade: only its children do.
+    await seek(browser_page, 0)
+    assert await opacity(browser_page, "#lagged") == pytest.approx(1.0)
+
+
+async def test_stagger_spaces_offsets_and_jitters_them_from_a_seed(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, LAGGED)))
+    assert await js(browser_page, "() => window.auditorium.stagger(3, 100)") == [0, 100, 200]
+    a = await js(browser_page, "() => window.auditorium.stagger(4, 100, {jitter: 0.5, seed: 7})")
+    b = await js(browser_page, "() => window.auditorium.stagger(4, 100, {jitter: 0.5, seed: 7})")
+    c = await js(browser_page, "() => window.auditorium.stagger(4, 100, {jitter: 0.5, seed: 8})")
+    assert a == b != c
+    for i, x in enumerate(a):
+        assert i * 100 <= x <= i * 100 + 50
+
+
+async def scale(page, sel):
+    return (await matrix(page, sel))["a"]
+
+
+EMPHASIS = """
+<section data-beat="a" data-d="4">
+  <div id="fa" class="card" data-emphasis="focus" data-at="0.5">A</div>
+  <div id="fb" class="card" data-emphasis="focus" data-at="2">B</div>
+  <div id="pu" class="card" data-emphasis="pulse" data-at="1">C</div>
+</section>"""
+
+
+async def test_focus_holds_until_the_next_focus_then_settles_back(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, EMPHASIS)))
+    await seek(browser_page, 400)
+    assert await scale(browser_page, "#fa") == pytest.approx(1.0, abs=0.001)
+    await seek(browser_page, 1500)
+    assert await scale(browser_page, "#fa") == pytest.approx(1.06, abs=0.001)
+    assert await scale(browser_page, "#fb") == pytest.approx(1.0, abs=0.001)
+    await seek(browser_page, 2600)
+    assert await scale(browser_page, "#fa") == pytest.approx(1.0, abs=0.001)
+    assert await scale(browser_page, "#fb") == pytest.approx(1.06, abs=0.001)
+    # The last focus holds to the end of its beat.
+    await seek(browser_page, 3999)
+    assert await scale(browser_page, "#fb") == pytest.approx(1.06, abs=0.001)
+
+
+async def test_a_pulse_emphasis_swells_once_and_returns(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, EMPHASIS)))
+    scales = []
+    for t in (900, 1300, 1700):
+        await seek(browser_page, t)
+        scales.append(await scale(browser_page, "#pu"))
+    assert scales[0] == pytest.approx(1.0, abs=0.001)
+    assert scales[1] == pytest.approx(1.12, abs=0.001)
+    assert scales[2] == pytest.approx(1.0, abs=0.001)
+
+
+async def test_data_at_counts_from_the_end_of_the_entrance(browser_page, served, tmp_path):
+    body = """<section data-beat="a" data-d="3">
+      <p id="x" data-in="0.5" data-enter="fade" data-emphasis="pulse" data-at="0.2">x</p></section>"""
+    await load(browser_page, served(write_project(tmp_path, body)))
+    await seek(browser_page, 1200 + 300)  # fade ends at 1.0 s, pulse at 1.2 s peaks 300 ms later
+    assert await scale(browser_page, "#x") == pytest.approx(1.12, abs=0.001)
+
+
+async def test_neighbouring_idles_do_not_move_in_step(browser_page, served, tmp_path):
+    body = """<section data-beat="a" data-d="4">
+      <p id="f1" data-idle="float">one</p><p id="f2" data-idle="float">two</p>
+      <p id="f3" data-idle="float">three</p></section>"""
+    url = served(write_project(tmp_path, body))
+    await load(browser_page, url)
+    await seek(browser_page, 0)
+    ys = [await translate_y(browser_page, s) for s in ("#f1", "#f2", "#f3")]
+    assert ys[0] == pytest.approx(-8, abs=0.01)
+    assert len({round(y, 1) for y in ys}) == 3
+    # Seeded: a reload places them the same.
+    await load(browser_page, url)
+    await seek(browser_page, 0)
+    assert [await translate_y(browser_page, s) for s in ("#f1", "#f2", "#f3")] == pytest.approx(ys, abs=0.01)
+
+
+async def test_words_rise_out_of_a_blur(browser_page, served):
+    await load(browser_page, served(MOTIONS))
+    await seek(browser_page, 0)
+    assert await js(browser_page, "() => getComputedStyle(document.querySelector('#words .aud-word')).filter") == "blur(6px)"
+    await seek(browser_page, 3000)
+    assert await js(browser_page, "() => getComputedStyle(document.querySelector('#words .aud-word')).filter") == "blur(0px)"
+
+
+# ---- data-ambient, data-grade ---------------------------------------------------
+
+DRESSED = """
+<div id="bg" data-layer="background" data-ambient="particles"></div>
+<section data-beat="one" data-d="2"><p>First</p></section>
+<section data-beat="two" data-d="2"><p>Second</p></section>
+<div id="gr" data-layer="grade" data-grade="vignette grain"></div>
+"""
+
+
+async def transforms(page, sel):
+    return await js(page, "(s) => Array.from(document.querySelectorAll(s)).map((e) => getComputedStyle(e).transform)", sel)
+
+
+async def test_an_ambient_moves_seeded_pieces_on_the_timeline(browser_page, served, tmp_path):
+    url = served(write_project(tmp_path, DRESSED))
+    await load(browser_page, url)
+    assert await js(browser_page, "() => document.querySelectorAll('#bg .aud-ambient-particles').length") == 28
+    await seek(browser_page, 1000)
+    a = await transforms(browser_page, "#bg .aud-ambient")
+    await seek(browser_page, 3000)
+    b = await transforms(browser_page, "#bg .aud-ambient")
+    assert a != b
+    # Across a rewind and a reload, the same time shows the same frame, and
+    # the build created its pieces once.
+    await seek(browser_page, 1000)
+    assert await transforms(browser_page, "#bg .aud-ambient") == a
+    await load(browser_page, url)
+    await seek(browser_page, 1000)
+    assert await transforms(browser_page, "#bg .aud-ambient") == a
+    assert await js(browser_page, "() => document.querySelectorAll('#bg .aud-ambient').length") == 28
+
+
+async def test_grades_stack_and_grain_jumps_every_frame(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, DRESSED)))
+    assert await js(browser_page, "() => Array.from(document.querySelectorAll('#gr .aud-grade')).map((e) => e.className)") == [
+        "aud-grade aud-grade-vignette", "aud-grade aud-grade-grain"]
+    seen = set()
+    for t in (25, 75, 125, 175):  # mid-frame: a frame lasts 50 ms
+        await seek(browser_page, t)
+        seen.add((await transforms(browser_page, "#gr .aud-grade-grain"))[0])
+    assert len(seen) == 4

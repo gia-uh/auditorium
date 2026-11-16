@@ -15,6 +15,11 @@ seconds. Nothing here needs JavaScript.
 | `data-enter` | any element | entrance: fade rise pop flip grow draw words count |
 | `data-exit` | any element | exit, the entrance names played backwards |
 | `data-idle` | any element | while shown: float tilt pulse ken-burns |
+| `data-lag` | with `data-enter` | its children enter one by one, this many seconds apart |
+| `data-emphasis` | any element | once, at `data-at`: focus (grow, hold until the next focus) or pulse |
+| `data-at` | with an emphasis | seconds after its entrance ends (or it appears) |
+| `data-ambient` | background layer | aurora particles nodes |
+| `data-grade` | grade layer | tint vignette sweep grain, several at once |
 | `data-dur` | with a motion | the motion's length, overriding its default |
 | `data-ease` | with a motion | a CSS easing, overriding its default |
 | `data-col` | inside `.grid` | the columns it spans, `1/13` is all twelve |
@@ -96,12 +101,24 @@ A `<div data-layer>` beside the beats covers the whole stage and stays on
 from the first beat to the last: `background` is drawn under every beat,
 `grade` over it (a tint, a vignette). A beat change swaps only the beats, so
 a drifting background or a grade never cuts. Layers take no clicks.
+`data-ambient` and `data-grade` add presets that move with the timeline.
 
 ```html
 <main class="aud" data-format="explainer">
   <div data-layer="background" style="background: radial-gradient(#1e3a8a, #0f172a)"></div>
   <section data-beat="hook" data-d="4" class="title"><h1>Every beat sits on it</h1></section>
   <div data-layer="grade" style="box-shadow: inset 0 0 200px rgb(0 0 0 / 0.5)"></div>
+</main>
+```
+
+```html
+<main class="aud" data-format="explainer">
+  <div data-layer="background" data-ambient="aurora"></div>
+  <section data-beat="list" data-d="5">
+    <ul data-enter="rise" data-lag="0.2"><li>Measure</li><li>Step</li><li>Repeat</li></ul>
+    <p data-in="1" data-enter="fade" data-emphasis="pulse" data-at="0.5">and again</p>
+  </section>
+  <div data-layer="grade" data-grade="vignette grain"></div>
 </main>
 ```
 

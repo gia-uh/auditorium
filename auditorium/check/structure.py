@@ -42,6 +42,13 @@ def unknown_name(p: Project) -> Iterator[Finding]:
             value = el.get(attr)
             if value is not None and value not in names:
                 yield _unknown(el, attr, value, names, what)
+        # data-grade takes several names at once: "tint vignette".
+        for attr, names, what in (("data-emphasis", vocab.emphases(), "emphasis"),
+                                  ("data-ambient", vocab.ambients(), "ambient"),
+                                  ("data-grade", vocab.grades(), "grade")):
+            for value in (el.get(attr) or "").split():
+                if value not in names:
+                    yield _unknown(el, attr, value, names, what)
         if el.tag == "section" and el.parent is main:
             for cls in el.classes:
                 if cls not in vocab.layouts() and cls not in own:

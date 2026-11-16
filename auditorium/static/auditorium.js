@@ -37,10 +37,10 @@ export const FORMATS = {
 // same 1.5 s for its slide shim.
 export const STOP_HOLD_MS = 1500;
 
-// The motion library's first cut: each name is a list of [keyframes,
-// composite] effects with a default duration and easing, so opacity
-// (replace) and transform (add) run as separate animations. Tuning and the
-// rest of the library land with #87.
+// The motion library: each name is a list of [keyframes, composite]
+// effects with a default duration and easing, so opacity (replace) and
+// transform (add) run as separate animations. Every name compiles to
+// timeline tracks the engine seeks; nothing here is a CSS delay.
 const OUT_EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 const T = (from, to) => [{ transform: from }, { transform: to }];
 const O = [{ opacity: 0 }, { opacity: 1 }];
@@ -56,6 +56,7 @@ export const ENTRANCES = {
   grow:  { dur: 700, ease: OUT_EASE, origin: "left center",
            effects: [[T("scaleX(0)", "scaleX(1)"), "add"]] },
   draw:  { dur: 1000, ease: "ease-in-out", effects: "draw" },
+  // Words rise out of a blur, one after another.
   words: { dur: 400, ease: OUT_EASE, stagger: 90, effects: "words" },
   count: { dur: 1200, ease: "ease-out", effects: "count" },
 };
@@ -66,6 +67,32 @@ export const IDLES = {
   pulse:       { dur: 1200, effects: [[T("scale(1)", "scale(1.04)"), "add"]] },
   // Ken Burns runs once over the element's whole time on stage.
   "ken-burns": { dur: null, effects: [[T("scale(1)", "scale(1.08)"), "add"]] },
+};
+
+// Emphasis: a one-off at data-at. `focus` grows the element and holds it
+// until the next focus in its beat starts, then lets it settle back;
+// `pulse` swells once and returns.
+export const EMPHASES = {
+  focus: { dur: 400, scale: 1.06 },
+  pulse: { dur: 600, scale: 1.12 },
+};
+
+// Ambient backgrounds, for data-ambient on the background layer: elements
+// the build creates once at seeded places, each moving on a track that runs
+// the whole artifact. Colours come from the theme (auditorium.css).
+export const AMBIENTS = {
+  aurora:    { dur: 12000, count: 3 },   // drifting colour blobs
+  particles: { dur: 9000, count: 28 },   // dots rising from the bottom
+  nodes:     { dur: 2400, count: 14 },   // points that pulse out of step
+};
+
+// Grades, for data-grade on the grade layer, several at once: "tint
+// vignette". tint and vignette are still; sweep and grain move.
+export const GRADES = {
+  tint:     { dur: null },
+  vignette: { dur: null },
+  sweep:    { dur: 7000 },               // a band of light crossing the stage
+  grain:    { dur: 400, frames: 8 },     // film grain, a seeded jump per frame
 };
 
 const TIMED_ATTRS = ["data-in", "data-out", "data-step", "data-cue", "data-enter", "data-exit"];
@@ -86,6 +113,23 @@ export function rng(seed) {
     x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
     return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/**
+ * Start offsets for `n` things that enter one after another, `lag` apart.
+ * `jitter` (0 to 1) moves each later by up to that fraction of `lag`, from
+ * rng(seed), so a row does not tick like a metronome. Offsets keep their order.
+ */
+export function stagger(n, lag, { jitter = 0, seed = 1 } = {}) {
+  const r = rng(seed);
+  return Array.from({ length: n }, (_, i) => (i === 0 ? 0 : i * lag + jitter * lag * r()));
+}
+
+/** A stable seed from a string, for rng: the same name always varies alike. */
+function seedOf(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
 }
 
 // ---- build ------------------------------------------------------------------
@@ -160,6 +204,7 @@ function motion(timeline, el, name, start, dur, ease, reverse) {
       const s = start + i * spec.stagger;
       push(w, O, "replace", s, dur);
       push(w, T("translateY(0.4em)", "translateY(0em)"), "add", s, dur);
+      push(w, [{ filter: "blur(6px)" }, { filter: "blur(0px)" }], "replace", s, dur);
     });
     return start + Math.max(0, words.length - 1) * spec.stagger + dur;
   }
@@ -187,7 +232,11 @@ function motion(timeline, el, name, start, dur, ease, reverse) {
   return start + dur;
 }
 
-function idle(timeline, el, name, start, end) {
+/**
+ * An idle from `start` to `end`. `phase` (0 to 1) starts its loop part way
+ * through a back-and-forth cycle, so neighbours do not move in step.
+ */
+function idle(timeline, el, name, start, end, phase = 0) {
   const spec = IDLES[name];
   const span = Math.max(1, end - start);
   for (const [keyframes, composite] of spec.effects) {
@@ -197,7 +246,105 @@ function idle(timeline, el, name, start, end) {
       timeline.tracks.push({
         el, keyframes, start, end: start + spec.dur, easing: "ease-in-out", composite,
         iterations: Math.ceil(span / spec.dur), direction: "alternate",
+        // A cycle out and back is two alternate iterations.
+        iterationStart: 2 * phase,
       });
+    }
+  }
+}
+
+/**
+ * The emphases in one beat, each `{el, name, at}`. A focus holds until the
+ * next focus starts (or the beat ends), then settles back in its own time.
+ */
+function emphasize(timeline, list, beatEnd) {
+  list.sort((a, b) => a.at - b.at);
+  const foci = list.filter((e) => e.name === "focus");
+  for (const e of list) {
+    const spec = EMPHASES[e.name];
+    const big = `scale(${spec.scale})`;
+    if (e.name === "pulse") {
+      timeline.tracks.push({ el: e.el, start: e.at, end: e.at + spec.dur, easing: "ease-in-out",
+        composite: "add", keyframes: [{ transform: "scale(1)" }, { transform: big }, { transform: "scale(1)" }] });
+      continue;
+    }
+    // One track over grow, hold and settle: two additive tracks would
+    // multiply their scales while both hold.
+    const next = foci[foci.indexOf(e) + 1];
+    const release = Math.max(e.at + spec.dur, next ? next.at : beatEnd);
+    const end = next ? release + spec.dur : release;
+    const span = Math.max(1, end - e.at);
+    const keyframes = [
+      { transform: "scale(1)", offset: 0, easing: OUT_EASE },
+      { transform: big, offset: spec.dur / span },
+    ];
+    if (next) {
+      keyframes.push({ transform: big, offset: (release - e.at) / span, easing: "ease-in-out" });
+      keyframes.push({ transform: "scale(1)", offset: 1 });
+    } else {
+      keyframes.push({ transform: big, offset: 1 });
+    }
+    timeline.tracks.push({ el: e.el, start: e.at, end, easing: "linear", composite: "add", keyframes,
+                           fill: "forwards" });
+  }
+}
+
+/** A child the build adds to a layer, placed in stage percent. */
+function piece(layer, cls, x, y) {
+  const el = document.createElement("div");
+  el.className = cls;
+  el.style.left = `${(x * 100).toFixed(2)}%`;
+  el.style.top = `${(y * 100).toFixed(2)}%`;
+  layer.appendChild(el);
+  return el;
+}
+
+/** Loops of `dur` over [0, span], entered part way through by `phase`. */
+function loop(timeline, el, keyframes, dur, span, phase, extra = {}) {
+  timeline.tracks.push({ el, keyframes, start: 0, end: dur, easing: "linear", composite: "replace",
+    iterations: Math.ceil(span / dur) + 1, iterationStart: phase, ...extra });
+}
+
+/** Ambient and grade presets on the layers, over the artifact's whole length. */
+function dress(timeline, root, span) {
+  for (const layer of root.querySelectorAll(":scope > [data-layer]")) {
+    const kind = layer.getAttribute("data-layer");
+    const names = (layer.getAttribute(kind === "grade" ? "data-grade" : "data-ambient") || "")
+      .split(/\s+/).filter((n) => n && (kind === "grade" ? GRADES : AMBIENTS)[n]);
+    for (const name of names) {
+      const r = rng(seedOf(kind + name));
+      if (kind === "grade") {
+        const spec = GRADES[name];
+        const el = piece(layer, `aud-grade aud-grade-${name}`, 0, 0);
+        if (name === "sweep") {
+          loop(timeline, el, T("translateX(-100%)", "translateX(100%)"), spec.dur, span, 0,
+               { easing: "ease-in-out" });
+        } else if (name === "grain") {
+          const frames = Array.from({ length: spec.frames + 1 }, () =>
+            ({ transform: `translate(${Math.round(r() * 200 - 100)}px, ${Math.round(r() * 200 - 100)}px)` }));
+          loop(timeline, el, frames, spec.dur, span, 0, { easing: `steps(${spec.frames}, end)` });
+        }
+        continue;
+      }
+      if (kind !== "background") continue;
+      const spec = AMBIENTS[name];
+      for (let i = 0; i < spec.count; i++) {
+        const el = piece(layer, `aud-ambient aud-ambient-${name}`, r(), r());
+        el.style.setProperty("--aud-ambient-i", String(i));
+        if (name === "aurora") {
+          const dx = Math.round(r() * 400 - 200), dy = Math.round(r() * 300 - 150);
+          loop(timeline, el, T("translate(-50%, -50%)", `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`),
+               spec.dur * (0.8 + 0.4 * r()), span, 2 * r(), { easing: "ease-in-out", direction: "alternate" });
+        } else if (name === "particles") {
+          el.style.top = "100%";
+          loop(timeline, el, [{ transform: "translateY(0)", opacity: 0 }, { opacity: 0.8, offset: 0.2 },
+                              { opacity: 0.8, offset: 0.8 }, { transform: "translateY(calc(-1 * var(--aud-stage-h, 1080px) - 20px))", opacity: 0 }],
+               spec.dur * (0.6 + 0.8 * r()), span, r());
+        } else {
+          loop(timeline, el, [{ transform: "scale(0.6)", opacity: 0.15 }, { transform: "scale(1.4)", opacity: 0.5 }],
+               spec.dur, span, 2 * r(), { easing: "ease-in-out", direction: "alternate" });
+        }
+      }
     }
   }
 }
@@ -266,6 +413,7 @@ export function build(root, { tracked = [] } = {}) {
     const stepEnds = [];
     const pendingHides = [];
     const endExits = [];
+    const entered = new Map();
     byStep.forEach((els, step) => {
       let segEnd = segStart;
       for (const el of els) {
@@ -282,8 +430,21 @@ export function build(root, { tracked = [] } = {}) {
         let shownUntil = inAt;
         if (enter && ENTRANCES[enter]) {
           const dur = el.hasAttribute("data-dur") ? ms(el.getAttribute("data-dur")) : ENTRANCES[enter].dur;
-          shownUntil = motion(timeline, el, enter, inAt, dur, ease || ENTRANCES[enter].ease, false);
+          const e = ease || ENTRANCES[enter].ease;
+          if (el.hasAttribute("data-lag")) {
+            // Its children enter one after another instead; a child with
+            // time attributes of its own keeps them.
+            const kids = Array.from(el.children).filter((c) => !TIMED_ATTRS.some((a) => c.hasAttribute(a)));
+            const offsets = stagger(kids.length, ms(num(el, "data-lag", 0)));
+            kids.forEach((kid, i) => {
+              kid.classList.add("aud-lag");
+              shownUntil = Math.max(shownUntil, motion(timeline, kid, enter, inAt + offsets[i], dur, e, false));
+            });
+          } else {
+            shownUntil = motion(timeline, el, enter, inAt, dur, e, false);
+          }
         }
+        entered.set(el, shownUntil);
         timeline.ops.push({ t: inAt, el, on: true });
         if (el.hasAttribute("data-out")) {
           const outAt = segStart + ms(el.getAttribute("data-out"));
@@ -331,13 +492,30 @@ export function build(root, { tracked = [] } = {}) {
       }
     }
 
-    // Idles run from the element's entrance to the end of the beat.
+    // Idles run from the element's entrance to the end of the beat. The
+    // first of each name in a beat starts its cycle at the top; the rest
+    // start at seeded phases, so a row of floats never moves in step.
+    const seen = {};
     for (const el of section.querySelectorAll("[data-idle]")) {
       const name = el.getAttribute("data-idle");
       if (!IDLES[name]) continue;
-      const entered = timeline.ops.find((op) => op.el === el && op.on);
-      idle(timeline, el, name, entered ? entered.t : start, start + length);
+      const op = timeline.ops.find((o) => o.el === el && o.on);
+      const k = seen[name] = (seen[name] || 0) + 1;
+      const phase = k === 1 ? 0 : rng(seedOf(`${id}:${name}:${k}`))();
+      idle(timeline, el, name, op ? op.t : start, start + length, phase);
     }
+
+    // Emphases, at data-at seconds after the element's entrance ends (or
+    // after it appears, without one).
+    const emphases = [];
+    for (const el of section.querySelectorAll("[data-emphasis]")) {
+      const name = el.getAttribute("data-emphasis");
+      if (!EMPHASES[name]) continue;
+      const op = timeline.ops.find((o) => o.el === el && o.on);
+      const base = entered.has(el) ? entered.get(el) : op ? op.t : start;
+      emphases.push({ el, name, at: base + ms(num(el, "data-at", 0)) });
+    }
+    emphasize(timeline, emphases, start + length);
 
     // Anchored lines: SVG elements with data-from / data-to ("id:side"). A
     // count target also carries data-to, but a number, on HTML or in an SVG
@@ -408,6 +586,7 @@ export function build(root, { tracked = [] } = {}) {
 
   const last = beats[beats.length - 1];
   const duration = last ? last.t + last.d : 0;
+  dress(timeline, root, Math.max(1, duration));
   return { format: formatName, stage: format ? { w: format.w, h: format.h } : null,
            timeline, beats, audio, duration };
 }
@@ -539,6 +718,7 @@ const api = {
     }
   },
   rng,
+  stagger,
   onFrame(fn) { listeners.push(fn); },
 };
 window.auditorium = api;

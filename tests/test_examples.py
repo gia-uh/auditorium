@@ -26,7 +26,7 @@ async def test_every_example_builds_a_timeline(path):
 
 async def test_the_motion_gallery_uses_every_motion():
     """examples/motion is the motion library's living documentation: every
-    entrance and idle the runtime knows appears in it."""
+    entrance, idle, emphasis, ambient and grade the runtime knows appears in it."""
     import re
 
     runtime = (EXAMPLES.parent / "auditorium" / "static" / "auditorium.js").read_text()
@@ -35,4 +35,5 @@ async def test_the_motion_gallery_uses_every_motion():
     assert {"fade", "rise", "words", "count", "float", "ken-burns"} <= names
     page = (EXAMPLES / "motion" / "index.html").read_text()
     for name in names:
-        assert re.search(rf'data-(enter|exit|idle)="{name}"', page), f"the gallery does not show {name}"
+        assert re.search(rf'data-(enter|exit|idle|emphasis|ambient|grade)="[a-z -]*\b{name}\b', page), \
+            f"the gallery does not show {name}"

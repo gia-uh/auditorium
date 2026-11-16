@@ -149,6 +149,34 @@ html.aud-staged { font-size: calc(min(var(--aud-stage-w), var(--aud-stage-h)) * 
 .aud > [data-layer="background"] { z-index: -1; }
 .aud > [data-layer="grade"] { z-index: 5; }
 
+/* Ambient and grade presets (data-ambient, data-grade). The runtime creates
+   these pieces once at seeded places and moves them on timeline tracks; the
+   colours come from the theme, so a brand change restyles them. */
+.aud .aud-ambient { position: absolute; pointer-events: none; }
+.aud .aud-ambient-aurora {
+  width: 60%; aspect-ratio: 1; border-radius: 50%; filter: blur(80px); opacity: 0.12;
+  background: radial-gradient(circle, var(--aud-accent, currentColor), transparent 70%);
+}
+.aud .aud-ambient-aurora:nth-child(2n) {
+  background: radial-gradient(circle, var(--aud-muted, currentColor), transparent 70%);
+}
+.aud .aud-ambient-particles {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--aud-accent, currentColor);
+}
+.aud .aud-ambient-nodes {
+  width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: var(--aud-accent, currentColor);
+}
+.aud .aud-grade { position: absolute; inset: 0; pointer-events: none; }
+.aud .aud-grade-tint { background: var(--aud-accent, currentColor); opacity: 0.08; mix-blend-mode: multiply; }
+.aud .aud-grade-vignette { background: radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.45)); }
+.aud .aud-grade-sweep {
+  background: linear-gradient(100deg, transparent 35%, rgb(255 255 255 / 0.12) 50%, transparent 65%);
+}
+.aud .aud-grade-grain {
+  inset: -100px; opacity: 0.12; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
 /* A page flows at any width and scrolls. */
 html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 

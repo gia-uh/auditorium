@@ -100,7 +100,10 @@ template's example. Every template also has a logo slot, an
 | `data-in`, `data-out` | Seconds from the start of the beat (of the step, in a deck) |
 | `data-enter`, `data-exit` | `fade`, `rise`, `pop`, `flip`, `grow`, `draw`, `words`, `count`; optional `data-dur`, `data-ease` |
 | | An exit plays from `data-out`; without it, it ends with a beat that has `data-d`. In a deck, an exit needs `data-out` |
-| `data-idle` | `float`, `tilt`, `pulse`, `ken-burns` |
+| `data-idle` | `float`, `tilt`, `pulse`, `ken-burns`. Several of one name in a beat start at seeded phases, out of step |
+| `data-lag` | With `data-enter`: its children enter one after another, this many seconds apart |
+| `data-emphasis`, `data-at` | `focus` grows the element and holds it until the next focus; `pulse` swells once. `data-at` counts seconds from the end of its entrance |
+| `data-ambient`, `data-grade` | On the layers: `aurora`, `particles`, `nodes` under the beats; `tint`, `vignette`, `sweep`, `grain` over them, several at once |
 | `data-col`, `data-row` | Placement on the twelve-column grid of a `.grid` |
 | `data-from`, `data-to` on an SVG `<line>` | Anchors (`id:side`): the line follows its boxes on every frame |
 | `<aside class="notes">` | Speaker notes, shown in the presenter view only |

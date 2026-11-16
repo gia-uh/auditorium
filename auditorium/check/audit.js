@@ -389,7 +389,7 @@
   function fades() {
     const out = [];
     for (const el of document.querySelectorAll("main.aud [data-enter]")) {
-      for (const target of [el, ...el.querySelectorAll(".aud-word")]) {
+      for (const target of [el, ...el.querySelectorAll(".aud-word, .aud-lag")]) {
         for (const a of target.getAnimations()) {
           const first = a.effect.getKeyframes()[0] || {};
           const timing = a.effect.getTiming();
