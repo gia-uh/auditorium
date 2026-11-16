@@ -108,6 +108,8 @@ async def run(project: Project) -> list[Finding]:
             await page.goto(served.url + "/?embed")
             await page.wait_for_function(READY, timeout=30000)
             failed = await page.evaluate("() => window.auditorium.error")
+            sound = None if failed else await page.evaluate(
+                "() => ({audio: window.auditorium.audio, duration: window.auditorium.duration})")
             if not failed:
                 await _measure(page, project, raw, now)
         finally:
@@ -119,6 +121,10 @@ async def run(project: Project) -> list[Finding]:
         out.append(finding("console-error", file, line, message,
                            "fix the script at that line; check the browser console in auditorium preview",
                            **_when(when)))
+    if sound:
+        from auditorium.check import audio
+
+        out += audio.run(project, sound["audio"], sound["duration"] / 1000)
     return merge(out)
 
 

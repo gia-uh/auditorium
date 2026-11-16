@@ -24,7 +24,8 @@ seconds. Nothing here needs JavaScript.
 | `data-from`, `data-to` | SVG `<line>` | anchored ends, `id:side` (left right top bottom center) |
 | `data-lang` | `<pre>` | the language to highlight |
 | `data-gain` | `<audio>` | its volume, 0 to 1, in the render's mix |
-| `data-duck` | `<audio>` | lowered under a voice (read by the audio mix, not yet) |
+| `data-duck` | `<audio>` | pressed down by about 12 dB while a narration clip speaks |
+| `loop` | `<audio>` | repeated from its time to the end of the video, faded in over 1 s |
 | `data-camera` | `<div class="camera">` | pans, zooms and tilts over its first child (below) |
 | `data-placeholder` | any element | template content still to replace; delete when done |
 | `data-layer` | a child of `<main>` | background or grade: stays on through every beat |
@@ -136,8 +137,7 @@ Capture the page with `auditorium assets` (`help assets`).
 </main>
 ```
 
-`render` mixes every `<audio>` from its `data-in` at its `data-gain`, with
-each beat's narration. Ducking comes later.
+`render` mixes every `<audio>` with the narration; all but the voice fade out over the last 2 s (`help assets`).
 
 `data-say` names an alignment JSON from a TTS service or an aligner:
 ElevenLabs `characters` with `character_start_times_seconds` (top level or
