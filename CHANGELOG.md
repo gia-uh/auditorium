@@ -4,6 +4,11 @@
 
 ### Added
 
+- **`bundle` and `export html` compress images to WebP (#94).** A still PNG
+  goes in as lossless WebP and a JPEG as WebP at quality 85, each only when
+  that is smaller; GIF, SVG, WebP and animated images go in as they are. Code
+  that names the original path still finds the image. Pillow is now a
+  dependency.
 - **Image providers as plugins (#93).** A `generate` entry in `assets.yaml`
   resolves through the provider it names: one function, registered by an
   installed package under the `auditorium.image_providers` entry point group,

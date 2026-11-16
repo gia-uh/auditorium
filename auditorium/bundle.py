@@ -31,12 +31,18 @@ came from bundling a 45-beat talk by hand:
   its path and still decodes.
 
 Missing files and anything loaded from the network refuse the bundle with the
-file and line that names them; nothing is written. Size work (WebP, resizing,
-re-encoding audio, minifying, a budget) is #94's.
+file and line that names them; nothing is written.
+
+PNG and JPEG images go in as WebP when that is smaller (#94): a PNG losslessly,
+so a diagram keeps every pixel, a JPEG at quality 85, already a lossy photo.
+Animated images, GIF, SVG and WebP go in as they are. The key keeps the
+original path, so code that names ``red.png`` still finds the bytes; the MIME
+type comes from the bytes, so the browser decodes them as WebP.
 """
 from __future__ import annotations
 
 import base64
+import io
 import json
 import mimetypes
 import re
@@ -108,6 +114,30 @@ def mime_of(data: bytes, name: str) -> str:
     if b"<svg" in data[:1024]:
         return "image/svg+xml"
     return mimetypes.guess_type(name)[0] or "application/octet-stream"
+
+
+def compress(data: bytes) -> bytes:
+    """``data`` as WebP if it is a still PNG or JPEG and WebP is smaller; else ``data``."""
+    from PIL import Image, ImageOps
+
+    mime = mime_of(data, "")
+    if mime not in ("image/png", "image/jpeg"):
+        return data
+    try:
+        with Image.open(io.BytesIO(data)) as im:
+            if getattr(im, "is_animated", False):
+                return data
+            # WebP carries the colour profile but not the EXIF orientation a
+            # browser applies to a JPEG, so the pixels are turned upright here.
+            icc = im.info.get("icc_profile")
+            upright = ImageOps.exif_transpose(im)
+            out = io.BytesIO()
+            options = {"lossless": True} if mime == "image/png" else {"quality": 85}
+            upright.save(out, "WEBP", method=6, **({"icc_profile": icc} if icc else {}), **options)
+    except (OSError, ValueError):
+        return data  # Pillow cannot read it; the browser may, so it goes in as is
+    webp = out.getvalue()
+    return webp if len(webp) < len(data) else data
 
 
 def _kind(mime: str) -> str:
@@ -265,7 +295,7 @@ class _Builder:
     def asset(self, file: Path, key: str) -> str:
         """Put ``file`` in the table once; return its key."""
         if key not in self.assets:
-            self.assets[key] = self.data_uri(file)
+            self.assets[key] = self.data_uri(file, compress(file.read_bytes()))
         return key
 
     # -- CSS ---------------------------------------------------------------------------
