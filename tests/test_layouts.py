@@ -23,15 +23,15 @@ ROOT = Path(__file__).parent.parent
 CSS = (ROOT / "auditorium" / "static" / "auditorium.css").read_text()
 TOPICS = ["layouts", "components"]
 
-# The placeholder insets of the 2026-11-05 spec's format table, top right bottom
-# left, until the formats issue (#83) measures them against each platform.
+# Each format's safe area, top right bottom left, as measured for #83 (the
+# comment above the formats in auditorium.css gives the sources).
 SAFE = {
     "deck": (60, 80, 60, 80),
     "explainer": (60, 80, 60, 80),
     "square": (60, 60, 60, 60),
     "portrait": (70, 60, 70, 60),
-    "story": (250, 60, 340, 60),
-    "short": (250, 60, 340, 120),
+    "story": (270, 120, 670, 120),
+    "short": (270, 120, 670, 120),
 }
 STAGE = {"deck": (1920, 1080), "explainer": (1920, 1080), "square": (1080, 1080),
          "portrait": (1080, 1350), "story": (1080, 1920), "short": (1080, 1920)}
@@ -337,8 +337,8 @@ TYPE = {"deck": (3.2, 1.3, 0.85), "square": (2.8, 1.25, 0.85), "portrait": (2.8,
 # The title scale, for a layout's heading.
 TITLE = {"deck": 2.2, "square": 2.0, "portrait": 2.0, "short": 2.2, "story": 2.2, "page": 1.75}
 # Cards (and stats) side by side, and columns side by side.
-SIDE_BY_SIDE = {"deck": (3, 2), "square": (2, 2), "portrait": (2, 1), "short": (1, 1),
-                "story": (1, 1), "page": (3, 2)}
+SIDE_BY_SIDE = {"deck": (3, 2), "square": (2, 2), "portrait": (2, 1), "short": (2, 1),
+                "story": (2, 1), "page": (3, 2)}
 
 
 @pytest.mark.parametrize("fmt", list(TYPE))

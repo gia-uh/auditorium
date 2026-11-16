@@ -4,10 +4,10 @@
 
 ### Added
 
-- **`auditorium check DIR`** runs 18 rules over a project, in two passes:
+- **`auditorium check DIR`** runs 19 rules over a project, in two passes:
   structure (no browser: `parse`, `unknown-name`, `external-url`,
   `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
-  `duplicate-id`) and layout (Chromium, at every stop and once a second on a
+  `duration`, `duplicate-id`) and layout (Chromium, at every stop and once a second on a
   clock: `overflow`, `overlap`, `off-grid`, `safe-area`, `min-size`,
   `contrast`, `console-error`, `h-scroll`, `placeholder`, `empty`). It stops
   after the first pass with errors. Each finding names the file, line,
@@ -23,6 +23,14 @@
   `--beats --notes` gives one tile per beat with its speaker notes under it,
   a storyboard. `--json` prints the tiles. Each tile is a frame that
   `render --from F --to F+1` reproduces (#72).
+- **Formats state their bounds (#83).** `duration` fails a short whose beats
+  sum outside 15 to 60 s and a square, portrait or story with more than one
+  beat; the bounds live in the runtime's `FORMATS`. A story's and a short's
+  safe area is now 270 120 670 120 (top right bottom left, was 250 60 340 60
+  and 250 60 340 120): the widest bands Meta's 9:16 zone for Stories and
+  Reels and TikTok's in-feed template leave free at 1080 × 1920, with the
+  buttons on the right covered. Story and short now set cards and stats two
+  across, so a row of three still fits the 980 px left between the bands.
 - `auditorium help check`, and `auditorium help rule NAME` with a broken and a
   fixed snippet for each rule.
 
@@ -129,8 +137,7 @@
   look with the library: cards are padded 1.1em 1.4em (was 1.2em 1.6em) on a
   3 % tint of the ink, and stat numbers are set in Playfair Display.
 - **Each format sets its safe area and type scale** as variables on
-  `<main class="aud">`: `--aud-safe-top|right|bottom|left` (the spec's
-  placeholder insets until #83 measures them), `--aud-inset`, `--aud-cols`,
+  `<main class="aud">`: `--aud-safe-top|right|bottom|left`, `--aud-inset`, `--aud-cols`,
   `--aud-columns` and `--aud-type-display|title|body|small`. Layouts keep
   their content inside the safe area and stack cards, stats and columns to
   what the format shows side by side; a `page` stacks them below 700 px.

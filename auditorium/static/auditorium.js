@@ -18,15 +18,17 @@ import { connect, createPlayer } from "./client.js";
 export const VERSION = 5;
 
 // Stage sizes. `timed` formats need data-d on every beat and play as video;
-// the others advance on a press (deck) or are stills (posters). Safe areas,
-// duration bounds and type minimums land with the formats issue (#83).
+// the others advance on a press (deck) or are stills (posters). `seconds` is
+// the length a timed format must fall in and `beats` the most beats a poster
+// may have; the check's duration rule reads both from here. Safe areas are
+// in auditorium.css and type minimums in check/vocab.py.
 export const FORMATS = {
   deck:      { w: 1920, h: 1080, timed: false },
   explainer: { w: 1920, h: 1080, timed: true },
-  short:     { w: 1080, h: 1920, timed: true },
-  story:     { w: 1080, h: 1920, timed: false },
-  square:    { w: 1080, h: 1080, timed: false },
-  portrait:  { w: 1080, h: 1350, timed: false },
+  short:     { w: 1080, h: 1920, timed: true, seconds: [15, 60] },
+  story:     { w: 1080, h: 1920, timed: false, beats: 1 },
+  square:    { w: 1080, h: 1080, timed: false, beats: 1 },
+  portrait:  { w: 1080, h: 1350, timed: false, beats: 1 },
   page:      null,
 };
 

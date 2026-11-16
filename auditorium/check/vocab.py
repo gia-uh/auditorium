@@ -42,6 +42,22 @@ def formats() -> dict[str, bool | None]:
 
 
 @cache
+def bounds() -> dict[str, dict]:
+    """Each format's duration bounds: ``seconds`` (low, high) for a timed
+    format that has them, ``beats`` for a poster's most beats."""
+    block = _block(_runtime(), "export const FORMATS", "};")
+    out: dict[str, dict] = {}
+    for name, body in re.findall(r"^\s+([a-z]+):\s+(.*)$", block, re.MULTILINE):
+        b = {}
+        if m := re.search(r"seconds: \[([\d.]+), ([\d.]+)\]", body):
+            b["seconds"] = (float(m.group(1)), float(m.group(2)))
+        if m := re.search(r"beats: (\d+)", body):
+            b["beats"] = int(m.group(1))
+        out[name] = b
+    return out
+
+
+@cache
 def entrances() -> list[str]:
     block = _block(_runtime(), "export const ENTRANCES", "export const IDLES")
     return re.findall(r'^\s+"?([a-z-]+)"?:\s+\{ dur', block, re.MULTILINE)

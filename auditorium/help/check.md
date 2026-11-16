@@ -55,6 +55,7 @@ Fix the first finding first. Later ones are often its consequence.
 | wall-clock | structure | timers, Date.now, Math.random in your scripts |
 | bare-transition | structure | a CSS transition |
 | time-attrs | structure | a beat on a clock with no data-d; data-in after data-out |
+| duration | structure | a short outside 15 to 60 s; a poster with a second beat |
 | duplicate-id | structure | two elements with one id |
 | overflow | layout | text out of its box or past the stage |
 | overlap | layout | text over text, or text over a picture |
