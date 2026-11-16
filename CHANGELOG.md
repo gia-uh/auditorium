@@ -4,6 +4,11 @@
 
 ### Added
 
+- **`bundle` and `export html` compress images to WebP (#94).** A still PNG
+  goes in as lossless WebP and a JPEG as WebP at quality 85, each only when
+  that is smaller; GIF, SVG, WebP and animated images go in as they are. Code
+  that names the original path still finds the image. Pillow is now a
+  dependency.
 - **Music** (#90): `auditorium music --mood calm --bpm 100 --length 30 -o
   assets/bed.wav` composes a bed with Euterpe, the optional extra
   `auditorium[music]`: four-bar loops, each rendered twice with the second
