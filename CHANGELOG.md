@@ -17,6 +17,12 @@
   endpoints declared under `[data]` in `auditorium.toml` are served from their
   fixture, and nothing else reaches the network. The time, reading and audio
   rules come with milestone 3.
+- **`auditorium sheet DIR`** writes a contact sheet, `dist/sheet.png`: the
+  frame at each beat's end plus `--between N` frames (default 3) evenly spaced
+  in time before it, each tile labelled with its frame number, time and beat.
+  `--beats --notes` gives one tile per beat with its speaker notes under it,
+  a storyboard. `--json` prints the tiles. Each tile is a frame that
+  `render --from F --to F+1` reproduces (#72).
 - `auditorium help check`, and `auditorium help rule NAME` with a broken and a
   fixed snippet for each rule.
 

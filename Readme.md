@@ -189,6 +189,11 @@ auditorium render examples/motion --from 0 --to 300 -o part1.mp4
 auditorium export examples/talk -f png
 auditorium export examples/talk -f png --beat rule   # one beat, by id or number
 
+# A contact sheet: each beat at its end and 3 frames between, labelled with
+# frame, time and beat, in one PNG. --beats --notes makes a storyboard.
+# Writes examples/talk/dist/sheet.png
+auditorium sheet examples/talk
+
 # One page per beat at stage size, every step shown; a page format prints at A4.
 # Text stays selectable. Writes examples/talk/dist/talk.pdf
 auditorium export examples/talk -f pdf
