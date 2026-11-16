@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Narration** (#73): `data-say` on a beat names a clip and its alignment
+  JSON (ElevenLabs character times, or word times from an aligner); the clip
+  starts 0.3 s in, and without `data-d` it sets the beat's length, so a
+  regenerated clip re-times its beat alone. `data-cue="phrase"` enters an
+  element when the phrase is said. `render` mixes every clip at its own time
+  and `data-gain`. New check rules `overrun` and `cue-missing`.
 - **`auditorium assets DIR`** resolves `assets.yaml`: files copied in, pages
   captured whole by Chromium after an optional `state` script, and image
   generation requests. Each lands in `.auditorium/cache/` under its entry's
@@ -91,8 +97,7 @@
     `data-d`. In a deck, an exit needs `data-out`.
   - `data-col` and `data-row` on the twelve-column `.grid`.
   - `data-from` and `data-to` (`id:side`) on an SVG line for anchors.
-  - `data-cue` is recognised but does not resolve yet: the element enters at
-    its step's start and the page logs a warning, until narration cues (#73).
+  - `data-cue` enters an element when its beat's narration says a phrase (#73).
   - `<aside class="notes">` in a section holds speaker notes for the
     presenter view.
   - `data-placeholder` is reserved for templates: the runtime ignores it, and

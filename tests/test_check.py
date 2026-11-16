@@ -20,7 +20,7 @@ from auditorium.cli import app
 from auditorium.help import rule_path
 from auditorium.templates import TEMPLATES
 
-from conftest import write_project
+from conftest import write_narration, write_project
 
 ROOT = Path(__file__).parent.parent
 FIXTURES = Path(__file__).parent / "rules"
@@ -35,7 +35,8 @@ WHERE = {
     "external-url": ("index.html", 15), "missing-asset": ("index.html", 15),
     "wall-clock": ("script.js", 3), "bare-transition": ("theme.css", 2),
     "time-attrs": ("index.html", 14), "duration": ("index.html", 10),
-    "duplicate-id": ("index.html", 16),
+    "duplicate-id": ("index.html", 16), "overrun": ("index.html", 14),
+    "cue-missing": ("index.html", 13),
     "overflow": ("index.html", 15), "overlap": ("index.html", 17),
     "off-grid": ("index.html", 16), "safe-area": ("index.html", 15),
     "min-size": ("index.html", 15), "contrast": ("index.html", 15),
@@ -156,6 +157,9 @@ def test_a_structure_rules_help_snippets_break_and_fix_it(rule, tmp_path):
             if folder is fixed:
                 (folder / rel).parent.mkdir(parents=True, exist_ok=True)
                 (folder / rel).write_bytes(b"")
+        # A narrated snippet says "Small steps win" in a 1.2 s clip.
+        for rel in re.findall(r'data-say="assets/vo/([^"]+)\.json"', (folder / "index.html").read_text()):
+            write_narration(folder, rel, [("Small", 0.0), ("steps", 0.4), ("win.", 0.8)], 1.2, rate=4000)
     assert rule in {f.rule for f in check(broken, layout=False).findings}
     assert check(fixed, layout=False).findings == []
 

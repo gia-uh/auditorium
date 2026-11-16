@@ -2,7 +2,7 @@
 
 error, structure pass.
 
-On a clock (explainer, short) every beat needs its length in data-d. An element's data-in must come before its data-out, both in seconds from the start of its beat.
+On a clock (explainer, short) every beat needs its length in data-d, unless its narration clip (data-say) sets it. An element's data-in must come before its data-out, both in seconds from the start of its beat.
 
 ## Broken
 

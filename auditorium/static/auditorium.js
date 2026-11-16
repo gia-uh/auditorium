@@ -278,7 +278,7 @@ function decorate(root) {
  * (data-aud-t, word spans, pathLength); every visibility change after this is
  * an op the engine applies and undoes.
  */
-export function build(root, { tracked = [] } = {}) {
+export function build(root, { tracked = [], narration = new Map() } = {}) {
   const formatName = root.getAttribute("data-format") || "deck";
   const format = formatName in FORMATS ? FORMATS[formatName] : FORMATS.deck;
   const exclusive = formatName !== "page";
@@ -292,7 +292,11 @@ export function build(root, { tracked = [] } = {}) {
   sections.forEach((section, index) => {
     const id = section.getAttribute("data-beat") || `beat-${index + 1}`;
     const start = t;
-    const d = section.hasAttribute("data-d") ? ms(section.getAttribute("data-d")) : null;
+    // Narration (#73): the clip starts LEAD into the beat, and with no data-d
+    // its spoken length plus LEAD and TAIL is the beat's length.
+    const say = section.hasAttribute("data-say") ? narration.get(section.getAttribute("data-say")) || null : null;
+    const d = section.hasAttribute("data-d") ? ms(section.getAttribute("data-d"))
+      : say ? ms(SAY_LEAD + say.end + SAY_TAIL) : null;
     const timedBeat = format && format.timed && d !== null;
 
     // Elements the beat times, grouped by step. Steps only exist in decks
@@ -324,12 +328,14 @@ export function build(root, { tracked = [] } = {}) {
       let segEnd = segStart;
       for (const el of els) {
         el.setAttribute("data-aud-t", "");
+        let inAt = segStart + ms(num(el, "data-in", 0));
         if (el.hasAttribute("data-cue")) {
-          // Narration cues resolve against an alignment (#73); until then an
-          // element with data-cue enters at its step's start.
-          console.warn("auditorium: data-cue resolves with narration support (#73)", el);
+          // A cue enters when its phrase starts in the beat's narration; one
+          // that is not said enters at its step's start (check: cue-missing).
+          const at = say ? cueAt(say, el.getAttribute("data-cue")) : null;
+          if (at !== null) inAt = start + ms(SAY_LEAD + at);
+          else console.warn(`auditorium: data-cue "${el.getAttribute("data-cue")}" is not in this beat's narration`, el);
         }
-        const inAt = segStart + ms(num(el, "data-in", 0));
         const enter = el.getAttribute("data-enter");
         const exit = el.getAttribute("data-exit");
         const ease = el.getAttribute("data-ease");
@@ -412,6 +418,7 @@ export function build(root, { tracked = [] } = {}) {
       });
     }
 
+    if (say) audio.push({ src: say.clip, t: start + ms(SAY_LEAD), gain: 1, duck: false, voice: true });
     for (const a of section.querySelectorAll("audio")) {
       audio.push({
         src: a.getAttribute("src"),
@@ -469,6 +476,75 @@ export function build(root, { tracked = [] } = {}) {
   const duration = last ? last.t + last.d : 0;
   return { format: formatName, stage: format ? { w: format.w, h: format.h } : null,
            timeline, beats, audio, duration };
+}
+
+// ---- narration (#73) ------------------------------------------------------------
+// The same rules as auditorium/narration.py, which the check and render use.
+
+const SAY_LEAD = 0.3;
+const SAY_TAIL = 0.5;
+
+/** Letters and digits lowercased, every other run one space, with each kept char's time. */
+function normaliseSaid(chars, starts) {
+  let text = "";
+  const times = [];
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    if (/[\p{L}\p{N}]/u.test(ch)) { text += ch.toLowerCase(); times.push(starts[i]); }
+    else if (text && !text.endsWith(" ")) { text += " "; times.push(starts[i]); }
+  }
+  while (text.endsWith(" ")) { text = text.slice(0, -1); times.pop(); }
+  return { text, times };
+}
+
+/** Characters and their start and end times from ElevenLabs or word alignments. */
+function saidTimes(data) {
+  const a = data && ("characters" in data ? data : data.alignment);
+  if (a && a.characters) {
+    const starts = (a.character_start_times_seconds || []).map(Number);
+    const ends = (a.character_end_times_seconds || starts).map(Number);
+    return { chars: Array.from(a.characters).slice(0, starts.length), starts, ends };
+  }
+  const words = (data && data.words) || ((data && data.segments) || []).flatMap((s) => s.words || []);
+  const chars = [], starts = [], ends = [];
+  for (const w of words) {
+    const word = String(w.word ?? w.text ?? "");
+    for (const ch of Array.from(word + " ")) {
+      chars.push(ch); starts.push(Number(w.start)); ends.push(Number(w.end ?? w.start));
+    }
+  }
+  return { chars, starts, ends };
+}
+
+/** Seconds into the clip where the phrase starts, or null. */
+function cueAt(say, phrase) {
+  const want = normaliseSaid(Array.from(phrase), Array.from(phrase, () => 0)).text;
+  if (!want) return null;
+  const at = (" " + say.text + " ").indexOf(" " + want + " ");
+  return at < 0 ? null : say.times[at];
+}
+
+/** Fetch every data-say alignment once: value -> {clip, text, times, end}. */
+async function loadNarration(root) {
+  const out = new Map();
+  const values = new Set(Array.from(root.querySelectorAll("section[data-say]"), (s) => s.getAttribute("data-say")));
+  await Promise.all(Array.from(values, async (value) => {
+    const isJson = /\.json$/i.test(value);
+    const alignment = isJson ? value : value.replace(/\.[^./]*$/, "") + ".json";
+    try {
+      const res = await fetch(alignment);
+      if (!res.ok) throw new Error(res.status + " " + res.statusText);
+      const data = await res.json();
+      const dir = alignment.slice(0, alignment.lastIndexOf("/") + 1);
+      const clip = !isJson ? value : data.audio ? dir + data.audio : alignment.replace(/\.json$/i, ".mp3");
+      const { chars, starts, ends } = saidTimes(data);
+      if (!chars.length) throw new Error("no character or word times");
+      out.set(value, { clip, ...normaliseSaid(chars, starts), end: Math.max(...ends) });
+    } catch (e) {
+      console.warn(`auditorium: data-say="${value}": ${alignment} could not be read (${e.message})`);
+    }
+  }));
+  return out;
 }
 
 // ---- the page -----------------------------------------------------------------
@@ -672,7 +748,8 @@ async function start() {
     await loadDecorators(root);
     decorate(root);
     placeOnGrid(root);
-    result = build(root, { tracked });
+    const narration = await loadNarration(root);
+    result = build(root, { tracked, narration });
   } catch (e) {
     fail("the build failed: " + (e && e.message ? e.message : String(e)));
     return;
