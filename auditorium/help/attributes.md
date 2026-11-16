@@ -7,28 +7,25 @@ seconds. Nothing here needs JavaScript.
 |---|---|---|
 | `data-format` | `<main class="aud">` | the format (help formats); default deck |
 | `data-beat` | `<section>` | the beat's name: a slide in a deck, a scene in a video |
-| `data-d` | `<section>` | the beat's length; required on a clock, omitted in a deck |
+| `data-d` | `<section>` | the beat's length; required on a clock unless `data-say` sets it, omitted in a deck |
+| `data-say` | `<section>` | the beat's narration: its alignment JSON, or its clip (below) |
 | `data-step` | any element | appears at the Nth press inside its beat (presses only) |
 | `data-in` | any element | appears this long after its beat (or step) starts |
 | `data-out` | any element | leaves this long after its beat (or step) starts |
-| `data-cue` | any element | instead of `data-in`: when a phrase is said (not active yet) |
+| `data-cue` | any element | instead of `data-in`: enters when its beat's narration says this phrase |
 | `data-enter` | any element | entrance: fade rise pop flip grow draw words count |
 | `data-exit` | any element | exit, the entrance names played backwards |
 | `data-idle` | any element | while shown: float tilt pulse ken-burns |
-| `data-lag` | with `data-enter` | its children enter one by one, this many seconds apart |
-| `data-emphasis` | any element | once, at `data-at`: focus (grow, hold until the next focus) or pulse |
-| `data-at` | with an emphasis | seconds after its entrance ends (or it appears) |
-| `data-ambient` | background layer | aurora particles nodes |
-| `data-grade` | grade layer | tint vignette sweep grain, several at once |
-| `data-dur` | with a motion | the motion's length, overriding its default |
-| `data-ease` | with a motion | a CSS easing, overriding its default |
+| `data-dur`, `data-ease` | with a motion | its length and CSS easing, overriding the defaults |
+| `data-lag`, `data-emphasis`, `data-at`, `data-ambient`, `data-grade` | see help motion | stagger, emphasis, layer presets |
 | `data-col` | inside `.grid` | the columns it spans, `1/13` is all twelve |
 | `data-row` | inside `.grid` | the grid row |
 | `data-to` | `<b>` with count | the number it counts up to |
 | `data-from`, `data-to` | SVG `<line>` | anchored ends, `id:side` (left right top bottom center) |
 | `data-lang` | `<pre>` | the language to highlight |
-| `data-gain` | `<audio>` | its volume, 0 to 1 (read by the audio mix, not yet) |
+| `data-gain` | `<audio>` | its volume, 0 to 1, in the render's mix |
 | `data-duck` | `<audio>` | lowered under a voice (read by the audio mix, not yet) |
+| `data-camera` | `<div class="camera">` | pans, zooms and tilts over its first child (below) |
 | `data-placeholder` | any element | template content still to replace; delete when done |
 | `data-layer` | a child of `<main>` | background or grade: stays on through every beat |
 
@@ -101,7 +98,6 @@ A `<div data-layer>` beside the beats covers the whole stage and stays on
 from the first beat to the last: `background` is drawn under every beat,
 `grade` over it (a tint, a vignette). A beat change swaps only the beats, so
 a drifting background or a grade never cuts. Layers take no clicks.
-`data-ambient` and `data-grade` add presets that move with the timeline.
 
 ```html
 <main class="aud" data-format="explainer">
@@ -111,28 +107,43 @@ a drifting background or a grade never cuts. Layers take no clicks.
 </main>
 ```
 
+## A camera over a captured page
+
+`data-camera` lists keys, `T: field=value ...` split by `;`. T is seconds
+from the beat's start; `x` and `y` are the point of the picture, in percent
+of it, held at the window's centre; `zoom` is a scale and `tilt` leans the
+picture back in degrees. A field a key leaves out keeps its last value
+(first: x=50 y=50 zoom=1 tilt=0). `data-ease` sets the easing between keys.
+Capture the page with `auditorium assets` (`help assets`).
+
 ```html
-<main class="aud" data-format="explainer">
-  <div data-layer="background" data-ambient="aurora"></div>
-  <section data-beat="list" data-d="5">
-    <ul data-enter="rise" data-lag="0.2"><li>Measure</li><li>Step</li><li>Repeat</li></ul>
-    <p data-in="1" data-enter="fade" data-emphasis="pulse" data-at="0.5">and again</p>
-  </section>
-  <div data-layer="grade" data-grade="vignette grain"></div>
-</main>
+<section data-beat="tour" class="figure">
+  <h2>The dashboard, signed in</h2>
+  <div class="camera" data-camera="0: y=10; 2.5: x=30 y=40 zoom=1.8 tilt=8; 5: y=80 zoom=1.2">
+    <img src="assets/dash.png" alt="The dashboard">
+  </div>
+</section>
 ```
 
-## Audio
+## Audio and narration
 
 ```html
 <main class="aud" data-format="short">
-  <section data-beat="intro" data-d="4" class="statement">
-    <p data-enter="words">Listen to <em>this</em>.</p>
+  <section data-beat="intro" class="statement" data-say="assets/vo/01.json">
+    <p data-enter="words" data-cue="listen">Listen to <em>this</em>.</p>
     <audio src="assets/bed.mp3" data-in="0" data-gain="0.5" data-duck></audio>
   </section>
 </main>
 ```
 
-`render` puts the first `<audio>` under the video from its `data-in`; mixing
-several clips with gain and ducking comes later. Until narration cues land,
-`data-cue` enters at its step's start.
+`render` mixes every `<audio>` from its `data-in` at its `data-gain`, with
+each beat's narration. Ducking comes later.
+
+`data-say` names an alignment JSON from a TTS service or an aligner:
+ElevenLabs `characters` with `character_start_times_seconds` (top level or
+under `alignment`), or `words` / `segments[].words` as `{word, start, end}`.
+Its clip is its `"audio"` key, else the `.mp3` of the same name; `data-say`
+may name the clip instead, beside a `.json` of the same name. The clip starts
+0.3 s in; without `data-d` the beat lasts 0.3 s + speech + 0.5 s (rule
+overrun). `data-cue` enters at the phrase's first letter, matched on whole
+words, case and punctuation aside (rule cue-missing).

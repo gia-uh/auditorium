@@ -39,6 +39,7 @@ version = "1!4.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
+    { name = "pyyaml" },
     { name = "rich" },
     { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
@@ -71,6 +72,7 @@ requires-dist = [
     { name = "playwright", marker = "extra == 'record'", specifier = ">=1.62" },
     { name = "pypdf", marker = "extra == 'record'", specifier = ">=5" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
+    { name = "pyyaml", specifier = ">=6" },
     { name = "rich", specifier = ">=15.0.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4" },
     { name = "tqdm", marker = "extra == 'record'", specifier = ">=4.67.3" },

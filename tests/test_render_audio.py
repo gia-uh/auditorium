@@ -70,12 +70,12 @@ async def test_audio_data_in_delays_the_tone(tmp_path, tone):
     parameter accepted and silently discarded is worse than none."""
     project = _project(tmp_path / "p", tone, at=1.0, d=2.0)
     out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
-    start = subprocess.run(
-        ["ffprobe", "-v", "error", "-select_streams", "a:0",
-         "-show_entries", "stream=start_time", "-of", "csv=p=0", str(out)],
+    # The mix pads each clip with silence to its time, so the tone's onset,
+    # not the stream's start, is where data-in shows.
+    err = subprocess.run(
+        ["ffmpeg", "-i", str(out), "-af", "silencedetect=n=-40dB:d=0.1", "-f", "null", "-"],
         capture_output=True, text=True,
-    ).stdout.strip()
-    assert start, "no audio stream in the output"
-    assert float(start) == pytest.approx(1.0, abs=0.15), (
-        f"audio starts at {start}s, expected ~1.0s -- data-in was discarded"
-    )
+    ).stderr
+    assert "silence_start: 0" in err, f"no silence before the tone -- data-in was discarded\n{err[-500:]}"
+    onset = float(err.split("silence_end: ")[1].split()[0])
+    assert onset == pytest.approx(1.0, abs=0.15), f"the tone starts at {onset}s, expected ~1.0s"

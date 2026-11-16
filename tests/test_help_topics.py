@@ -22,7 +22,7 @@ from test_templates import known_class
 
 ROOT = Path(__file__).parent.parent
 RUNTIME = (ROOT / "auditorium" / "static" / "auditorium.js").read_text()
-NEW = ["start", "formats", "attributes", "templates", "themes"]
+NEW = ["start", "formats", "attributes", "templates", "themes", "motion"]
 
 # test_layouts' safe-area probe, except the anchored-line overlay's own box: it
 # covers its section by design, as the layer lines are drawn in. The lines in
@@ -143,6 +143,14 @@ def runtime_attributes():
 def test_attributes_teaches_every_attribute_the_runtime_reads():
     taught = set(re.findall(r"`(data-[a-z]+)", text("attributes")))
     assert runtime_attributes() - taught == set()
+
+
+def test_motion_teaches_every_name_the_runtime_knows():
+    from auditorium.check import vocab
+
+    taught = set(re.findall(r"`([a-z-]+)`", text("motion")))
+    names = set(vocab.entrances() + vocab.idles() + vocab.emphases() + vocab.ambients() + vocab.grades())
+    assert names - taught == set()
 
 
 def test_templates_lists_every_bundled_theme():

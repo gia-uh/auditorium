@@ -1,0 +1,7 @@
+# A generation request that no provider has resolved: its key holds a
+# labelled placeholder, drawn by auditorium assets.
+assets/hero.png:
+  generate: a ball rolling downhill, flat illustration
+  size: [640, 360]
+  seed: 7
+  provider: example

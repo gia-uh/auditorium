@@ -307,6 +307,26 @@ def parse_size(value: str) -> tuple[int, int]:
     return int(parts[0]), int(parts[1])
 
 
+def _mix(project: Path, clips: list[dict], offset: float) -> list[str]:
+    """ffmpeg arguments that mix ``clips`` ({src, t ms, gain}) into one track.
+
+    Each clip is delayed to its time, minus ``offset`` (a ranged render starts
+    later), and scaled by its gain; amix sums them without normalising, so a
+    voice keeps its level when music joins it.
+    """
+    args: list[str] = []
+    chains: list[str] = []
+    for i, c in enumerate(clips):
+        args += ["-i", str(project / c["src"])]
+        at = c.get("t", 0) / 1000 - offset
+        trim = f"atrim=start={-at:.3f},asetpts=PTS-STARTPTS," if at < 0 else ""
+        delay = max(0, round(at * 1000))
+        chains.append(f"[{i + 1}:a]{trim}adelay={delay}:all=1,volume={c.get('gain', 1)}[a{i}]")
+    inputs = "".join(f"[a{i}]" for i in range(len(clips)))
+    graph = ";".join(chains) + f";{inputs}amix=inputs={len(clips)}:normalize=0:dropout_transition=0[aout]"
+    return [*args, "-filter_complex", graph, "-map", "0:v", "-map", "[aout]", "-c:a", "aac", "-shortest"]
+
+
 async def render_video(
     project: Path,
     output: Path,
@@ -331,16 +351,12 @@ async def render_video(
     if shutil.which("ffmpeg") is None:
         raise RuntimeError("ffmpeg is required to encode video; install it or use --format png-sequence")
 
-    # An explicit audio= wins; otherwise the first <audio> the page declares is
-    # the bed. Audio is not part of the visual state -- seek() never sees it --
-    # so this is the only place it is read. Mixing several clips with gain and
-    # ducking lands with the audio mix (#107).
-    audio_at = 0.0
-    if audio is None:
-        bed = (await published_timeline(project))["audio"]
-        if bed:
-            audio = project / bed[0]["src"]
-            audio_at = bed[0].get("t", 0) / 1000
+    # An explicit audio= is the whole soundtrack. Otherwise every clip the page
+    # publishes -- each <audio> and each beat's narration (#73) -- is mixed at
+    # its own time and gain. Audio is not part of the visual state -- seek()
+    # never sees it -- so this is the only place it is read. Ducking lands
+    # with #107.
+    clips = [] if audio is not None else (await published_timeline(project))["audio"]
 
     with tempfile.TemporaryDirectory(prefix="auditorium-render-") as tmp:
         frames = Path(tmp)
@@ -357,9 +373,9 @@ async def render_video(
             "-i", str(frames / "frame-%06d.png"),
         ]
         if audio is not None:
-            if audio_at:
-                cmd += ["-itsoffset", str(audio_at)]
             cmd += ["-i", str(audio), "-c:a", "aac", "-shortest"]
+        elif clips:
+            cmd += _mix(project, clips, start_frame / fps)
         cmd += codec
         # Strip metadata so two renders of the same project are byte-identical;
         # ffmpeg otherwise stamps an encoder string and creation time.

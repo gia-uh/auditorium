@@ -4,6 +4,21 @@
 
 ### Added
 
+- **Narration** (#73): `data-say` on a beat names a clip and its alignment
+  JSON (ElevenLabs character times, or word times from an aligner); the clip
+  starts 0.3 s in, and without `data-d` it sets the beat's length, so a
+  regenerated clip re-times its beat alone. `data-cue="phrase"` enters an
+  element when the phrase is said. `render` mixes every clip at its own time
+  and `data-gain`. New check rules `overrun` and `cue-missing`.
+- **`auditorium assets DIR`** resolves `assets.yaml`: files copied in, pages
+  captured whole by Chromium after an optional `state` script, and image
+  generation requests. Each lands in `.auditorium/cache/` under its entry's
+  hash and is copied to its key, so a second run fetches nothing. An entry
+  that cannot resolve gets a labelled placeholder at its size, and the new
+  check rule `placeholder-asset` fails on it. No image provider ships (#92).
+- **The camera**: `<div class="camera" data-camera="0: y=10; 3: x=30 y=60
+  zoom=1.8 tilt=8">` pans, zooms and tilts over its first child, a captured
+  page or any large picture, as tracks on the beat's timeline (#92).
 - **The motion library** (#87). `data-lag` staggers an entrance over an
   element's children. `data-emphasis="focus"` grows an element and holds it
   until the next focus in its beat, which lets it settle back;
@@ -14,7 +29,8 @@
   `data-grade` (`tint`, `vignette`, `sweep`, `grain`); their pieces are
   placed from `rng` and move on timeline tracks. `auditorium.stagger(n, lag,
   {jitter, seed})` gives seeded start offsets to custom code. `check` reports
-  an unknown emphasis, ambient or grade name.
+  an unknown emphasis, ambient or grade name. `auditorium help motion` lists
+  every name with its defaults and when to use it.
 - **`render --jobs N`** splits the frames into N contiguous ranges, renders
   each in its own Chromium at the same time, and encodes the one frame
   sequence with the audio once. The frames are byte-identical to a
@@ -29,13 +45,13 @@
   the beats covers the stage and stays on through every beat, drawn under
   and over them; a beat change swaps only the content. Layers take no clicks,
   and `check` reports an unknown layer name (#85).
-- **`auditorium check DIR`** runs 20 rules over a project, in two passes:
+- **`auditorium check DIR`** runs 21 rules over a project, in two passes:
   structure (no browser: `parse`, `unknown-name`, `external-url`,
   `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
   `duration`, `duplicate-id`) and layout (Chromium, at every stop and once a second on a
   clock: `overflow`, `overlap`, `off-grid`, `safe-area`, `min-size`,
-  `contrast`, `console-error`, `h-scroll`, `placeholder`, `empty`, and the
-  warning `pop-in` at the first frame of each fading entrance). It stops
+  `contrast`, `console-error`, `h-scroll`, `placeholder`, `placeholder-asset`,
+  `empty`, and the warning `pop-in` at the first frame of each fading entrance). It stops
   after the first pass with errors. Each finding names the file, line,
   selector, beat and time, what was measured and the edit that fixes it. Text
   output shows the first 8 errors and ends on the counts; `--json` prints every
@@ -93,8 +109,7 @@
     `data-d`. In a deck, an exit needs `data-out`.
   - `data-col` and `data-row` on the twelve-column `.grid`.
   - `data-from` and `data-to` (`id:side`) on an SVG line for anchors.
-  - `data-cue` is recognised but does not resolve yet: the element enters at
-    its step's start and the page logs a warning, until narration cues (#73).
+  - `data-cue` enters an element when its beat's narration says a phrase (#73).
   - `<aside class="notes">` in a section holds speaker notes for the
     presenter view.
   - `data-placeholder` is reserved for templates: the runtime ignores it, and

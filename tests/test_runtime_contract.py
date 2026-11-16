@@ -300,9 +300,10 @@ async def test_data_col_and_data_row_place_a_block_on_the_grid(browser_page, ser
 # ---- data-cue -----------------------------------------------------------------------
 
 
-async def test_data_cue_enters_at_its_step_start_and_warns(browser_page, served):
-    """Until narration alignment lands (#73), a cue cannot resolve. It enters at
-    its step's start and says so, rather than vanishing."""
+async def test_data_cue_without_narration_enters_at_its_step_start_and_warns(browser_page, served):
+    """A cue on a beat with no data-say cannot resolve (tests/test_narration.py
+    covers the ones that do). It enters at its step's start and says so,
+    rather than vanishing."""
     messages = []
     browser_page.on("console", lambda m: messages.append((m.type, m.text)))
     await load(browser_page, served(MOTIONS))
