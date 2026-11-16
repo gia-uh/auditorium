@@ -60,7 +60,9 @@ static/engine.js                               seek(t): the only runtime
   playback position and compiles nothing.
 - **The renderer** (`render.py`) maps output frames to timeline positions with a
   pure function of the published duration and stops, seeks Chromium to each
-  one, screenshots, and encodes with ffmpeg. **The exporter** (`exporter.py`)
+  one, captures it, and encodes with ffmpeg. On Linux the capture is
+  `HeadlessExperimental.beginFrame` in chrome-headless-shell, which draws only
+  when asked; elsewhere it is a screenshot. **The exporter** (`exporter.py`)
   seeks to each beat's end state and saves PNG stills, or prints each one to a
   PDF page; a page format prints at A4.
 - **The bundler** (`bundle.py`) writes the folder as one HTML file that presents
@@ -112,7 +114,9 @@ shells over the same page, so the second one costs little.
 
 **D9. Render scope.** mp4 by default, webm and PNG sequences on request,
 addressable by frame range (`--from`/`--to`), audio mixed at encode time. Frame
-ranges were cheap to build first and expensive to retrofit.
+ranges were cheap to build first and expensive to retrofit. `--jobs N` splits
+the range into N ranges, each in its own browser, written into one frame
+sequence and encoded once.
 
 **Time is attributes; free code is a function of time.** A time written once,
 where the element is, can be read by a check without running anything. Custom
@@ -184,7 +188,7 @@ frames, which is why "done" for a new motion includes watching it in
 - Geometry that negotiates space with flowing text. Overlap is an authoring
   mistake, and layout-aware SVG would be a separate design.
 
-Deferred rather than rejected, with the spec's reasoning: `--jobs N`, voiceover
+Deferred rather than rejected, with the spec's reasoning: voiceover
 synced to beats, multi-track audio, alpha output, GIF, cloud rendering.
 
 ## Specs

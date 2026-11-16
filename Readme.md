@@ -189,7 +189,10 @@ state equals a fresh one and the renderer, which only travels forward, agrees.
 # writes examples/motion/dist/motion.mp4
 auditorium render examples/motion --fps 30
 
-# Render a frame range, to fan several out in parallel
+# Split the frames across 4 browsers rendering at once
+auditorium render examples/motion --jobs 4
+
+# Render a frame range, to look at one stretch again
 auditorium render examples/motion --from 0 --to 300 -o part1.mp4
 
 # Each beat at its end state as PNG (or each press, with --steps),

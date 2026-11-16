@@ -1,4 +1,6 @@
+import asyncio
 import hashlib
+import sys
 from pathlib import Path
 
 import pytest
@@ -94,3 +96,58 @@ async def test_a_range_matches_the_same_frames_of_a_full_render(project, tmp_pat
     assert part_d
     for name, digest in part_d.items():
         assert full_d[name] == digest, f"{name} differs between full and ranged render"
+
+
+async def test_jobs_write_the_same_frames_as_one_worker(project, tmp_path):
+    """--jobs splits the schedule across browsers; the frames must not change.
+
+    Three jobs over ten frames give uneven ranges (3, 3, 4), and the later
+    workers replay the schedule up to their start without capturing.
+    """
+    one, three = tmp_path / "one", tmp_path / "three"
+    await render_frames(project, one, fps=10, size=(320, 240))
+    n = await render_frames(project, three, fps=10, size=(320, 240), jobs=3)
+    assert n == 10
+    assert _digests(three) == _digests(one)
+
+
+async def test_jobs_split_a_frame_range(project, tmp_path):
+    out = tmp_path / "o"
+    n = await render_frames(project, out, fps=10, size=(320, 240), start_frame=2, end_frame=7, jobs=2)
+    assert n == 5
+    assert [p.name for p in sorted(out.glob("*.png"))] == [f"frame-{i:06d}.png" for i in range(2, 7)]
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="begin-frame capture is Linux only")
+async def test_linux_renders_under_begin_frame_control(project):
+    """Guards the deterministic path: a silent fallback to screenshots would
+    keep every other test green."""
+    from playwright.async_api import async_playwright
+
+    from auditorium.render import _open_for_capture
+
+    async with async_playwright() as p:
+        served, browser, page, _ = await _open_for_capture(p, project, (320, 240))
+        try:
+            assert hasattr(page, "begin_frames")
+        finally:
+            await browser.close()
+            served.stop()
+
+
+async def test_a_page_with_web_fonts_renders_in_its_font(tmp_path):
+    """Under begin-frame control nothing ticks: awaiting fonts.ready or a
+    requestAnimationFrame in the page hangs the render, which is why loading
+    pumps frames and polls. The bound turns such a hang into a failure, and
+    frame 0 in the bundled web font must differ from the same text in the
+    fallback serif."""
+    def text(family):
+        return (f'<section data-beat="one" data-d="1"><p style="font-family:{family};'
+                f'font-size:160px">Aqf</p></section>')
+
+    webfont = write_project(tmp_path / "webfont", text("'Playfair Display'"))
+    fallback = write_project(tmp_path / "fallback", text("serif"))
+    a, b = tmp_path / "a", tmp_path / "b"
+    await asyncio.wait_for(render_frames(webfont, a, fps=10, size=(320, 240), end_frame=1), 60)
+    await asyncio.wait_for(render_frames(fallback, b, fps=10, size=(320, 240), end_frame=1), 60)
+    assert _digests(a) != _digests(b)

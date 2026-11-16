@@ -177,6 +177,7 @@ def render(
     audio: Path | None = typer.Option(None, "--audio", help="Audio bed mixed into the render"),
     from_frame: int = typer.Option(0, "--from", help="First frame to render"),
     to_frame: int | None = typer.Option(None, "--to", help="Stop before this frame"),
+    jobs: int = typer.Option(1, "--jobs", min=1, help="Split the frames into N ranges, each rendered by its own browser"),
 ) -> None:
     """Render a project to video by stepping frames deterministically."""
     from auditorium.render import render_video
@@ -188,7 +189,7 @@ def render(
 
     asyncio.run(render_video(
         folder, output, fps=fps, size=dims, audio=audio, fmt=fmt,
-        start_frame=from_frame, end_frame=to_frame,
+        start_frame=from_frame, end_frame=to_frame, jobs=jobs,
     ))
     console.print(f"[green]✓[/] Rendered to [bold]{output}[/]")
 

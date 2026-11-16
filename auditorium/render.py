@@ -10,8 +10,10 @@ two agree (D2).
 """
 from __future__ import annotations
 
+import asyncio
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -56,26 +58,113 @@ FRAME_NAME = "frame-{:06d}.png"
 # Built, or failed with a reason: either way there is no point waiting longer.
 READY = "() => window.auditorium && (window.auditorium.built === true || !!window.auditorium.error)"
 
+# Frame 0 renders blank without this: webfonts and images resolve after the
+# build, and nothing else waits for them. Started here and polled through
+# SETTLED rather than awaited, because under begin-frame control a promise
+# that waits on rendering only resolves while frames are being pumped.
+SETTLE = """() => {
+    window.__auditoriumSettled = false;
+    Promise.all([document.fonts.ready, ...[...document.images].map(
+        (i) => (i.decode ? i.decode().catch(() => {}) : null))])
+      .then(() => { window.__auditoriumSettled = true; });
+}"""
+SETTLED = "() => window.__auditoriumSettled === true"
 
-async def open_project(p, project: Path, size: tuple[int, int] | None):
+# chrome-headless-shell draws a frame only when HeadlessExperimental.beginFrame
+# asks for one, with every compositor stage run before the draw and nothing
+# animated, scrolled or decoded on another thread. The frame captured is then
+# the state seek(t) left, not whatever a compositor tick happened to show
+# (spec 2026-11-10, section 11).
+BEGIN_FRAME_ARGS = [
+    "--deterministic-mode",
+    "--enable-begin-frame-control",
+    "--run-all-compositor-stages-before-draw",
+    "--disable-threaded-animation",
+    "--disable-threaded-scrolling",
+    "--disable-checker-imaging",
+]
+
+
+class BeginFrames:
+    """Draw and capture frames of one page under begin-frame control.
+
+    Nothing ticks on its own here: document.fonts.ready and wait_for_function
+    hang. until() pumps frames that draw nothing and polls with evaluate, the
+    warm-up loop HyperFrames uses.
+    """
+
+    INTERVAL_MS = 1000 / 60
+
+    def __init__(self, page, cdp):
+        self.page, self.cdp, self.ticks = page, cdp, 0.0
+
+    async def frame(self, **params) -> dict:
+        self.ticks += self.INTERVAL_MS
+        return await self.cdp.send("HeadlessExperimental.beginFrame",
+                                   {"frameTimeTicks": self.ticks, "interval": self.INTERVAL_MS, **params})
+
+    async def until(self, predicate: str, timeout_s: float = 30) -> None:
+        import asyncio
+        import time
+
+        deadline = time.monotonic() + timeout_s
+        while not await self.page.evaluate(predicate):
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"timed out after {timeout_s}s waiting for {predicate}")
+            await self.frame(noDisplayUpdates=True)
+            await asyncio.sleep(0.01)
+
+    async def capture(self, path: Path) -> None:
+        import base64
+
+        # A frame can come back without a screenshot while the renderer
+        # initialises; the next one has it.
+        for _ in range(10):
+            data = (await self.frame(screenshot={"format": "png"})).get("screenshotData")
+            if data:
+                Path(path).write_bytes(base64.b64decode(data))
+                return
+        raise RuntimeError("beginFrame returned no screenshot after 10 frames")
+
+
+async def open_project(p, project: Path, size: tuple[int, int] | None, *, begin_frame: bool = False):
     """Serve ``project``, open it embedded in Chromium and wait for the build.
 
     Returns ``(served, browser, page, published)`` where ``published`` is the
     JSON part of window.auditorium. With ``size`` None the viewport is the
-    format's stage, so the stage renders at scale 1.
+    format's stage, so the stage renders at scale 1. With ``begin_frame`` the
+    browser runs under begin-frame control and ``page.begin_frames`` is the
+    BeginFrames that draws it; a browser without HeadlessExperimental (not
+    chrome-headless-shell) raises, and the caller falls back to screenshots.
     """
     from auditorium.server import create_app, serve_in_thread
     from auditorium.testing import chromium_path
 
     served = serve_in_thread(create_app(project))
-    kwargs = {}
+    kwargs = {"args": BEGIN_FRAME_ARGS} if begin_frame else {}
     if chromium_path():
         kwargs["executable_path"] = chromium_path()
-    browser = await p.chromium.launch(**kwargs)
+    try:
+        browser = await p.chromium.launch(**kwargs)
+    except BaseException:
+        served.stop()
+        raise
     try:
         page = await browser.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
-        await page.goto(served.url + "/?embed")
-        await page.wait_for_function(READY, timeout=30000)
+        if begin_frame:
+            cdp = await page.context.new_cdp_session(page)
+            await cdp.send("HeadlessExperimental.enable")
+            frames = page.begin_frames = BeginFrames(page, cdp)
+            until = frames.until
+            navigation = asyncio.ensure_future(page.goto(served.url + "/?embed"))
+            while not navigation.done():
+                await frames.frame(noDisplayUpdates=True)
+                await asyncio.sleep(0.01)
+            await navigation
+        else:
+            until = lambda predicate: page.wait_for_function(predicate, timeout=30000)  # noqa: E731
+            await page.goto(served.url + "/?embed")
+        await until(READY)
         error = await page.evaluate("() => window.auditorium.error")
         if error:
             raise RuntimeError(f"{project}/index.html did not build: {error}")
@@ -87,20 +176,26 @@ async def open_project(p, project: Path, size: tuple[int, int] | None):
             stage = published["stage"] or {"w": 1920, "h": 1080}
             size = (stage["w"], stage["h"])
         await page.set_viewport_size({"width": size[0], "height": size[1]})
-        # Frame 0 renders blank without this: webfonts and images resolve
-        # after the build, and nothing else waits for them.
-        await page.evaluate(
-            """async () => {
-                await document.fonts.ready;
-                await Promise.all([...document.images].map(
-                    (i) => (i.decode ? i.decode().catch(() => {}) : null)));
-            }"""
-        )
+        await page.evaluate(SETTLE)
+        await until(SETTLED)
     except BaseException:
         await browser.close()
         served.stop()
         raise
     return served, browser, page, published
+
+
+async def _open_for_capture(p, project: Path, size):
+    """Open with begin-frame control on Linux, screenshots elsewhere or as fallback."""
+    from playwright.async_api import Error as PlaywrightError
+
+    if sys.platform.startswith("linux"):
+        try:
+            return await open_project(p, project, size, begin_frame=True)
+        except PlaywrightError as e:
+            if "HeadlessExperimental" not in str(e):
+                raise
+    return await open_project(p, project, size)
 
 
 async def render_frames(
@@ -111,6 +206,7 @@ async def render_frames(
     size: tuple[int, int] | None = None,
     start_frame: int = 0,
     end_frame: int | None = None,
+    jobs: int = 1,
 ) -> int:
     """Render frames to PNGs in out_dir. Returns how many were written.
 
@@ -118,14 +214,33 @@ async def render_frames(
     from frame 0 without screenshotting, because seek() is only correct
     forward -- jumping straight to a mid-timeline position would reach a state
     a sequential render never passes through.
+
+    With ``jobs`` > 1 the range is split into that many contiguous ranges,
+    each rendered by its own Chromium at the same time. Frames keep their
+    index in the file name, so the directory is the same sequence a single
+    worker writes.
     """
     from playwright.async_api import async_playwright
 
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    project = Path(project)
+
+    if jobs > 1:
+        published = await published_timeline(project)
+        total = frame_count(published["duration"], published["stops"], fps) or 1
+        stop = total if end_frame is None else min(end_frame, total)
+        bounds = [start_frame + max(0, stop - start_frame) * k // jobs for k in range(jobs + 1)]
+        counts = await asyncio.gather(*(
+            render_frames(project, out_dir, fps=fps, size=size, start_frame=a, end_frame=b)
+            for a, b in zip(bounds, bounds[1:]) if b > a
+        ))
+        return sum(counts)
+
     written = 0
     async with async_playwright() as p:
-        served, browser, page, published = await open_project(p, Path(project), size)
+        served, browser, page, published = await _open_for_capture(p, project, size)
+        frames = getattr(page, "begin_frames", None)
         try:
             # A project with no beats has a zero-length schedule, but it is
             # still one capturable state. Rendering it as nothing leaves a
@@ -140,10 +255,14 @@ async def render_frames(
                 await page.evaluate("(t) => window.auditorium.seek(t)", schedule[index])
                 if index < start_frame:
                     continue
-                # No animations="disabled": it fast-forwards every finite
-                # animation to its end state, which is the one state this frame
-                # is not in. seek() already pins every animation to t.
-                await page.screenshot(path=str(out_dir / FRAME_NAME.format(index)))
+                path = out_dir / FRAME_NAME.format(index)
+                if frames:
+                    await frames.capture(path)
+                else:
+                    # No animations="disabled": it fast-forwards every finite
+                    # animation to its end state, which is the one state this
+                    # frame is not in. seek() already pins every animation to t.
+                    await page.screenshot(path=str(path))
                 written += 1
         finally:
             await browser.close()
@@ -198,11 +317,12 @@ async def render_video(
     fmt: str = "mp4",
     start_frame: int = 0,
     end_frame: int | None = None,
+    jobs: int = 1,
 ) -> Path:
     """Render a project to a video file (or a PNG sequence directory)."""
     output = Path(output)
     project = Path(project)
-    frame_range = {"start_frame": start_frame, "end_frame": end_frame}
+    frame_range = {"start_frame": start_frame, "end_frame": end_frame, "jobs": jobs}
 
     if fmt == "png-sequence":
         await render_frames(project, output, fps=fps, size=size, **frame_range)
