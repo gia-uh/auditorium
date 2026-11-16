@@ -23,7 +23,9 @@ Every run also writes every finding to `DIR/dist/check.json`.
    to the first frame of every entrance that fades in, where nothing should
    show yet (pop-in, a warning). Where ffmpeg is installed it mixes the
    audio as render will and warns when it clips or the music drowns the
-   voice (audio-peak).
+   voice (audio-peak). On an explainer or a short it also weighs
+   each beat's length against its words (reading-time) and looks for
+   stretches where nothing moves and no voice plays (dead-air).
 
 The check stops after the first pass with errors: a broken tag moves every
 box, so measuring them first would only add noise. Fix what it shows, run it
@@ -73,6 +75,8 @@ Fix the first finding first. Later ones are often its consequence.
 | empty | layout | a beat that shows nothing, a chart with no bars |
 | pop-in | layout | an element at full opacity when its entrance starts (warning) |
 | audio-peak | layout | the mix clipping, or music louder than the voice (warning) |
+| reading-time | layout | a beat too short or too long for its words (warning; an error under half) |
+| dead-air | layout | nothing moving and no voice for longer than the format allows (warning) |
 
 `auditorium help rule NAME` prints one rule with a broken and a fixed snippet.
 

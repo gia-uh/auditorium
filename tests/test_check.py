@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from auditorium.check import RULES, check
+from auditorium.check import RULES, check, reading
 from auditorium.check.source import annotate, parse
 from auditorium.cli import app
 from auditorium.help import rule_path
@@ -44,6 +44,7 @@ WHERE = {
     "placeholder": ("index.html", 15), "placeholder-asset": ("index.html", 15),
     "empty": ("index.html", 14), "pop-in": ("index.html", 15),
     "audio-peak": ("index.html", 16),
+    "reading-time": ("index.html", 14), "dead-air": ("index.html", 14),
 }
 
 CLEAN = sorted([*TEMPLATES.glob("*/example"), *(ROOT / "examples").iterdir()])
@@ -62,9 +63,11 @@ def test_every_rule_has_a_fixture_a_help_page_and_a_place():
 def test_the_layout_rules_are_the_ones_the_browser_measures():
     """audit.js measures most layout rules; console-error is the page's own
     log, placeholder and placeholder-asset need only the source and
-    assets.yaml, all read in Python, and audio-peak mixes with ffmpeg."""
+    assets.yaml, all read in Python, audio-peak mixes with ffmpeg, and
+    reading.py judges reading-time and dead-air from what audit.js counts."""
     measured = set(re.search(r"const RULES = \[(.*?)\]", AUDIT).group(1).replace('"', "").replace(" ", "").split(","))
-    assert measured | {"console-error", "placeholder", "placeholder-asset", "audio-peak"} == set(LAYOUT)
+    python = {"console-error", "placeholder", "placeholder-asset", "audio-peak", "reading-time", "dead-air"}
+    assert measured | python == set(LAYOUT)
 
 
 # ---- each rule fires on its fixture, at its line --------------------------------
@@ -167,8 +170,18 @@ def test_a_structure_rules_help_snippets_break_and_fix_it(rule, tmp_path):
 
 # placeholder-asset turns on assets.yaml, which a snippet of HTML cannot carry;
 # its fixture and tests/test_assets.py hold it. audio-peak needs audio files,
-# which its own snippet test below writes.
-SNIPPET_LAYOUT = [r for r in LAYOUT if r not in ("placeholder-asset", "audio-peak")]
+# which its own snippet test below writes. The reading rules need a clock,
+# which a deck has not; they are checked on an explainer below.
+READING = ["reading-time", "dead-air"]
+SNIPPET_LAYOUT = [r for r in LAYOUT if r not in ("placeholder-asset", "audio-peak", *READING)]
+
+
+@pytest.mark.parametrize("rule", READING)
+def test_a_reading_rules_help_snippets_break_and_fix_it(rule, tmp_path):
+    broken = check(write_project(tmp_path / "broken", snippet(rule, "Broken")))
+    fixed = check(write_project(tmp_path / "fixed", snippet(rule, "Fixed")))
+    assert rule in {f.rule for f in broken.findings}, broken.text()
+    assert fixed.findings == [], fixed.text()
 
 
 def test_the_layout_rules_fixed_snippets_pass_together(tmp_path):
@@ -188,11 +201,12 @@ def test_the_layout_rules_broken_snippets_fire_together(tmp_path):
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
 def test_audio_peaks_help_snippets_break_and_fix_it(tmp_path):
-    """The snippets name the fixture's bed, a full-scale tone, under a voice."""
+    """The snippets name the fixture's bed, a full-scale tone, under a voice
+    slow enough that the beat's three words can be read (reading-time)."""
     reports = {}
     for which in ("Broken", "Fixed"):
         folder = write_project(tmp_path / which, snippet("audio-peak", which), fmt="explainer")
-        write_narration(folder, "claim", [("Small", 0.0), ("steps", 0.4), ("win.", 0.8)], 1.2, rate=8000)
+        write_narration(folder, "claim", [("Small", 0.0), ("steps", 0.8), ("win.", 1.6)], 2.2, rate=8000)
         shutil.copy(FIXTURES / "audio-peak" / "assets" / "bed.wav", folder / "assets" / "bed.wav")
         reports[which] = check(folder)
     assert "audio-peak" in {f.rule for f in reports["Broken"].findings}, reports["Broken"].text()
@@ -311,6 +325,58 @@ def test_unknown_emphasis_ambient_and_grade_names_are_unknown_names(tmp_path):
     hits = [f for f in check(write_project(tmp_path, body), layout=False).findings if f.rule == "unknown-name"]
     assert sorted(f.fix for f in hits) == ['set data-ambient="aurora"', 'set data-emphasis="focus"',
                                          'set data-grade="grain"']
+
+
+# ---- the reading rules ---------------------------------------------------------
+
+
+@pytest.mark.parametrize("words, hold, narrated, expected", [
+    (5, 3.5, False, None), (5, 2.5, False, "short"), (5, 1.4, False, "error"),
+    (5, 10, False, "long"), (5, 10, True, None), (0, 30, False, None),
+])
+def test_reading_time_is_two_sided(words, hold, narrated, expected):
+    """5 words need 2 s plus 1.5 s: 3.5 s fits, 2.5 s is 0.71 of it, 1.4 s
+    is 0.4, 10 s is 2.9 times it, unless a voice holds the beat."""
+    assert reading.verdict(words, hold, reading.pace({}, "en"), narrated) == expected
+
+
+def test_reading_pace_is_per_language():
+    config = {"reading": {"base": 1.0, "es": {"rate": 2.0}, "es-cu": {"base": 2.0}}}
+    assert reading.pace({}, None) == reading.Pace(2.5, 1.5)
+    assert reading.pace(config, "en") == reading.Pace(2.5, 1.0)
+    assert reading.pace(config, "es") == reading.Pace(2.0, 1.0)
+    assert reading.pace(config, "es-CU") == reading.Pace(2.0, 2.0)
+
+
+def test_still_stretches_are_what_no_motion_or_voice_covers():
+    assert reading.still(0, 10, [(1, 2), (6, 7)], 3) == [(2, 6)]
+    assert reading.still(0, 10, [(1, 2), (6, 7)], 2.5) == [(2, 6), (7, 10)]
+    assert reading.still(0, 10, [(1, 2), (5, None)], 2.5) == [(2, 5)]
+    assert reading.still(0, 10, [(-5, None)], 0) == []
+
+
+def test_reading_time_follows_the_projects_language(tmp_path):
+    """Six words fit 4 s at the default pace; a Spanish pace of one word a
+    second plus 6 s needs 12 s, three times the beat."""
+    body = '<section data-beat="b" class="statement" data-d="4"><p data-idle="float">' + "palabra " * 6 + "</p></section>"
+    folder = write_project(tmp_path, body)
+    html = folder / "index.html"
+    html.write_text(html.read_text().replace('lang="en"', 'lang="es"'))
+    assert [f for f in check(folder).findings if f.rule == "reading-time"] == []
+    (folder / "auditorium.toml").write_text("[reading.es]\nrate = 1\nbase = 6\n")
+    hits = [f for f in check(folder).findings if f.rule == "reading-time"]
+    assert [f.level for f in hits] == ["error"], hits
+
+
+def test_dead_air_counts_a_track_function_as_motion(tmp_path):
+    """No animation runs in this beat, but script.js draws on every seek."""
+    body = ('<section data-beat="b" class="statement" data-d="6"><p id="n">0</p></section>')
+    folder = write_project(tmp_path, body, head='<script type="module" src="script.js"></script>')
+    (folder / "script.js").write_text(
+        "auditorium.track((s) => { document.getElementById('n').textContent = s.toFixed(1); }, {beat: 'b'});\n")
+    assert "dead-air" not in {f.rule for f in check(folder).findings}
+    (folder / "script.js").write_text("auditorium.track(() => {}, {beat: 'b'});\n")
+    assert "dead-air" in {f.rule for f in check(folder).findings}
 
 
 def test_text_names_a_beat_without_a_time():

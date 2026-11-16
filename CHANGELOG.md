@@ -18,6 +18,14 @@
   clip but the voice out over the last 2 s, and ducks `data-duck` music
   under the narration with a sidechain compressor. New check rule
   `audio-peak` warns when the mix clips or the music is louder than the voice.
+- **Check rules `reading-time` and `dead-air` (#96).** On an explainer or a
+  short, `reading-time` counts the words on stage at each beat's end and warns
+  when the beat lasts under 0.8 or over 2.5 times `words / rate + base` (an
+  error under 0.5); rate and base default to 2.5 words a second and 1.5 s and
+  are set per language under `[reading]` in `auditorium.toml`. `dead-air`
+  warns when nothing moves and no voice plays inside a beat for longer than
+  the format allows (4 s for an explainer, 2 s for a short). The motion
+  gallery's first beat is 5.5 s, so its text can be read.
 - **Image providers as plugins (#93).** A `generate` entry in `assets.yaml`
   resolves through the provider it names: one function, registered by an
   installed package under the `auditorium.image_providers` entry point group,
@@ -26,13 +34,6 @@
   provider that is missing or raises leaves the placeholder with the reason.
   None ships enabled. `help assets` says when a generated image helps and
   when it must not be used (logos, charts, text).
-- **Templates `explainer` and `short` (#107).** `explainer` is a narrated
-  landscape video of 1 to 6 minutes: a question, a statement, a figure, two
-  columns, a number and a closing line, each beat with its clip. `short` is
-  a vertical video of 15 to 60 s: a hook, a number, a line and a call to
-  action over a music bed that ducks under optional narration. Both examples
-  carry their clips and alignments and pass the check; the short renders
-  with its mix from its folder alone.
 - **Templates `pitch`, `report` and `dashboard` (#106).** `pitch` is a deck
   of big statements, stats, a photo and partner logos. `report` is a page
   that prints to A4 through `export pdf`. `dashboard` is a page of KPI

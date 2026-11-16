@@ -10,8 +10,8 @@ structural error makes geometry findings noise.
 - **audio**: audio-peak mixes what the page publishes with ffmpeg
   (``audio.py``), after the layout pass and in it.
 - **time**: overrun and cue-missing (narration, #73) read files only and run
-  with the structure pass. The reading rules (reading rate, dead air,
-  seek-stable) join this registry when they land.
+  with the structure pass. reading-time and dead-air (#96) measure in
+  Chromium with the layout pass and are judged in ``reading.py``.
 
 Every finding names the file, the line, the rule, what was measured and the
 edit that fixes it in the file's own terms. ``RULES`` is the registry: a rule
@@ -80,6 +80,9 @@ _RULES = [
     # audio (#90): the mix render would encode, measured with ffmpeg on the
     # audio the page publishes, so it runs with the layout pass.
     Rule("audio-peak", "layout", "warning", "The mix clipping, or the music louder than the voice"),
+    # reading, on a clock: words and motion measured in Chromium, judged in reading.py
+    Rule("reading-time", "layout", "warning", "Text on screen for less than 0.8 or more than 2.5 times its reading time; an error under 0.5"),
+    Rule("dead-air", "layout", "warning", "Nothing moving and no voice for longer than the format allows"),
 ]
 RULES: dict[str, Rule] = {r.name: r for r in _RULES}
 PASSES = ["structure", "layout"]
