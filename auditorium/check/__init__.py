@@ -8,8 +8,8 @@ structural error makes geometry findings noise.
 - **layout** seeks Chromium to every stop and to sampled times in between and
   measures the live DOM (``layout.py`` and ``audit.js``).
 - **time**: overrun and cue-missing (narration, #73) read files only and run
-  with the structure pass. The reading rules (reading rate, dead air,
-  seek-stable) join this registry when they land.
+  with the structure pass. reading-time and dead-air (#96) measure in
+  Chromium with the layout pass and are judged in ``reading.py``.
 
 Every finding names the file, the line, the rule, what was measured and the
 edit that fixes it in the file's own terms. ``RULES`` is the registry: a rule
@@ -75,6 +75,9 @@ _RULES = [
     Rule("placeholder-asset", "layout", "error", "An assets.yaml entry still showing its labelled placeholder"),
     Rule("empty", "layout", "error", "A beat with nothing visible, a chart with no data"),
     Rule("pop-in", "layout", "warning", "An element visible at full opacity before its entrance"),
+    # reading, on a clock: words and motion measured in Chromium, judged in reading.py
+    Rule("reading-time", "layout", "warning", "Text on screen for less than 0.8 or more than 2.5 times its reading time; an error under 0.5"),
+    Rule("dead-air", "layout", "warning", "Nothing moving and no voice for longer than the format allows"),
 ]
 RULES: dict[str, Rule] = {r.name: r for r in _RULES}
 PASSES = ["structure", "layout"]

@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Check rules `reading-time` and `dead-air` (#96).** On an explainer or a
+  short, `reading-time` counts the words on stage at each beat's end and warns
+  when the beat lasts under 0.8 or over 2.5 times `words / rate + base` (an
+  error under 0.5); rate and base default to 2.5 words a second and 1.5 s and
+  are set per language under `[reading]` in `auditorium.toml`. `dead-air`
+  warns when nothing moves and no voice plays inside a beat for longer than
+  the format allows (4 s for an explainer, 2 s for a short). The motion
+  gallery's first beat is 5.5 s, so its text can be read.
 - **Image providers as plugins (#93).** A `generate` entry in `assets.yaml`
   resolves through the provider it names: one function, registered by an
   installed package under the `auditorium.image_providers` entry point group,

@@ -424,6 +424,30 @@
   // contrast: the text's colour composited over every sampled backdrop pixel,
   // against WCAG AA (4.5, or 3 for large type). The 10th percentile counts,
   // so a few dark pixels under light text do not hide a pale background.
+  // reading-time: the words on stage now, in text that shows. MathML copies
+  // of KaTeX formulas are for screen readers and never show.
+  window.__audWords = () => {
+    let n = 0;
+    const walker = document.createTreeWalker(document.querySelector("main.aud"), NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const el = walker.currentNode.parentElement;
+      if (!el || el.closest(".katex-mathml, script, style") || !shown(el)) continue;
+      n += (walker.currentNode.textContent.match(/\S+/g) || []).length;
+    }
+    return n;
+  };
+
+  // dead-air: when each animation on stage runs, [start, end] in ms of the
+  // global timeline; end is null for one that never stops (an ambient loop,
+  // a theme's infinite animation). The engine places every animation by its
+  // delay, so delay is its start.
+  window.__audMotion = () => document.getAnimations()
+    .filter((a) => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest("main.aud"))
+    .map((a) => {
+      const c = a.effect.getComputedTiming();
+      return [c.delay, Number.isFinite(c.activeDuration) ? c.delay + c.activeDuration : null];
+    });
+
   window.__audContrast = async (png) => {
     const img = new Image();
     img.src = png;
