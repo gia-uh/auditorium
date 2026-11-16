@@ -9,6 +9,7 @@ it builds, it raises nothing, every box stays in the safe area.
 """
 import json
 import re
+import shutil
 import tomllib
 from pathlib import Path
 
@@ -52,6 +53,13 @@ def test_milestone_2_adds_pitch_report_and_dashboard():
     assert known["pitch"]["formats"] == ["deck"]
     assert known["report"]["formats"] == ["page"]
     assert known["dashboard"]["formats"] == ["page"]
+
+
+def test_milestone_3_adds_explainer_and_short():
+    """Section 09 and 14, M3 (#107): the two templates that play on a clock."""
+    known = templates()
+    assert known["explainer"]["formats"] == ["explainer"]
+    assert known["short"]["formats"] == ["short"]
 
 
 @pytest.mark.parametrize("name", sorted(templates()))
@@ -471,3 +479,58 @@ async def test_a_dashboard_chip_filters_the_tiles_the_chart_and_the_table(browse
     assert year["pressed"] == ["Year"] and q4["pressed"] == ["Q4"]
     assert year["value"] == "515,500" and q4["value"] == "154,000"
     assert q4["bars"] == ["60,000", "38,000", "30,000", "26,000"] and q4["rows"] == 4
+
+
+# ---- explainer and short (#107) -------------------------------------------------
+
+
+@pytest.mark.parametrize("name", ["explainer", "short"])
+def test_a_fresh_video_template_fails_on_its_placeholders_only(name, tmp_path):
+    """The short's music bed is a placeholder too: a fresh short must not
+    render the template's stand-in track unnoticed."""
+    from auditorium.check import check
+
+    assert run("new", name, str(tmp_path / name)).exit_code == 0
+    report = check(tmp_path / name)
+    assert report.findings and {f.rule for f in report.findings} == {"placeholder"}, report.text()
+
+
+@pytest.mark.parametrize("name", ["explainer", "short"])
+def test_the_video_examples_are_narrated_from_clips_in_their_folder(name):
+    """Every beat of both examples speaks, from a clip and an alignment the
+    example carries."""
+    from auditorium.narration import load
+
+    example = TEMPLATES / name / "example"
+    says = re.findall(r'<section data-beat="[^"]+"[^>]*data-say="([^"]+)"', (example / "index.html").read_text())
+    beats = re.findall(r"<section data-beat=", (example / "index.html").read_text())
+    assert says and len(says) == len(beats)
+    for value in says:
+        narration = load(example, value)
+        assert (example / narration.clip).is_file() and narration.text
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
+async def test_a_narrated_short_renders_from_its_folder_alone(tmp_path):
+    """The M3 criterion: the short example, copied away from the package,
+    renders with its narration and a bed ducked under it, from nothing
+    outside its folder."""
+    import subprocess
+
+    from auditorium.render import published_timeline, render_video
+
+    dest = shutil.copytree(TEMPLATES / "short" / "example", tmp_path / "short")
+    published = await published_timeline(dest)
+    voices = [c for c in published["audio"] if c.get("voice")]
+    beds = [c for c in published["audio"] if not c.get("voice")]
+    assert len(voices) == 4 and len(beds) == 1
+    assert beds[0]["duck"] and beds[0]["loop"] and beds[0]["gain"] == 0.5
+    assert 15 <= published["duration"] / 1000 <= 60
+
+    out = await render_video(dest, tmp_path / "short.mp4", fps=2, size=(108, 192))
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type:format=duration",
+         "-of", "json", str(out)], capture_output=True, text=True, check=True)
+    info = json.loads(probe.stdout)
+    assert {s["codec_type"] for s in info["streams"]} == {"video", "audio"}
+    assert abs(float(info["format"]["duration"]) - published["duration"] / 1000) < 1

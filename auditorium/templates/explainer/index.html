@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explainer</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<!-- An explainer: a narrated landscape video of 1 to 6 minutes, rendered to
+     mp4 (auditorium render .). The beats play in a row, each for its data-d
+     in seconds. Replace every element marked data-placeholder, then delete
+     the attribute. Delete beats you do not need, copy the ones you need twice.
+     Narration: put each beat's clip and its alignment JSON in assets/vo/ and
+     give the beat data-say="assets/vo/01.json"; the clip plays 0.3 s in, and
+     without data-d it sets the beat's length. data-cue="a phrase" enters an
+     element when the phrase is said. A music bed is an <audio data-duck loop>
+     in the first beat. Times, narration and the mix: auditorium help
+     attributes. Layouts: auditorium help layouts. -->
+<main class="aud" data-format="explainer">
+  <!-- The logo slot: on every beat, bottom right, in the band the layouts
+       leave free. Replace assets/logo.svg with your logo, or delete both. -->
+  <img class="brand" src="assets/logo.svg" alt="Logo" data-placeholder>
+
+  <!-- The question the video answers. -->
+  <section data-beat="question" data-d="6" class="title">
+    <span class="kicker" data-placeholder>The topic</span>
+    <h1 data-enter="words" data-placeholder>The question, in a few words</h1>
+  </section>
+
+  <!-- The answer in one sentence; <em> is the accent. -->
+  <section data-beat="answer" data-d="6" class="statement">
+    <p data-enter="words" data-placeholder>The short answer, with the <em>key word</em>.</p>
+  </section>
+
+  <!-- A figure: draw with currentColor and the fill-* and stroke-* classes. -->
+  <section data-beat="figure" data-d="8" class="figure">
+    <h2 data-placeholder>How it works</h2>
+    <figure>
+      <svg viewBox="0 0 800 400">
+        <path data-enter="draw" d="M 40 360 L 280 200 L 520 240 L 760 40" fill="none" stroke="currentColor" stroke-width="6"/>
+        <circle cx="760" cy="40" r="18" class="fill-accent" data-in="2" data-enter="pop"/>
+      </svg>
+      <figcaption data-placeholder>What the figure shows</figcaption>
+    </figure>
+  </section>
+
+  <section data-beat="compare" data-d="8" class="columns">
+    <h2 data-placeholder>Two sides</h2>
+    <div data-enter="fade"><h3 data-placeholder>One</h3><p data-placeholder>A line on the first side.</p></div>
+    <div data-in="2" data-enter="fade"><h3 data-placeholder>Other</h3><p data-placeholder>A line on the second side.</p></div>
+  </section>
+
+  <section data-beat="numbers" data-d="6" class="stats">
+    <h2 data-placeholder>The number that matters</h2>
+    <div class="stat" data-enter="count"><b data-to="3" data-placeholder>0</b><span data-placeholder>the unit</span></div>
+  </section>
+
+  <section data-beat="close" data-d="6" class="statement">
+    <p data-enter="words" data-placeholder>The line to <em>remember</em>.</p>
+  </section>
+
+</main>
+</body>
+</html>

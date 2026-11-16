@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fix the drip</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<main class="aud" data-format="short">
+  <img class="brand" src="assets/logo.svg" alt="City water">
+
+  <section data-beat="hook" data-d="5" class="title" data-say="assets/vo/01.json">
+    <span class="kicker">City water</span>
+    <h1 data-enter="words">A dripping tap wastes water all day</h1>
+    <audio src="assets/bed.wav" data-in="0" data-gain="0.5" data-duck loop></audio>
+  </section>
+
+  <section data-beat="number" data-d="5" class="stats" data-say="assets/vo/02.json">
+    <h2>Litres lost every day</h2>
+    <div class="stat" data-enter="count"><b data-to="30">0</b><span>litres</span></div>
+  </section>
+
+  <section data-beat="point" data-d="5" class="statement" data-say="assets/vo/03.json">
+    <p data-enter="words" data-cue="a full bathtub">A new washer saves <em>a bathtub a week</em>.</p>
+  </section>
+
+  <section data-beat="action" data-d="4" class="title" data-say="assets/vo/04.json">
+    <h1 data-enter="rise">Check your taps tonight</h1>
+    <p data-in="0.6" data-enter="fade">water.example.org</p>
+  </section>
+
+</main>
+</body>
+</html>
