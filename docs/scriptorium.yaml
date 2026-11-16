@@ -1,0 +1,36 @@
+# Auditorium, the book. Every bash and Python block runs the real CLI when the
+# book builds (make book), from this directory; what the blocks write lands in
+# build/, and the gallery's exports in build/gallery/, which make book copies
+# into the site.
+theme: book
+base-url: https://auditorium.uhgia.org/
+execute: {timeout: 300, freeze: file}
+
+vars:
+  title: "Auditorium"
+  subtitle: "Decks, posters, pages and short videos written in plain HTML"
+
+files:
+  - chapters/00-index.md
+  - chapters/01-quick-start.md
+  - chapters/02-a-talk.md
+  - chapters/03-a-poster.md
+  - chapters/04-a-pitch.md
+  - chapters/05-a-report.md
+  - chapters/06-a-dashboard.md
+  - chapters/07-an-explainer.md
+  - chapters/08-a-short.md
+  - chapters/09-gallery.md
+  - chapters/10-architecture.md
+  - chapters/11-extending.md
+
+outputs:
+  site:
+    format: docs
+    dir: site
+    repo-url: https://github.com/gia-uh/auditorium
+    version: "5.0"
+    footer: "Auditorium is MIT-licensed. Made at GIA-UH."
+  print:
+    format: pdf
+    file: auditorium.pdf

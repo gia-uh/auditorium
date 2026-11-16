@@ -1,0 +1,47 @@
+name: book
+# Builds the book (docs/) with every block executed, the PDF and the gallery of
+# exported examples, and runs its gate on every pull request. On main it also
+# publishes docs/site to GitHub Pages (auditorium.uhgia.org). A block that fails,
+# an example that drifts from its chapter or a command the book never names
+# fails this workflow: it is the book's test.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: book-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { enable-cache: true }
+      # ffmpeg for the check's audio rule; pango for WeasyPrint, which prints the PDF.
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg libpango-1.0-0 libpangoft2-1.0-0
+      # docs carries scriptorium; the default dev group carries what the
+      # vendored Euterpe behind auditorium music needs.
+      - run: uv sync --locked --group docs
+      - run: uv run playwright install --with-deps chromium
+      - run: make book-check
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: docs/site }
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

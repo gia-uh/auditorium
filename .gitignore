@@ -178,3 +178,10 @@ dist/
 # The check rules' fixtures are projects too: each index.html breaks one rule
 # (tests/test_check.py), and CI fails without them.
 !tests/rules/**/*.html
+
+# The book's build output (make book): the site, the PDF, what its blocks wrote,
+# and scriptorium's cache. Listed after the *.html rules so they stay ignored.
+docs/site/
+docs/build/
+docs/.scriptorium/
+docs/*.pdf
