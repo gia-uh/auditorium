@@ -36,7 +36,7 @@ def _project(folder, tone=None, at=0.0, d=0.5):
 
 async def test_declared_audio_is_published(tmp_path, tone):
     published = await published_timeline(_project(tmp_path / "p", tone))
-    assert published["audio"] == [{"src": "assets/tone.wav", "t": 0, "gain": 1, "duck": False}]
+    assert published["audio"] == [{"src": "assets/tone.wav", "t": 0, "gain": 1, "duck": False, "loop": False}]
 
 
 async def test_rendered_video_has_an_audio_stream(tmp_path, tone):
@@ -79,3 +79,39 @@ async def test_audio_data_in_delays_the_tone(tmp_path, tone):
     assert "silence_start: 0" in err, f"no silence before the tone -- data-in was discarded\n{err[-500:]}"
     onset = float(err.split("silence_end: ")[1].split()[0])
     assert onset == pytest.approx(1.0, abs=0.15), f"the tone starts at {onset}s, expected ~1.0s"
+
+
+# ---- lay, fade and duck (#90) --------------------------------------------------
+
+
+def _levels(video, step=0.25):
+    """Mean volume in dB of each ``step`` seconds of the video's audio."""
+    err = subprocess.run(
+        ["ffmpeg", "-i", str(video), "-af", f"asetnsamples={round(48000 * step)},astats=metadata=1:reset=1,"
+         "ametadata=print:key=lavfi.astats.Overall.RMS_level", "-f", "null", "-"],
+        capture_output=True, text=True,
+    ).stderr
+    return [float(v) if v != "-inf" else -200.0 for v in
+            (line.split("=")[1] for line in err.splitlines() if "RMS_level=" in line)]
+
+
+def _tone(path, seconds, freq=440):
+    subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", f"sine=frequency={freq}:duration={seconds}", str(path)],
+                   capture_output=True, check=True)
+
+
+async def test_a_looped_clip_is_laid_to_the_end_and_faded(tmp_path):
+    """A 1 s clip with loop sounds for the whole 6 s video: it fades in over
+    its first second and out over the video's last two."""
+    folder = write_project(tmp_path / "p", """<section data-beat="one" data-d="6">
+      <p data-enter="fade">x</p><audio src="assets/bed.wav" loop></audio></section>""")
+    (folder / "assets").mkdir()
+    _tone(folder / "assets" / "bed.wav", 1)
+    out = await render_video(folder, tmp_path / "o.mp4", fps=10, size=(320, 240))
+    levels = _levels(out)
+    assert len(levels) >= 23
+    steady = levels[12]  # 3 s in: past the fade-in, before the fade-out
+    assert steady > -30, levels
+    assert levels[0] < steady - 6, f"no fade-in: {levels}"
+    assert levels[16] > steady - 1.5, f"the loop stopped after its first pass: {levels}"
+    assert levels[-1] < steady - 10, f"no fade-out at the video's end: {levels}"

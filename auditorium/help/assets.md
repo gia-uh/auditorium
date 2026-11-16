@@ -58,3 +58,21 @@ command ends on one count line and exits 1 while any placeholder remains.
 
 A captured page is a tall picture: show it through a camera that pans, zooms
 and tilts over it (`help attributes`, data-camera).
+
+## Music
+
+A music bed is an asset like any other, any audio file under `assets/`. With
+`auditorium[music]` installed, Euterpe composes one:
+
+    auditorium music --mood calm --bpm 100 --length 30 -o assets/bed.wav
+
+Moods are `calm`, `bright` and `dark`. With `--length`, four-bar loops are
+laid end to end, sparse (pad and bass) under the first and last loop and full
+(with an arpeggio and drums) between, or as `--sections sparse,full,...` says,
+then faded in and out. Without `--length` the file is one loop that tiles with
+no seam: give it to `<audio loop>`. The bed peaks at -6 dBFS.
+
+In the render, `<audio loop>` repeats to the end of the video and fades in
+over 1 s; every clip but the narration fades out over the video's last 2 s;
+`data-duck` presses the clip down by about 12 dB while the narration speaks.
+Rule audio-peak warns when the mix clips or the music is louder than the voice.

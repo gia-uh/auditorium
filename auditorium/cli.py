@@ -1,6 +1,6 @@
-"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``assets``, ``run``, ``preview``, ``render``, ``sheet``, ``bundle``, ``export``, ``relay``.
+"""The ``auditorium`` command: ``template``, ``help``, ``check``, ``assets``, ``music``, ``run``, ``preview``, ``render``, ``sheet``, ``bundle``, ``export``, ``relay``.
 
-Every command but ``template``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
+Every command but ``template``, ``music``, ``relay`` and ``help`` takes a project: a folder holding index.html (or
 the index.html itself). ``run`` and ``preview`` share ``_serve()`` and differ
 only in which surface they open and whether shared navigation is on. SIGINT is
 reset to ``SIG_DFL`` before uvicorn starts, for a clean shutdown.
@@ -255,6 +255,42 @@ def assets(
         print(f"{resolved} resolved, {len(placeholders)} placeholders, {len(outcomes)} entries")
     if placeholders:
         raise typer.Exit(1)
+
+
+@app.command()
+def music(
+    output: Path = typer.Option(..., "-o", "--output", help="Audio file to write; the extension names the format"),
+    mood: str = typer.Option("calm", "--mood", help="calm, bright or dark"),
+    bpm: float = typer.Option(100, "--bpm", help="Tempo, 40 to 240"),
+    length: float = typer.Option(None, "--length", help="Seconds; without it, one seamless loop for <audio loop>"),
+    sections: str = typer.Option(None, "--sections", help="Comma list of sparse or full, one per loop along --length"),
+    seed: int = typer.Option(0, "--seed", help="Seed of the performance"),
+    as_json: bool = typer.Option(False, "--json", help="Print what was written as JSON"),
+) -> None:
+    """Compose a music bed with Euterpe (auditorium[music]) and write it as an asset."""
+    import json
+
+    from auditorium import music as bed
+
+    from rich.markup import escape
+
+    missing = bed.euterpe_missing()
+    if missing:
+        console.print(f"[red]error:[/] {escape(missing)}", highlight=False)
+        raise typer.Exit(1)
+    order = sections.split(",") if sections else None
+    try:
+        path = bed.write(output, mood, bpm, length, order, seed)
+        laid = ["full"] if length is None else bed.layout(length, bpm, order)
+    except bed.MusicError as exc:
+        console.print(f"[red]error:[/] {escape(str(exc))}", highlight=False)
+        raise typer.Exit(1)
+    if as_json:
+        print(json.dumps({"output": str(path), "mood": mood, "bpm": bpm, "length": length,
+                          "loop": bed.loop_seconds(bpm), "sections": laid}, indent=2))
+        return
+    print(f"{path}: {mood} at {bpm:g} bpm, {'one seamless loop' if length is None else f'{length:g} s'}")
+    print(f"{len(laid)} loops of {bed.loop_seconds(bpm):g} s: {', '.join(laid)}")
 
 
 @app.command()

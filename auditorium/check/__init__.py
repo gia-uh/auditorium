@@ -7,6 +7,8 @@ structural error makes geometry findings noise.
 - **structure** reads the files and never starts a browser (``structure.py``).
 - **layout** seeks Chromium to every stop and to sampled times in between and
   measures the live DOM (``layout.py`` and ``audit.js``).
+- **audio**: audio-peak mixes what the page publishes with ffmpeg
+  (``audio.py``), after the layout pass and in it.
 - **time**: overrun and cue-missing (narration, #73) read files only and run
   with the structure pass. The reading rules (reading rate, dead air,
   seek-stable) join this registry when they land.
@@ -75,6 +77,9 @@ _RULES = [
     Rule("placeholder-asset", "layout", "error", "An assets.yaml entry still showing its labelled placeholder"),
     Rule("empty", "layout", "error", "A beat with nothing visible, a chart with no data"),
     Rule("pop-in", "layout", "warning", "An element visible at full opacity before its entrance"),
+    # audio (#90): the mix render would encode, measured with ffmpeg on the
+    # audio the page publishes, so it runs with the layout pass.
+    Rule("audio-peak", "layout", "warning", "The mix clipping, or the music louder than the voice"),
 ]
 RULES: dict[str, Rule] = {r.name: r for r in _RULES}
 PASSES = ["structure", "layout"]
