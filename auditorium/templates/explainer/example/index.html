@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How a heat pump heats a house</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<main class="aud" data-format="explainer">
+  <img class="brand" src="assets/logo.svg" alt="Home energy guide">
+
+  <section data-beat="question" data-d="10" class="title" data-say="assets/vo/01.json">
+    <span class="kicker">Home energy, part 2</span>
+    <h1 data-enter="words">How a heat pump warms a house in winter</h1>
+  </section>
+
+  <section data-beat="answer" data-d="10" class="statement" data-say="assets/vo/02.json">
+    <p data-enter="words">It does not make heat. It <em>moves</em> it.</p>
+  </section>
+
+  <section data-beat="figure" data-d="10" class="figure" data-say="assets/vo/03.json">
+    <h2>Outside air in, heat up</h2>
+    <figure>
+      <svg viewBox="0 0 800 400">
+        <rect x="40" y="120" width="200" height="160" rx="16" fill="none" stroke="currentColor" stroke-width="6" data-enter="draw"/>
+        <path d="M 240 200 L 560 200" fill="none" stroke="currentColor" stroke-width="6" data-cue="compressor" data-enter="draw"/>
+        <circle cx="400" cy="200" r="36" class="fill-accent" data-cue="compressor" data-enter="pop"/>
+        <rect x="560" y="120" width="200" height="160" rx="16" fill="none" stroke="currentColor" stroke-width="6" data-cue="makes it hot" data-enter="draw"/>
+      </svg>
+      <figcaption>Cold outside, a compressor, hot inside</figcaption>
+    </figure>
+  </section>
+
+  <section data-beat="inside" data-d="10" class="columns" data-say="assets/vo/04.json">
+    <h2>One loop, two coils</h2>
+    <div data-enter="fade"><h3>Outside</h3><p>The cold liquid boils and takes heat from the air.</p></div>
+    <div data-cue="inside" data-enter="fade"><h3>Inside</h3><p>The hot gas gives its heat to the room and condenses.</p></div>
+  </section>
+
+  <section data-beat="numbers" data-d="10" class="stats" data-say="assets/vo/05.json">
+    <h2>Heat out for each unit of electricity in</h2>
+    <div class="stat" data-enter="count" data-cue="three units"><b data-to="3">0</b><span>units of heat</span></div>
+  </section>
+
+  <section data-beat="close" data-d="10" class="statement" data-say="assets/vo/06.json">
+    <p data-enter="words">Three times the heat for the <em>same power</em>.</p>
+  </section>
+
+</main>
+</body>
+</html>

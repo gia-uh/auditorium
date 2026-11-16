@@ -1,0 +1,10 @@
+/* The explainer's palette. Variables only: layout, type sizes and the safe
+   area come from auditorium.css and the format. A bundled theme (auditorium
+   template new --theme NAME) is linked before this file, so a variable set
+   here wins over it. */
+:root {
+  --aud-slide-bg: #fafaf9;
+  --aud-fg: #1c1917;
+  --aud-muted: #57534e;
+  --aud-accent: #c2410c;
+}

@@ -26,6 +26,13 @@
   provider that is missing or raises leaves the placeholder with the reason.
   None ships enabled. `help assets` says when a generated image helps and
   when it must not be used (logos, charts, text).
+- **Templates `explainer` and `short` (#107).** `explainer` is a narrated
+  landscape video of 1 to 6 minutes: a question, a statement, a figure, two
+  columns, a number and a closing line, each beat with its clip. `short` is
+  a vertical video of 15 to 60 s: a hook, a number, a line and a call to
+  action over a music bed that ducks under optional narration. Both examples
+  carry their clips and alignments and pass the check; the short renders
+  with its mix from its folder alone.
 - **Templates `pitch`, `report` and `dashboard` (#106).** `pitch` is a deck
   of big statements, stats, a photo and partner logos. `report` is a page
   that prints to A4 through `export pdf`. `dashboard` is a page of KPI

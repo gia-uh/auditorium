@@ -1,0 +1,3 @@
+summary = "a narrated landscape video, 1 to 6 minutes"
+for = "A video that explains one idea out loud: a question, a statement, a figure, a comparison, numbers, a closing line, each beat with its narration clip. Rendered to mp4."
+formats = ["explainer"]
