@@ -4,6 +4,14 @@
 
 ### Added
 
+- **Image providers as plugins (#93).** A `generate` entry in `assets.yaml`
+  resolves through the provider it names: one function, registered by an
+  installed package under the `auditorium.image_providers` entry point group,
+  that takes the prompt, size, seed and format and returns the image's bytes.
+  Its result is cached under the entry's hash like any other asset, and a
+  provider that is missing or raises leaves the placeholder with the reason.
+  None ships enabled. `help assets` says when a generated image helps and
+  when it must not be used (logos, charts, text).
 - **Templates `pitch`, `report` and `dashboard` (#106).** `pitch` is a deck
   of big statements, stats, a photo and partner logos. `report` is a page
   that prints to A4 through `export pdf`. `dashboard` is a page of KPI

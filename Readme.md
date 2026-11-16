@@ -135,8 +135,10 @@ assets/hero.png: {generate: a ball rolling downhill, size: [1280, 720], seed: 7,
 keyed by each entry's hash, and copies each to its key; an entry already
 cached is never fetched again, and no other command touches the network. An
 entry that cannot resolve gets a labelled placeholder at its size, and
-`auditorium check` fails on it (`placeholder-asset`). No image provider ships
-enabled. `auditorium help assets` has the details.
+`auditorium check` fails on it (`placeholder-asset`). An image provider is a
+plugin, one function registered under the `auditorium.image_providers` entry
+point group; none ships enabled. `auditorium help assets` has the signature
+and says when a generated image helps and when it must not be used.
 
 ## 🧱 Layouts and components
 

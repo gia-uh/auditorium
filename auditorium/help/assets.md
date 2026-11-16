@@ -28,9 +28,30 @@ so the same capture, or the same prompt and seed, never costs twice.
 An entry that cannot resolve (a missing file, a page that fails to load, an
 image no provider made) gets a labelled placeholder at its key and size, so
 the page lays out, and `auditorium check` fails on it with
-`placeholder-asset`. No image provider ships enabled. Use one for a backdrop
-or an illustration no file gives you; never for a logo, a chart, text, or
-anything that must be exact.
+`placeholder-asset`.
+
+An image provider is a plugin: a package you install that registers one
+function under the `auditorium.image_providers` entry point group, by the
+name `provider:` uses. No provider ships enabled, so a `generate` entry stays
+a placeholder until you install one. The function takes the prompt and
+returns the image's bytes:
+
+```python
+def generate(prompt: str, *, size: tuple[int, int], seed: int | None,
+             format: str) -> bytes:   # format is "png" or "jpeg", from the key
+    ...
+```
+
+```toml
+[project.entry-points."auditorium.image_providers"]
+NAME = "my_package:generate"
+```
+
+If it raises, the entry stays a placeholder and the message is the reason.
+
+Use a generated image for a backdrop or an illustration no file gives you.
+Never use one for a logo, a chart, text, or anything that must be exact: a
+diffusion model draws something like it, not it.
 
 `--json` prints each entry's outcome (cached, resolved or placeholder). The
 command ends on one count line and exits 1 while any placeholder remains.

@@ -124,6 +124,66 @@ def test_a_generation_request_is_a_placeholder_at_its_size_until_cached(tmp_path
     assert [o.status for o in resolve(folder)] == ["placeholder"]
 
 
+# ---- image provider plugins ------------------------------------------------------
+# A stand-in registered the way an installed package would be: no test calls a
+# real provider.
+
+CALLS: list[tuple] = []
+
+
+def fake_provider(prompt, *, size, seed, format):
+    CALLS.append((prompt, size, seed, format))
+    return (FIXTURES / "placeholder-asset" / "assets" / "hero.png").read_bytes()
+
+
+def broken_provider(prompt, *, size, seed, format):
+    raise RuntimeError("quota exhausted")
+
+
+@pytest.fixture
+def installed(monkeypatch):
+    import importlib.metadata as md
+
+    eps = md.EntryPoints([
+        md.EntryPoint("fake", "test_assets:fake_provider", "auditorium.image_providers"),
+        md.EntryPoint("broken", "test_assets:broken_provider", "auditorium.image_providers"),
+    ])
+    monkeypatch.setattr(md, "entry_points", lambda group=None: eps.select(group=group))
+    CALLS.clear()
+
+
+GENERATE = "assets/hero.png:\n  generate: a ball rolling downhill\n  size: [320, 180]\n  seed: 7\n"
+
+
+def test_an_installed_provider_makes_the_image_once(tmp_path, installed):
+    folder = project(tmp_path, GENERATE + "  provider: fake\n")
+    assert [o.status for o in resolve(folder)] == ["resolved"]
+    assert CALLS == [("a ball rolling downhill", (320, 180), 7, "png")]
+    made = (FIXTURES / "placeholder-asset" / "assets" / "hero.png").read_bytes()
+    assert (folder / "assets" / "hero.png").read_bytes() == made
+    assert cached(folder, load(folder)[0]).read_bytes() == made
+
+    # The same prompt and seed never cost twice.
+    assert [o.status for o in resolve(folder)] == ["cached"]
+    assert len(CALLS) == 1
+
+
+def test_a_provider_not_installed_is_a_placeholder_naming_the_installed_ones(tmp_path, installed):
+    folder = project(tmp_path, GENERATE + "  provider: dalle\n")
+    [outcome] = resolve(folder)
+    assert outcome.status == "placeholder"
+    assert outcome.detail == "no image provider named dalle is installed (installed: broken, fake)"
+    assert png_size(folder / "assets" / "hero.png") == (320, 180)
+    assert CALLS == []
+
+
+def test_a_provider_that_fails_leaves_a_placeholder_with_its_reason(tmp_path, installed):
+    folder = project(tmp_path, GENERATE + "  provider: broken\n")
+    [outcome] = resolve(folder)
+    assert (outcome.status, outcome.detail) == ("placeholder", "broken: quota exhausted")
+    assert cached(folder, load(folder)[0]) is None
+
+
 # ---- page captures ---------------------------------------------------------------
 
 
