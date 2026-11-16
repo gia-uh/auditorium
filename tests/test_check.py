@@ -40,8 +40,8 @@ WHERE = {
     "off-grid": ("index.html", 16), "safe-area": ("index.html", 15),
     "min-size": ("index.html", 15), "contrast": ("index.html", 15),
     "console-error": ("index.html", 18), "h-scroll": ("index.html", 15),
-    "placeholder": ("index.html", 15), "empty": ("index.html", 14),
-    "pop-in": ("index.html", 15),
+    "placeholder": ("index.html", 15), "placeholder-asset": ("index.html", 15),
+    "empty": ("index.html", 14), "pop-in": ("index.html", 15),
 }
 
 CLEAN = sorted([*TEMPLATES.glob("*/example"), *(ROOT / "examples").iterdir()])
@@ -59,9 +59,10 @@ def test_every_rule_has_a_fixture_a_help_page_and_a_place():
 
 def test_the_layout_rules_are_the_ones_the_browser_measures():
     """audit.js measures most layout rules; console-error is the page's own
-    log and placeholder needs only the source, both read in Python."""
+    log, and placeholder and placeholder-asset need only the source and
+    assets.yaml, all read in Python."""
     measured = set(re.search(r"const RULES = \[(.*?)\]", AUDIT).group(1).replace('"', "").replace(" ", "").split(","))
-    assert measured | {"console-error", "placeholder"} == set(LAYOUT)
+    assert measured | {"console-error", "placeholder", "placeholder-asset"} == set(LAYOUT)
 
 
 # ---- each rule fires on its fixture, at its line --------------------------------
@@ -159,8 +160,13 @@ def test_a_structure_rules_help_snippets_break_and_fix_it(rule, tmp_path):
     assert check(fixed, layout=False).findings == []
 
 
+# placeholder-asset turns on assets.yaml, which a snippet of HTML cannot carry;
+# its fixture and tests/test_assets.py hold it.
+SNIPPET_LAYOUT = [r for r in LAYOUT if r != "placeholder-asset"]
+
+
 def test_the_layout_rules_fixed_snippets_pass_together(tmp_path):
-    body = "\n".join(snippet(r, "Fixed") for r in LAYOUT)
+    body = "\n".join(snippet(r, "Fixed") for r in SNIPPET_LAYOUT)
     report = check(write_project(tmp_path / "fixed", body, fmt="deck"))
     assert report.findings == [], report.text()
 
@@ -168,7 +174,7 @@ def test_the_layout_rules_fixed_snippets_pass_together(tmp_path):
 def test_the_layout_rules_broken_snippets_fire_together(tmp_path):
     """h-scroll needs a page, and placeholder has its fixture; the rest share
     one deck, and each must still fire."""
-    rules = [r for r in LAYOUT if r != "h-scroll"]
+    rules = [r for r in SNIPPET_LAYOUT if r != "h-scroll"]
     body = "\n".join(snippet(r, "Broken") for r in rules)
     report = check(write_project(tmp_path / "broken", body, fmt="deck"))
     assert set(rules) <= {f.rule for f in report.findings}, report.text()

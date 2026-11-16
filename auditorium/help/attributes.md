@@ -24,6 +24,7 @@ seconds. Nothing here needs JavaScript.
 | `data-lang` | `<pre>` | the language to highlight |
 | `data-gain` | `<audio>` | its volume, 0 to 1 (read by the audio mix, not yet) |
 | `data-duck` | `<audio>` | lowered under a voice (read by the audio mix, not yet) |
+| `data-camera` | `<div class="camera">` | pans, zooms and tilts over its first child (below) |
 | `data-placeholder` | any element | template content still to replace; delete when done |
 | `data-layer` | a child of `<main>` | background or grade: stays on through every beat |
 
@@ -103,6 +104,24 @@ a drifting background or a grade never cuts. Layers take no clicks.
   <section data-beat="hook" data-d="4" class="title"><h1>Every beat sits on it</h1></section>
   <div data-layer="grade" style="box-shadow: inset 0 0 200px rgb(0 0 0 / 0.5)"></div>
 </main>
+```
+
+## A camera over a captured page
+
+`data-camera` lists keys, `T: field=value ...` split by `;`. T is seconds
+from the beat's start; `x` and `y` are the point of the picture, in percent
+of it, held at the window's centre; `zoom` is a scale and `tilt` leans the
+picture back in degrees. A field a key leaves out keeps its last value
+(first: x=50 y=50 zoom=1 tilt=0). `data-ease` sets the easing between keys.
+Capture the page with `auditorium assets` (`help assets`).
+
+```html
+<section data-beat="tour" class="figure">
+  <h2>The dashboard, signed in</h2>
+  <div class="camera" data-camera="0: y=10; 2.5: x=30 y=40 zoom=1.8 tilt=8; 5: y=80 zoom=1.2">
+    <img src="assets/dash.png" alt="The dashboard">
+  </div>
+</section>
 ```
 
 ## Audio

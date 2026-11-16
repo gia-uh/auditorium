@@ -67,6 +67,7 @@ _RULES = [
     Rule("console-error", "layout", "error", "A JS error at load or at any seeked time"),
     Rule("h-scroll", "layout", "error", "A page that scrolls sideways at 390 px"),
     Rule("placeholder", "layout", "error", "A data-placeholder element or asset still in the artifact"),
+    Rule("placeholder-asset", "layout", "error", "An assets.yaml entry still showing its labelled placeholder"),
     Rule("empty", "layout", "error", "A beat with nothing visible, a chart with no data"),
     Rule("pop-in", "layout", "warning", "An element visible at full opacity before its entrance"),
 ]

@@ -4,6 +4,15 @@
 
 ### Added
 
+- **`auditorium assets DIR`** resolves `assets.yaml`: files copied in, pages
+  captured whole by Chromium after an optional `state` script, and image
+  generation requests. Each lands in `.auditorium/cache/` under its entry's
+  hash and is copied to its key, so a second run fetches nothing. An entry
+  that cannot resolve gets a labelled placeholder at its size, and the new
+  check rule `placeholder-asset` fails on it. No image provider ships (#92).
+- **The camera**: `<div class="camera" data-camera="0: y=10; 3: x=30 y=60
+  zoom=1.8 tilt=8">` pans, zooms and tilts over its first child, a captured
+  page or any large picture, as tracks on the beat's timeline (#92).
 - **`render --jobs N`** splits the frames into N contiguous ranges, renders
   each in its own Chromium at the same time, and encodes the one frame
   sequence with the audio once. The frames are byte-identical to a
@@ -18,13 +27,13 @@
   the beats covers the stage and stays on through every beat, drawn under
   and over them; a beat change swaps only the content. Layers take no clicks,
   and `check` reports an unknown layer name (#85).
-- **`auditorium check DIR`** runs 20 rules over a project, in two passes:
+- **`auditorium check DIR`** runs 21 rules over a project, in two passes:
   structure (no browser: `parse`, `unknown-name`, `external-url`,
   `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
   `duration`, `duplicate-id`) and layout (Chromium, at every stop and once a second on a
   clock: `overflow`, `overlap`, `off-grid`, `safe-area`, `min-size`,
-  `contrast`, `console-error`, `h-scroll`, `placeholder`, `empty`, and the
-  warning `pop-in` at the first frame of each fading entrance). It stops
+  `contrast`, `console-error`, `h-scroll`, `placeholder`, `placeholder-asset`,
+  `empty`, and the warning `pop-in` at the first frame of each fading entrance). It stops
   after the first pass with errors. Each finding names the file, line,
   selector, beat and time, what was measured and the edit that fixes it. Text
   output shows the first 8 errors and ends on the counts; `--json` prints every

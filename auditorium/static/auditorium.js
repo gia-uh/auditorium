@@ -202,6 +202,53 @@ function idle(timeline, el, name, start, end) {
   }
 }
 
+// A camera moves its first child, a captured page or any large picture,
+// under a fixed window: data-camera="0: y=0; 3: y=60 zoom=1.8 tilt=12".
+// Each key is a time in seconds from the beat's start, then the point of the
+// content (x and y in percent of it) held at the window's centre, the zoom and
+// the tilt back in degrees. A value a key omits carries over from the key
+// before; the first starts from x=50 y=50 zoom=1 tilt=0.
+const CAMERA_FIELDS = { x: 50, y: 50, zoom: 1, tilt: 0 };
+
+export function parseCamera(value) {
+  const keys = [];
+  let last = { ...CAMERA_FIELDS };
+  for (const part of (value || "").split(";")) {
+    if (!part.trim()) continue;
+    const m = part.match(/^\s*([\d.]+)s?\s*:(.*)$/);
+    if (!m) return null;
+    const key = { ...last, t: ms(m[1]) };
+    for (const pair of m[2].trim().split(/\s+/).filter(Boolean)) {
+      const [name, v] = pair.split("=");
+      if (!(name in CAMERA_FIELDS) || v === undefined || isNaN(parseFloat(v))) return null;
+      key[name] = parseFloat(v);
+    }
+    if (keys.length && key.t < keys[keys.length - 1].t) return null;
+    keys.push(key);
+    last = key;
+  }
+  return keys.length ? keys : null;
+}
+
+export function cameraTransform({ x, y, zoom, tilt }) {
+  return `translate(50cqw, 50cqh) perspective(1600px) rotateX(${tilt}deg) scale(${zoom}) translate(${-x}%, ${-y}%)`;
+}
+
+function camera(timeline, el, keys, beatStart, ease) {
+  const content = el.firstElementChild;
+  if (!content) {
+    console.warn("auditorium: data-camera needs the picture it moves inside it", el);
+    return;
+  }
+  const first = keys[0].t;
+  const span = Math.max(1, keys[keys.length - 1].t - first);
+  timeline.tracks.push({
+    el: content,
+    keyframes: keys.map((k) => ({ transform: cameraTransform(k), offset: (k.t - first) / span, easing: ease })),
+    start: beatStart + first, end: beatStart + first + span, easing: "linear", composite: "replace",
+  });
+}
+
 function parseAnchor(value) {
   if (!value) return null;
   const [node, side] = value.split(":");
@@ -262,6 +309,13 @@ export function build(root, { tracked = [] } = {}) {
     // Track functions bound to this beat lengthen an untimed beat to fit.
     const beatTracks = tracked.filter((tr) => tr.opts.beat === id || tr.opts.beat === index);
 
+    const cameras = [];
+    for (const el of section.querySelectorAll("[data-camera]")) {
+      const keys = parseCamera(el.getAttribute("data-camera"));
+      if (keys) cameras.push({ el, keys });
+      else console.warn("auditorium: data-camera wants \"T: x=.. y=.. zoom=.. tilt=..; T: ...\" with times rising", el);
+    }
+
     let segStart = start;
     const stepEnds = [];
     const pendingHides = [];
@@ -307,6 +361,9 @@ export function build(root, { tracked = [] } = {}) {
           tr.to = tr.opts.to === undefined ? null : start + ms(tr.opts.to);
           if (tr.to !== null) segEnd = Math.max(segEnd, tr.to);
         }
+        // A camera's moves play from the beat's start; a beat that advances on
+        // a press holds its first stop until the last move ends.
+        for (const { keys } of cameras) segEnd = Math.max(segEnd, start + keys[keys.length - 1].t);
       }
       // A step with nothing timed in it still takes a millisecond, so every
       // stop is distinct and next/previous always move.
@@ -330,6 +387,8 @@ export function build(root, { tracked = [] } = {}) {
         motion(timeline, el, exit, start + length - dur, dur, e || ENTRANCES[exit].ease, true);
       }
     }
+
+    for (const { el, keys } of cameras) camera(timeline, el, keys, start, el.getAttribute("data-ease") || "ease-in-out");
 
     // Idles run from the element's entrance to the end of the beat.
     for (const el of section.querySelectorAll("[data-idle]")) {
