@@ -4,6 +4,16 @@
 
 ### Added
 
+- **`render --jobs N`** splits the frames into N contiguous ranges, renders
+  each in its own Chromium at the same time, and encodes the one frame
+  sequence with the audio once. The frames are byte-identical to a
+  single-worker render (#74).
+- **Deterministic capture on Linux**: `render` drives chrome-headless-shell
+  with `HeadlessExperimental.beginFrame` under begin-frame control, so each
+  frame is drawn only when captured. Loading pumps frames and polls until the
+  build, fonts and images are ready, since nothing ticks on its own. Other
+  platforms, and browsers without that domain, keep screenshots (#74).
+
 - **`auditorium check DIR`** runs 19 rules over a project, in two passes:
   structure (no browser: `parse`, `unknown-name`, `external-url`,
   `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
