@@ -14,12 +14,17 @@
   build, fonts and images are ready, since nothing ticks on its own. Other
   platforms, and browsers without that domain, keep screenshots (#74).
 
-- **`auditorium check DIR`** runs 19 rules over a project, in two passes:
+- **Layers.** A `<div data-layer="background">` or `data-layer="grade"` beside
+  the beats covers the stage and stays on through every beat, drawn under
+  and over them; a beat change swaps only the content. Layers take no clicks,
+  and `check` reports an unknown layer name (#85).
+- **`auditorium check DIR`** runs 20 rules over a project, in two passes:
   structure (no browser: `parse`, `unknown-name`, `external-url`,
   `missing-asset`, `wall-clock`, `bare-transition`, `time-attrs`,
   `duration`, `duplicate-id`) and layout (Chromium, at every stop and once a second on a
   clock: `overflow`, `overlap`, `off-grid`, `safe-area`, `min-size`,
-  `contrast`, `console-error`, `h-scroll`, `placeholder`, `empty`). It stops
+  `contrast`, `console-error`, `h-scroll`, `placeholder`, `empty`, and the
+  warning `pop-in` at the first frame of each fading entrance). It stops
   after the first pass with errors. Each finding names the file, line,
   selector, beat and time, what was measured and the edit that fixes it. Text
   output shows the first 8 errors and ends on the counts; `--json` prints every

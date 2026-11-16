@@ -41,6 +41,7 @@ WHERE = {
     "min-size": ("index.html", 15), "contrast": ("index.html", 15),
     "console-error": ("index.html", 18), "h-scroll": ("index.html", 15),
     "placeholder": ("index.html", 15), "empty": ("index.html", 14),
+    "pop-in": ("index.html", 15),
 }
 
 CLEAN = sorted([*TEMPLATES.glob("*/example"), *(ROOT / "examples").iterdir()])
@@ -270,3 +271,9 @@ def test_annotate_marks_every_element_with_its_line_and_keeps_the_lines():
     for number, (before, after) in enumerate(zip(page.splitlines(), marked.splitlines()), 1):
         tags = len(re.findall(r"<[a-zA-Z]", before))
         assert after.count(f'data-aud-line="{number}"') == tags
+
+
+def test_an_unknown_layer_is_an_unknown_name(tmp_path):
+    body = '<div data-layer="backdrop"></div>\n<section data-beat="b" data-d="2"><p>Beat</p></section>'
+    hits = [f for f in check(write_project(tmp_path, body), layout=False).findings if f.rule == "unknown-name"]
+    assert [f.fix for f in hits] == ['set data-layer="background"']

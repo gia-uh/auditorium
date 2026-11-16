@@ -442,3 +442,47 @@ async def test_a_fractional_step_counts_as_its_whole_press(browser_page, served,
 <section data-beat="a"><p id="half" data-step="1.5">x</p></section>""", fmt="deck")
     await load(browser_page, served(project))
     assert await js(browser_page, "() => window.auditorium.beats[0].steps") == 1
+
+
+# ---- data-layer ------------------------------------------------------------------
+
+LAYERED = """
+<div id="bg" data-layer="background" style="background: rgb(200, 0, 0)"></div>
+<section data-beat="one" data-d="2"><p id="first">First</p></section>
+<section data-beat="two" data-d="2"><p id="second">Second</p></section>
+<div id="grade" data-layer="grade" style="background: rgb(0 0 255 / 0.2)"></div>
+"""
+
+
+async def test_layers_stay_on_stage_through_every_beat(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, LAYERED)))
+    for t in (500, 3000):
+        await seek(browser_page, t)
+        assert await visible(browser_page, "#bg") is True
+        assert await visible(browser_page, "#grade") is True
+    assert await visible(browser_page, "#first") is False
+    assert await visible(browser_page, "#second") is True
+
+
+async def test_layers_draw_background_then_the_beat_then_grade(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, LAYERED)))
+    await seek(browser_page, 3000)
+    # elementsFromPoint lists paint order, topmost first; layers take no
+    # clicks, so they are made hit-testable for this one question.
+    order = await js(browser_page, """() => {
+        for (const l of document.querySelectorAll('[data-layer]')) l.style.pointerEvents = 'auto';
+        const r = document.querySelector('#second').getBoundingClientRect();
+        const ids = document.elementsFromPoint(r.left + 2, r.top + r.height / 2).map((e) => e.id);
+        return ids.filter((id) => ['bg', 'second', 'grade'].includes(id));
+    }""")
+    assert order == ["grade", "second", "bg"]
+
+
+async def test_layers_take_no_clicks(browser_page, served, tmp_path):
+    await load(browser_page, served(write_project(tmp_path, LAYERED)))
+    await seek(browser_page, 3000)
+    hit = await js(browser_page, """() => {
+        const r = document.querySelector('#second').getBoundingClientRect();
+        return document.elementFromPoint(r.left + 2, r.top + r.height / 2).id;
+    }""")
+    assert hit == "second"

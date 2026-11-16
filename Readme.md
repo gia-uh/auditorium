@@ -106,6 +106,7 @@ template's example. Every template also has a logo slot, an
 | `<aside class="notes">` | Speaker notes, shown in the presenter view only |
 | `data-cue` | Enters at the moment a phrase is said in the beat's narration. Until narration cues land (#73) it enters at its step's start and logs a warning |
 | `data-placeholder` | Set by templates on content the author must replace. The runtime ignores it; `auditorium check` fails while it remains |
+| `data-layer` | On a child of `<main>`: `background` or `grade`. It covers the stage through every beat, under or over them |
 | `<span class="math">`, `<pre data-lang>` | KaTeX and highlighted code, from vendored copies |
 
 Free JavaScript goes through `auditorium.track(fn, {beat, from, to})`, which

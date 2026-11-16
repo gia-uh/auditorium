@@ -4,7 +4,8 @@ The page is served with ``data-aud-line`` on every element (``source.annotate``)
 so what is measured in the DOM points at a line of index.html. It is seeked to
 every stop (the end of each step and beat, where a presenter pauses and an
 export takes its still) and, on a clock, once a second in between, where an
-element that leaves before its beat ends is only ever on stage. A page has no
+element that leaves before its beat ends is only ever on stage. Then it is
+seeked to the first frame of every entrance that fades in, where pop-in looks. A page has no
 stage: it is measured at 1440 and at 390 px wide.
 
 The browser never reaches the network. A request to an endpoint declared under
@@ -151,6 +152,18 @@ async def _measure(page, project: Project, raw: list, now: dict) -> None:
             await page.evaluate("(t) => window.auditorium.seek(t)", last)
             o = {**opts, "end": True, "sampled": False, "contrast": True, "hscroll": width < 1000}
             await _audit(page, o, raw, {"t": None, "beat": None, "width": width}, full_page=True)
+    await _pop_in(page, published, raw, now)
+
+
+async def _pop_in(page, published: dict, raw: list, now: dict) -> None:
+    """Seek to each entrance's first frame and look for one already shown."""
+    beats = published["beats"]
+    for t in await page.evaluate("() => window.__audEntrances()"):
+        beat = next((b["id"] for b in reversed(beats) if b["t"] <= t), None)
+        now.update(t=t, beat=beat)
+        await page.evaluate("(t) => window.auditorium.seek(t)", t)
+        for f in await page.evaluate("(t) => window.__audPopIn(t)", t):
+            raw.append((f, {"t": t, "beat": beat}))
 
 
 async def _settle(page) -> None:

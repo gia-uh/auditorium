@@ -68,6 +68,7 @@ _RULES = [
     Rule("h-scroll", "layout", "error", "A page that scrolls sideways at 390 px"),
     Rule("placeholder", "layout", "error", "A data-placeholder element or asset still in the artifact"),
     Rule("empty", "layout", "error", "A beat with nothing visible, a chart with no data"),
+    Rule("pop-in", "layout", "warning", "An element visible at full opacity before its entrance"),
 ]
 RULES: dict[str, Rule] = {r.name: r for r in _RULES}
 PASSES = ["structure", "layout"]

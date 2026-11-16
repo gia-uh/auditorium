@@ -3,6 +3,8 @@
 // layout.py seeks the page, then calls window.__audAudit(opts), which returns
 // raw findings for the rules measured in the DOM: overflow, overlap, off-grid,
 // safe-area, min-size, empty, h-scroll, and the text blocks contrast needs.
+// pop-in is measured apart, at each entrance's first frame: layout.py asks
+// window.__audEntrances() for those times and calls window.__audPopIn(t).
 // Contrast is a second call, window.__audContrast(png), once layout.py has a
 // screenshot with every glyph made transparent: the backdrop is sampled from
 // real pixels, so a gradient, a photo or a translucent card counts.
@@ -17,7 +19,7 @@
 // .math element, and SVG is a picture, not text.
 
 (() => {
-  const RULES = ["overflow", "overlap", "off-grid", "safe-area", "min-size", "empty", "h-scroll", "contrast"];
+  const RULES = ["overflow", "overlap", "off-grid", "safe-area", "min-size", "empty", "h-scroll", "contrast", "pop-in"];
   let lastBlocks = [];
 
   const lineOf = (el) => {
@@ -375,6 +377,47 @@
     }
 
     lastBlocks = opts.contrast ? blocks : [];
+    return out;
+  };
+
+  // pop-in: an entrance that fades in starts at opacity 0. Its animations are
+  // the ones on a [data-enter] element (or its word spans) whose first
+  // keyframe is opacity 0; an exit runs the same keyframes reversed, so it
+  // never matches. If at the entrance's first frame the element shows at
+  // full opacity, something outranks the animation (an !important opacity)
+  // and the element pops in, then fades.
+  function fades() {
+    const out = [];
+    for (const el of document.querySelectorAll("main.aud [data-enter]")) {
+      for (const target of [el, ...el.querySelectorAll(".aud-word")]) {
+        for (const a of target.getAnimations()) {
+          const first = a.effect.getKeyframes()[0] || {};
+          const timing = a.effect.getTiming();
+          if (first.opacity === "0" && timing.iterations === 1) out.push({ el, target, t: timing.delay });
+        }
+      }
+    }
+    return out;
+  }
+
+  window.__audEntrances = () => Array.from(new Set(fades().map((f) => f.t))).sort((a, b) => a - b);
+
+  window.__audPopIn = (t) => {
+    const out = [];
+    const seen = new Set();
+    for (const f of fades()) {
+      if (f.t !== t || seen.has(f.el)) continue;
+      const cs = getComputedStyle(f.target);
+      if (cs.visibility === "hidden" || cs.display === "none" || !f.target.getClientRects().length) continue;
+      const o = opacity(f.target);
+      if (o < 0.95) continue;
+      seen.add(f.el);
+      out.push({
+        rule: "pop-in", line: lineOf(f.el), selector: selectorOf(f.el),
+        message: `its ${f.el.getAttribute("data-enter")} entrance starts here, but it already shows at opacity ${o.toFixed(2)}, not 0`,
+        fix: "remove the opacity declared with !important on it (in its style or in theme.css), so the entrance can fade it in",
+      });
+    }
     return out;
   };
 
