@@ -14,6 +14,7 @@
      knows, each on a card, timed by attributes alone. Scrub it in
      `auditorium preview examples/motion`. -->
 <main class="aud" data-format="explainer">
+  <div data-layer="background" data-ambient="aurora particles nodes"></div>
 
   <section data-beat="entrances" data-d="5">
     <div class="grid">
@@ -48,6 +49,18 @@
     </div>
   </section>
 
+  <section data-beat="lag-and-emphasis" data-d="6">
+    <div class="grid">
+      <h2 data-col="1/13" data-enter="rise">One after another, then one at a time</h2>
+      <div class="cards" data-col="1/13" data-in="0.4" data-enter="rise" data-lag="0.25">
+        <div class="card">measure</div><div class="card">step</div><div class="card">repeat</div>
+      </div>
+      <div class="card" data-col="1/5" data-in="1.5" data-enter="pop" data-emphasis="focus" data-at="0.5">focus</div>
+      <div class="card" data-col="5/9" data-in="1.5" data-enter="pop" data-emphasis="focus" data-at="2">then this</div>
+      <div class="card" data-col="9/13" data-in="1.5" data-enter="pop" data-emphasis="pulse" data-at="3">pulse</div>
+    </div>
+  </section>
+
   <section data-beat="anchors" data-d="4">
     <div class="grid">
       <div id="from-box" class="card" data-col="1/4" data-enter="rise">from</div>
@@ -70,6 +83,7 @@
     </div>
   </section>
 
+  <div data-layer="grade" data-grade="tint vignette sweep grain"></div>
 </main>
 </body>
 </html>

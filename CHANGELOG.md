@@ -39,6 +39,18 @@
 - **The camera**: `<div class="camera" data-camera="0: y=10; 3: x=30 y=60
   zoom=1.8 tilt=8">` pans, zooms and tilts over its first child, a captured
   page or any large picture, as tracks on the beat's timeline (#92).
+- **The motion library** (#87). `data-lag` staggers an entrance over an
+  element's children. `data-emphasis="focus"` grows an element and holds it
+  until the next focus in its beat, which lets it settle back;
+  `data-emphasis="pulse"` swells once; `data-at` times either. Idles of one
+  name in a beat start at seeded phases, so neighbours never move in step.
+  `words` rises out of a blur. The background layer takes
+  `data-ambient` (`aurora`, `particles`, `nodes`) and the grade layer
+  `data-grade` (`tint`, `vignette`, `sweep`, `grain`); their pieces are
+  placed from `rng` and move on timeline tracks. `auditorium.stagger(n, lag,
+  {jitter, seed})` gives seeded start offsets to custom code. `check` reports
+  an unknown emphasis, ambient or grade name. `auditorium help motion` lists
+  every name with its defaults and when to use it.
 - **`render --jobs N`** splits the frames into N contiguous ranges, renders
   each in its own Chromium at the same time, and encodes the one frame
   sequence with the audio once. The frames are byte-identical to a

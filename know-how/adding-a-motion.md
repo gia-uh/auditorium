@@ -17,7 +17,8 @@ missing from it.
    replays (D5 in `DESIGN.md`).
 2. Add the motion to `ENTRANCES` or `IDLES` in `auditorium/static/auditorium.js`:
    a default duration, an easing, and its effects as `[keyframes, composite]`
-   pairs.
+   pairs. Emphases, ambients and grades have their own tables beside them
+   (`EMPHASES`, `AMBIENTS`, `GRADES`); the check reads every table's names.
 3. Use it in `examples/motion/index.html`.
 4. Watch it. Scrub it in `uv run auditorium preview examples/motion`, whose frame
    counter gives render frame numbers, then render just that range:

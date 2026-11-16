@@ -1,6 +1,6 @@
 """The names a project may use, read from the runtime that defines them.
 
-Formats, motions and idles are defined once, in auditorium.js; layouts and
+Formats, motions, idles, emphases, ambients and grades are defined once, in auditorium.js; layouts and
 layers once, in auditorium.css. Reading them from there instead of keeping a second list means
 a motion added to the runtime is valid in the check the same day, and a test
 cannot pass on a list that drifted from what the browser accepts.
@@ -65,8 +65,28 @@ def entrances() -> list[str]:
 
 @cache
 def idles() -> list[str]:
-    block = _block(_runtime(), "export const IDLES", "const TIMED_ATTRS")
+    block = _block(_runtime(), "export const IDLES", "export const EMPHASES")
     return re.findall(r'^\s+"?([a-z-]+)"?:\s+\{ dur', block, re.MULTILINE)
+
+
+def _names(start: str, end: str) -> list[str]:
+    block = _block(_runtime(), start, end)
+    return re.findall(r'^\s+"?([a-z-]+)"?:\s+\{ ', block, re.MULTILINE)
+
+
+@cache
+def emphases() -> list[str]:
+    return _names("export const EMPHASES", "export const AMBIENTS")
+
+
+@cache
+def ambients() -> list[str]:
+    return _names("export const AMBIENTS", "export const GRADES")
+
+
+@cache
+def grades() -> list[str]:
+    return _names("export const GRADES", "const TIMED_ATTRS")
 
 
 @cache

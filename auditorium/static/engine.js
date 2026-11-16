@@ -4,7 +4,7 @@
 //
 // A timeline is in-memory data holding element references:
 //   ops:     [{t, el, on}]   at t, el gains (on) or loses the aud-on class
-//   tracks:  [{el, keyframes, start, end, easing, composite, iterations}]
+//   tracks:  [{el, keyframes, start, end, easing, composite, iterations, iterationStart}]
 //   anchors: [{el, from: {node, side} | null, to: {node, side} | null}]
 //
 // Two invariants, both learned the hard way:
@@ -99,6 +99,8 @@ export const AuditoriumEngine = {
         fill: track.fill || "both",
         iterations: track.iterations || 1,
         direction: track.direction || "normal",
+        // Where in its loop an idle starts, so neighbours move out of step.
+        iterationStart: track.iterationStart || 0,
         // Transforms compose: an entrance's translate and an idle's float
         // both write `transform`, and under "replace" the last one wins
         // outright. Opacity must not: additive opacity sums against the
