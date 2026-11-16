@@ -377,3 +377,10 @@ def test_dead_air_counts_a_track_function_as_motion(tmp_path):
     assert "dead-air" not in {f.rule for f in check(folder).findings}
     (folder / "script.js").write_text("auditorium.track(() => {}, {beat: 'b'});\n")
     assert "dead-air" in {f.rule for f in check(folder).findings}
+
+
+def test_text_names_a_beat_without_a_time():
+    """An overrun finding names its beat but no time; text output must not crash."""
+    from auditorium.check import Report, finding
+    f = finding("overrun", "index.html", 12, "clip is 5 s, beat is 3 s", "shorten it", beat="intro")
+    assert "index.html:12  overrun  error (beat intro)" in Report(Path("."), [f], ["structure"]).text()
