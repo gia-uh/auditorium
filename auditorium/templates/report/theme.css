@@ -1,0 +1,9 @@
+/* The report's palette. Variables only: layout, type sizes and motion come
+   from auditorium.css. A bundled theme (auditorium template new --theme NAME)
+   is linked before this file, so a variable set here wins over it. */
+:root {
+  --aud-slide-bg: #ffffff;
+  --aud-fg: #1f2937;
+  --aud-muted: #4b5563;
+  --aud-accent: #0f766e;
+}

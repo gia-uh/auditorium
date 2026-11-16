@@ -137,9 +137,14 @@ async def open_project(p, project: Path, size: tuple[int, int] | None, *, begin_
     BeginFrames that draws it; a browser without HeadlessExperimental (not
     chrome-headless-shell) raises, and the caller falls back to screenshots.
     """
+    from auditorium.check.project import load
     from auditorium.server import create_app, serve_in_thread
     from auditorium.testing import chromium_path
 
+    # Live data declared under [data] in auditorium.toml is answered from its
+    # fixture, so a render or a PDF shows the data it was made with and never
+    # needs the network (section 04 of the 2026-11-10 spec).
+    live = {url: path for url, path in load(project).endpoints.items() if path.is_file()}
     served = serve_in_thread(create_app(project))
     kwargs = {"args": BEGIN_FRAME_ARGS} if begin_frame else {}
     if chromium_path():
@@ -151,6 +156,9 @@ async def open_project(p, project: Path, size: tuple[int, int] | None, *, begin_
         raise
     try:
         page = await browser.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
+        if live:
+            await page.route(lambda url: url in live,
+                             lambda route: route.fulfill(path=str(live[route.request.url])))
         if begin_frame:
             cdp = await page.context.new_cdp_session(page)
             await cdp.send("HeadlessExperimental.enable")
@@ -165,6 +173,9 @@ async def open_project(p, project: Path, size: tuple[int, int] | None, *, begin_
             until = lambda predicate: page.wait_for_function(predicate, timeout=30000)  # noqa: E731
             await page.goto(served.url + "/?embed")
         await until(READY)
+        if live and not begin_frame:
+            # The page fetches after it builds; wait until its answers are drawn.
+            await page.wait_for_load_state("networkidle")
         error = await page.evaluate("() => window.auditorium.error")
         if error:
             raise RuntimeError(f"{project}/index.html did not build: {error}")

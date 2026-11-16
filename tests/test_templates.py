@@ -46,6 +46,14 @@ def test_the_first_templates_are_talk_and_poster():
     assert {"talk", "poster"} <= set(templates())
 
 
+def test_milestone_2_adds_pitch_report_and_dashboard():
+    """Section 09 and 14, M2 (#106): pitch a deck, report and dashboard pages."""
+    known = templates()
+    assert known["pitch"]["formats"] == ["deck"]
+    assert known["report"]["formats"] == ["page"]
+    assert known["dashboard"]["formats"] == ["page"]
+
+
 @pytest.mark.parametrize("name", sorted(templates()))
 def test_a_template_states_what_it_is_for_and_its_formats(name):
     meta = templates()[name]
@@ -255,9 +263,13 @@ def test_new_json_reports_what_it_wrote(tmp_path):
 
 
 def cases():
+    """Every template in every staged format. A page has no stage and no safe
+    area: the check measures it at 1440 and 390 px (tests/test_check.py runs
+    it on every example, and the tests below on every fresh project)."""
     for name, meta in sorted(templates().items()):
         for fmt in meta["formats"]:
-            yield pytest.param(name, fmt, id=f"{name}-{fmt}")
+            if fmt in STAGE:
+                yield pytest.param(name, fmt, id=f"{name}-{fmt}")
 
 
 @pytest.mark.parametrize("name,fmt", list(cases()))
@@ -376,3 +388,86 @@ def test_new_copies_the_placeholder_logo(tmp_path, name):
     page = (dest / "index.html").read_text()
     assert re.search(r'<img class="brand" src="assets/logo.svg" [^>]*data-placeholder', page)
     assert (dest / "assets" / "logo.svg").is_file()
+
+
+# ---- milestone 2: pitch, report, dashboard (#106) -----------------------------
+
+
+@pytest.mark.parametrize("name", sorted(templates()))
+def test_a_fresh_project_fails_the_check_on_its_placeholders_only(tmp_path, name):
+    """What new writes is the example with placeholders: the check finds
+    nothing else in it, at 1440 and 390 px for a page."""
+    from auditorium.check import check
+
+    dest = tmp_path / name
+    assert run("new", name, str(dest)).exit_code == 0
+    report = check(dest)
+    assert report.findings
+    assert {f.rule for f in report.findings} == {"placeholder"}, report.text()
+
+
+def test_new_keeps_the_dashboards_data_endpoint(tmp_path):
+    """The dashboard's [data] table comes after the keys new writes, so the
+    project's auditorium.toml still parses and still declares the endpoint."""
+    dest = tmp_path / "dash"
+    assert run("new", "dashboard", str(dest)).exit_code == 0
+    config = tomllib.loads((dest / "auditorium.toml").read_text())
+    assert config["template"] == "dashboard" and config["format"] == "page"
+    sales = config["data"]["sales"]
+    assert (dest / sales["fixture"]).is_file()
+    assert sales["url"] in (dest / "script.js").read_text()
+
+
+def test_the_report_prints_to_a4(tmp_path):
+    """The done line of #106: export pdf of the report is A4, more than one
+    sheet, with its text selectable."""
+    import asyncio
+
+    from pypdf import PdfReader
+
+    from auditorium.exporter import export_pdf
+
+    out = asyncio.run(export_pdf(TEMPLATES / "report" / "example", tmp_path / "report.pdf"))
+    pages = PdfReader(str(out)).pages
+    assert len(pages) >= 2
+    for page in pages:
+        w, h = (float(v) for v in page.mediabox[2:])
+        assert abs(w - 595) < 3 and abs(h - 842) < 3, (w, h)
+    assert "Water use in the district" in pages[0].extract_text()
+
+
+def test_the_dashboard_exports_the_data_its_endpoint_answers(tmp_path):
+    """export answers the declared endpoint from its fixture and waits for
+    the page to draw it: a number only the fixture holds is in the PDF."""
+    import asyncio
+    import shutil
+
+    from pypdf import PdfReader
+
+    from auditorium.exporter import export_pdf
+
+    dest = shutil.copytree(TEMPLATES / "dashboard" / "example", tmp_path / "dash")
+    (dest / "assets" / "sales.json").write_text(
+        '[{"group": "Q1", "label": "Atlantis", "value": 987654, "count": 3}]')
+    out = asyncio.run(export_pdf(dest, tmp_path / "dash.pdf"))
+    text = "".join(p.extract_text() for p in PdfReader(str(out)).pages)
+    assert "Atlantis" in text and "987,654" in text
+
+
+async def test_a_dashboard_chip_filters_the_tiles_the_chart_and_the_table(browser_page, served, tmp_path):
+    import shutil
+
+    dest = shutil.copytree(TEMPLATES / "dashboard" / "example", tmp_path / "dash")
+    await browser_page.set_viewport_size({"width": 1440, "height": 900})
+    await browser_page.goto(served(dest) + "/?embed")
+    await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")
+    read = """() => ({value: document.getElementById('kpi-value').textContent,
+                    bars: [...document.querySelectorAll('#bars b')].map(b => b.textContent),
+                    rows: document.querySelectorAll('#rows tr').length,
+                    pressed: [...document.querySelectorAll('#chips [aria-pressed=true]')].map(b => b.textContent)})"""
+    year = await browser_page.evaluate(read)
+    await browser_page.click("#chips button[data-group=Q4]")
+    q4 = await browser_page.evaluate(read)
+    assert year["pressed"] == ["Year"] and q4["pressed"] == ["Q4"]
+    assert year["value"] == "515,500" and q4["value"] == "154,000"
+    assert q4["bars"] == ["60,000", "38,000", "30,000", "26,000"] and q4["rows"] == 4

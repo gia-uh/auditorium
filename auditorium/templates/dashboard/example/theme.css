@@ -1,0 +1,8 @@
+/* The finished dashboard's palette. Variables only: layout, type sizes and
+   motion come from auditorium.css. */
+:root {
+  --aud-slide-bg: #f8fafc;
+  --aud-fg: #0f172a;
+  --aud-muted: #475569;
+  --aud-accent: #4338ca;
+}

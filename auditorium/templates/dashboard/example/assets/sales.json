@@ -1,0 +1,18 @@
+[
+  {"group": "Q1", "label": "North", "value": 41000, "count": 520},
+  {"group": "Q1", "label": "South", "value": 30000, "count": 410},
+  {"group": "Q1", "label": "East", "value": 22000, "count": 300},
+  {"group": "Q1", "label": "West", "value": 15000, "count": 220},
+  {"group": "Q2", "label": "North", "value": 45500, "count": 570},
+  {"group": "Q2", "label": "South", "value": 31000, "count": 420},
+  {"group": "Q2", "label": "East", "value": 26000, "count": 340},
+  {"group": "Q2", "label": "West", "value": 17500, "count": 250},
+  {"group": "Q3", "label": "North", "value": 52000, "count": 630},
+  {"group": "Q3", "label": "South", "value": 36500, "count": 470},
+  {"group": "Q3", "label": "East", "value": 24000, "count": 310},
+  {"group": "Q3", "label": "West", "value": 21000, "count": 290},
+  {"group": "Q4", "label": "North", "value": 60000, "count": 700},
+  {"group": "Q4", "label": "South", "value": 38000, "count": 490},
+  {"group": "Q4", "label": "East", "value": 30000, "count": 380},
+  {"group": "Q4", "label": "West", "value": 26000, "count": 340}
+]

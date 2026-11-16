@@ -1,0 +1,3 @@
+summary = "KPI tiles, a chart, a table and filter chips over data"
+for = "A dashboard someone opens in a browser: three key numbers, a bar chart, a table and chips that filter them, drawn from data embedded in the page or fetched live from an endpoint declared in auditorium.toml."
+formats = ["page"]

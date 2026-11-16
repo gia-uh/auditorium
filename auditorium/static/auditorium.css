@@ -626,6 +626,23 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 @media (max-width: 700px) {
     .aud[data-format="page"] { --aud-cols: 1; --aud-columns: 1; --aud-inset: 1rem; }
 }
+/* No letterbox round a page: it is the document, edge to edge. */
+html:not(.aud-staged) body { background: var(--aud-slide-bg); }
+/* A section with no layout on a page is prose: a heading and paragraphs,
+   inset like the layouts. */
+.aud[data-format="page"] > section:not([class]) {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75em;
+    padding: var(--aud-inset);
+}
+/* export pdf prints a page at A4 through this. A figure, table or chart is
+   never cut across two sheets, and a heading never ends one. */
+@media print {
+    @page { size: A4; margin: 15mm 12mm; }
+    .aud[data-format="page"] > section:is(.title, .figure, .photo, .table, .chart, .stats, .cards) { break-inside: avoid; }
+    .aud[data-format="page"] :is(h1, h2, h3) { break-after: avoid; }
+}
 
 /* ---- Layouts: a class on the beat's <section> ---- */
 
@@ -867,6 +884,32 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     background: var(--aud-rule, #d1d5db);
 }
 .aud .dots > i.on { background: var(--aud-accent, currentColor); }
+
+/* chips: a row of filter buttons; aria-pressed="true" marks the one in force.
+   The page's own script reads the press and redraws what the chip filters. */
+.aud .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    justify-content: center;
+}
+.aud .chips > button {
+    font: inherit;
+    font-size: var(--aud-type-small);
+    padding: 0.3em 0.9em;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    color: var(--aud-fg, #1d1d1f);
+    background: transparent;
+    cursor: pointer;
+}
+.aud .chips > button[aria-pressed="true"] {
+    color: var(--aud-slide-bg, #fff);
+    /* An unset accent is the text colour; currentColor here would be the
+       pressed chip's own text, the background colour. */
+    background: var(--aud-accent, var(--aud-fg, #111827));
+    border-color: var(--aud-accent, var(--aud-fg, #111827));
+}
 
 /* icon: <i class="icon icon-NAME"></i>, one em square in the text colour.
    Drawn as a mask over currentColor, so every theme recolours it. */
