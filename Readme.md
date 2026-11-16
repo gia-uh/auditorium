@@ -249,7 +249,7 @@ Every `<audio>` is mixed in at its `data-in` and `data-gain`, with each beat's n
 `<audio loop>` repeats to the end, and `data-duck` music drops under the voice.
 
 ```bash
-# A 30 s music bed composed with Euterpe: pip install "auditorium[music]"
+# A 30 s music bed composed with Euterpe, bundled in auditorium: pip install "auditorium[music]"
 auditorium music --mood calm --bpm 100 --length 30 -o assets/bed.wav
 ```
 

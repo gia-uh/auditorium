@@ -61,8 +61,9 @@ and tilts over it (`help attributes`, data-camera).
 
 ## Music
 
-A music bed is an asset like any other, any audio file under `assets/`. With
-`auditorium[music]` installed, Euterpe composes one:
+A music bed is an asset like any other, any audio file under `assets/`.
+Euterpe, which ships inside auditorium, composes one once `auditorium[music]`
+is installed (it adds numpy, scipy and soundfile):
 
     auditorium music --mood calm --bpm 100 --length 30 -o assets/bed.wav
 

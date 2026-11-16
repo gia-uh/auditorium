@@ -1,8 +1,9 @@
 """``auditorium music``: a music bed composed with Euterpe, written as an asset (#90).
 
-Euterpe is the optional extra ``auditorium[music]``; the core never imports it,
-so a project can use any audio file instead and render still lays, fades and
-ducks it (``auditorium.mix``).
+Euterpe ships vendored in ``auditorium._vendor.euterpe`` (#132), and the extra
+``auditorium[music]`` installs what it needs (numpy, scipy, soundfile); the core
+never imports it, so a project can use any audio file instead and render still
+lays, fades and ducks it (``auditorium.mix``).
 
 A mood is four bars: a key, a chord progression and a bass line. Each
 arrangement is that loop played twice and rendered in one pass, and the second
@@ -51,9 +52,9 @@ class MusicError(ValueError):
 def euterpe_missing() -> str | None:
     """Why ``auditorium music`` cannot run here, or None."""
     try:
-        import euterpe  # noqa: F401
+        import auditorium._vendor.euterpe  # noqa: F401
     except ImportError:
-        return ("auditorium music needs Euterpe: install auditorium[music], "
+        return ("auditorium music needs numpy, scipy and soundfile: install auditorium[music], "
                 "or use any audio file as the bed")
     return None
 
@@ -80,8 +81,8 @@ def layout(length: float, bpm: float, sections: list[str] | None = None) -> list
 
 def score(mood: str, bpm: float, arrangement: str):
     """The Euterpe score of one arrangement, its four bars written twice."""
-    from euterpe import Key, Meter, Score, arpeggiate, chords, drums, melody
-    from euterpe.instruments import AcidBass, Kit, Pad, SynthPluck
+    from auditorium._vendor.euterpe import Key, Meter, Score, arpeggiate, chords, drums, melody
+    from auditorium._vendor.euterpe.instruments import AcidBass, Kit, Pad, SynthPluck
 
     m = MOODS[mood]
     twice = f"{m.progression} | {m.progression}"
@@ -100,7 +101,7 @@ def score(mood: str, bpm: float, arrangement: str):
 
 def loop(mood: str, bpm: float, arrangement: str, seed: int = 0):
     """One seamless loop: samples (frames, 2) at Euterpe's rate."""
-    from euterpe.sound import render
+    from auditorium._vendor.euterpe.sound import render
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")  # range notes from the instruments' defaults
@@ -121,7 +122,7 @@ def compose(mood: str, bpm: float, length: float | None = None,
         raise MusicError("sections lay loops along a length; give --length too")
 
     import numpy as np
-    from euterpe.sound.core import RATE
+    from auditorium._vendor.euterpe.sound.core import RATE
 
     order = ["full"] if length is None else layout(length, bpm, sections)
     loops = {a: loop(mood, bpm, a, seed) for a in dict.fromkeys(order)}
@@ -138,6 +139,6 @@ def compose(mood: str, bpm: float, length: float | None = None,
 def write(path: Path, mood: str, bpm: float, length: float | None = None,
           sections: list[str] | None = None, seed: int = 0) -> Path:
     """Compose and write the bed; the extension names the format (wav, flac, mp3, ...)."""
-    from euterpe.io import write as write_audio
+    from auditorium._vendor.euterpe.io import write as write_audio
 
     return write_audio(compose(mood, bpm, length, sections, seed), path)
