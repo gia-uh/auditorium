@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pitch title</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<!-- A pitch: one <section> per slide, advanced by the presenter. Each slide
+     says one thing in big type. Replace every element marked
+     data-placeholder, then delete the attribute. Delete beats you do not
+     need, copy the ones you need twice. Layouts and components: auditorium
+     help layouts. -->
+<main class="aud" data-format="deck">
+  <!-- The logo slot: on every beat, bottom right, in the band the layouts
+       leave free. Replace assets/logo.svg with your logo, or delete both. -->
+  <img class="brand" src="assets/logo.svg" alt="Logo" data-placeholder>
+
+  <section data-beat="title" class="title">
+    <span class="kicker" data-placeholder>Organisation, date</span>
+    <h1 data-enter="words" data-placeholder>What we offer, in a few words</h1>
+    <p data-in="0.8" data-enter="fade" data-placeholder>Who it is for and why now</p>
+  </section>
+
+  <!-- A statement: the problem, in one short sentence; <em> is the accent. -->
+  <section data-beat="problem" class="statement">
+    <p data-enter="words" data-placeholder>The problem your audience <em>already has</em>.</p>
+  </section>
+
+  <!-- Stats: at most three numbers; data-to counts up to the value. -->
+  <section data-beat="numbers" class="stats">
+    <h2 data-placeholder>What we have done so far</h2>
+    <div class="stat" data-enter="count"><b data-to="120" data-placeholder>0</b><span data-placeholder>first number</span></div>
+    <div class="stat" data-in="0.3" data-enter="count"><b data-to="35" data-placeholder>0</b><span data-placeholder>second number</span></div>
+    <div class="stat" data-in="0.6" data-enter="count"><b data-to="8" data-placeholder>0</b><span data-placeholder>third number</span></div>
+  </section>
+
+  <!-- A photo: the product or the people. Replace assets/photo.svg. -->
+  <section data-beat="photo" class="photo">
+    <figure>
+      <div class="frame"><img src="assets/photo.svg" alt="What the photo shows" data-placeholder></div>
+      <figcaption data-placeholder>The caption</figcaption>
+    </figure>
+  </section>
+
+  <!-- Logos: partners or clients. Put each file in assets/ and write
+       <img class="logo" src="assets/NAME.svg" alt="NAME"> in place of a span. -->
+  <section data-beat="partners" class="logos">
+    <h2 data-placeholder>Who works with us</h2>
+    <span class="logo" data-placeholder>Partner</span>
+    <span class="logo" data-placeholder>Partner</span>
+    <span class="logo" data-placeholder>Partner</span>
+  </section>
+
+  <!-- The ask: what you want from the room, and how to reach you. -->
+  <section data-beat="ask" class="title">
+    <h1 data-enter="words" data-placeholder>What we ask of you</h1>
+    <p data-in="0.8" data-enter="fade" data-placeholder>name@example.org</p>
+  </section>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report title</title>
+  <link rel="stylesheet" href="/_auditorium/auditorium.css">
+  <link rel="stylesheet" href="theme.css">
+  <script type="module" src="/_auditorium/auditorium.js"></script>
+</head>
+<body>
+<!-- A report: a page that flows like a document and prints to A4
+     (auditorium export . -f pdf). Each <section> is a part of it, read top
+     to bottom. Replace every element marked data-placeholder, then delete
+     the attribute. Copy a prose section once per part; delete the figure,
+     table or chart if the report has none. Layouts: auditorium help layouts. -->
+<main class="aud" data-format="page">
+  <!-- The logo slot: at the top of the page. Replace assets/logo.svg with
+       your logo, or delete both. -->
+  <img class="brand" src="assets/logo.svg" alt="Logo" data-placeholder>
+
+  <section data-beat="title" class="title">
+    <span class="kicker" data-placeholder>Organisation, month and year</span>
+    <h1 data-placeholder>The title of the report</h1>
+    <p data-placeholder>What it answers, in one line</p>
+  </section>
+
+  <!-- A prose section: a heading and paragraphs. Copy it once per part. -->
+  <section data-beat="summary">
+    <h2 data-placeholder>Summary</h2>
+    <p data-placeholder>The answer first: what you found and what it means for the reader, in three or four sentences.</p>
+    <p data-placeholder>What the reader should do about it.</p>
+  </section>
+
+  <!-- A figure: draw with currentColor and the fill-* and stroke-* classes. -->
+  <section data-beat="figure" class="figure">
+    <h2 data-placeholder>What the figure shows</h2>
+    <figure>
+      <svg viewBox="0 0 800 400">
+        <path d="M 40 360 L 280 200 L 520 240 L 760 40" fill="none" stroke="currentColor" stroke-width="6"/>
+        <circle cx="760" cy="40" r="18" class="fill-accent"/>
+      </svg>
+      <figcaption data-placeholder>The caption</figcaption>
+    </figure>
+  </section>
+
+  <section data-beat="table" class="table">
+    <h2 data-placeholder>The numbers</h2>
+    <table>
+      <thead><tr><th data-placeholder>item</th><th data-placeholder>value</th><th data-placeholder>change</th></tr></thead>
+      <tbody>
+        <tr><td data-placeholder>first</td><td data-placeholder>10</td><td data-placeholder>+1</td></tr>
+        <tr><td data-placeholder>second</td><td data-placeholder>20</td><td data-placeholder>+2</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- A chart: --v is each bar's length from 0 to 1, the value over the largest. -->
+  <section data-beat="chart" class="chart">
+    <h2 data-placeholder>The comparison</h2>
+    <div class="bars">
+      <div class="bar" style="--v: 1"><span data-placeholder>first</span><i></i><b data-placeholder>20</b></div>
+      <div class="bar" style="--v: 0.5"><span data-placeholder>second</span><i></i><b data-placeholder>10</b></div>
+    </div>
+  </section>
+
+  <section data-beat="conclusions">
+    <h2 data-placeholder>What comes next</h2>
+    <p data-placeholder>The decision or the next step, and who takes it.</p>
+  </section>
+
+</main>
+</body>
+</html>

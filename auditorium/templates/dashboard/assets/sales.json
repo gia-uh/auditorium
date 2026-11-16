@@ -1,0 +1,6 @@
+[
+  {"group": "Q1", "label": "First", "value": 100, "count": 10},
+  {"group": "Q1", "label": "Second", "value": 60, "count": 8},
+  {"group": "Q2", "label": "First", "value": 120, "count": 12},
+  {"group": "Q2", "label": "Second", "value": 80, "count": 9}
+]

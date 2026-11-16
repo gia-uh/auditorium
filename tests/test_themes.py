@@ -187,7 +187,8 @@ async def test_every_theme_passes_contrast_on_every_template_example(browser_pag
     failures = []
     for name, meta in sorted(templates().items()):
         dest = themed_example(name, theme, tmp_path / name)
-        w, h = STAGE[meta["formats"][0]]
+        # A page has no stage; the check measures it 1440 px wide.
+        w, h = STAGE.get(meta["formats"][0], (1440, 900))
         await browser_page.set_viewport_size({"width": w, "height": h})
         await browser_page.goto(served(dest) + "/?embed")
         await browser_page.wait_for_function("() => window.auditorium && window.auditorium.built === true")

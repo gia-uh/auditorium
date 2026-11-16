@@ -138,6 +138,11 @@ def new(name: str, dest: Path, fmt: str | None = None, theme: str | None = None)
     ]
     if theme:
         config.append(f'theme = "{theme}"')
+    # A template's own auditorium.toml (the dashboard's [data] endpoints)
+    # follows the keys new writes: TOML tables come after top-level keys.
+    own = root / "auditorium.toml"
+    if own.is_file():
+        config += ["", own.read_text().rstrip()]
     (dest / "auditorium.toml").write_text("\n".join(config) + "\n")
     (dest / "README.md").write_text(
         f"# {dest.name}\n\n"

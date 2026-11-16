@@ -1,0 +1,6 @@
+# Live data: the endpoint script.js fetches when the page opens, and the file
+# that answers for it in check, render and export (auditorium help check).
+# Point url at your API and keep the fixture in the same shape as its answer.
+[data.sales]
+url = "https://example.com/api/sales.json"
+fixture = "assets/sales.json"

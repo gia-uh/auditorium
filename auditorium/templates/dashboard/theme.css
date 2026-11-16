@@ -1,0 +1,9 @@
+/* The dashboard's palette. Variables only: layout, type sizes and motion come
+   from auditorium.css. A bundled theme (auditorium template new --theme NAME)
+   is linked before this file, so a variable set here wins over it. */
+:root {
+  --aud-slide-bg: #f8fafc;
+  --aud-fg: #0f172a;
+  --aud-muted: #475569;
+  --aud-accent: #4338ca;
+}

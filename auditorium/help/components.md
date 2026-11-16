@@ -15,6 +15,7 @@ touches a beat.
 | table | a plain `<table>` with `<thead>` and `<tbody>` |
 | bars | `<div class="bars">` of `<div class="bar" style="--v: 0.4">` rows |
 | dots | `<div class="dots">` of `<i>`, `<i class="on">` for the picked ones |
+| chips | `<div class="chips">` of `<button aria-pressed="true">` filters; the page's script redraws on a press |
 | icon | `<i class="icon icon-NAME"></i>` |
 | containers | `cards`, `stats`, `columns`, `logos` also work on a `<div>` |
 

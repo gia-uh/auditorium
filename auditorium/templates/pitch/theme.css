@@ -1,0 +1,9 @@
+/* The pitch's palette. Variables only: layout, type sizes and motion come from
+   auditorium.css. A bundled theme (auditorium template new --theme NAME) is
+   linked before this file, so a variable set here wins over it. */
+:root {
+  --aud-slide-bg: #f7f8fb;
+  --aud-fg: #111827;
+  --aud-muted: #4b5563;
+  --aud-accent: #1d4ed8;
+}
