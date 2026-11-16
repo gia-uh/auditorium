@@ -204,7 +204,9 @@ function motion(timeline, el, name, start, dur, ease, reverse) {
       const s = start + i * spec.stagger;
       push(w, O, "replace", s, dur);
       push(w, T("translateY(0.4em)", "translateY(0em)"), "add", s, dur);
-      push(w, [{ filter: "blur(6px)" }, { filter: "blur(0px)" }], "replace", s, dur);
+      // It holds nothing after it ends: any filter, even blur(0px), makes
+      // Chromium print the word as an image, so a PDF would lose its text.
+      push(w, [{ filter: "blur(6px)" }, { filter: "blur(0px)" }], "replace", s, dur, { fill: "backwards" });
     });
     return start + Math.max(0, words.length - 1) * spec.stagger + dur;
   }

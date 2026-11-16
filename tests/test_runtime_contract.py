@@ -594,7 +594,7 @@ async def test_words_rise_out_of_a_blur(browser_page, served):
     await seek(browser_page, 0)
     assert await js(browser_page, "() => getComputedStyle(document.querySelector('#words .aud-word')).filter") == "blur(6px)"
     await seek(browser_page, 3000)
-    assert await js(browser_page, "() => getComputedStyle(document.querySelector('#words .aud-word')).filter") == "blur(0px)"
+    assert await js(browser_page, "() => getComputedStyle(document.querySelector('#words .aud-word')).filter") == "none"
 
 
 # ---- data-ambient, data-grade ---------------------------------------------------
