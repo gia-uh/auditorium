@@ -124,6 +124,10 @@ def create_app(project: Path | None = None, presenter_mode: bool = False,
         # opened from disk or a bundle has no meta and navigates alone.
         mode = "true" if app.state.presenter_mode else "false"
         meta = f'<meta name="auditorium-presenter-mode" content="{mode}">'
+        if app.state.edit:
+            # The stage's half of the editor: clicks and typing on the page,
+            # reported to the preview by postMessage (static/stage-edit.js).
+            meta += f'<script type="module" src="{RUNTIME_PATH}/stage-edit.js"></script>'
         if "</head>" in html:
             html = html.replace("</head>", meta + "</head>", 1)
         else:

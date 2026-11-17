@@ -53,8 +53,12 @@ static/engine.js                               seek(t): the only runtime
   anchors. `auditorium/static/client.js` holds the player, the beat arithmetic
   and the socket the surfaces share.
 - **The shells** (`preview.html`, `presenter.html`) embed the project's own page
-  in an iframe with `?embed` and drive it through `window.auditorium`, so a
-  shell may add chrome and nothing else.
+  in an iframe with `?embed` and drive it, so a shell may add chrome and nothing
+  else. The preview drives it by `postMessage` only (`bridge()` in
+  `auditorium.js`, `stage-edit.js` under `--edit`): it runs its own player over
+  the timeline the stage announces and sends it every seek. A host may sandbox
+  the preview without `allow-same-origin`, and then the stage frame has an
+  opaque origin of its own that no window reference can reach.
 - **The server** (`server.py`) serves the folder, the runtime and the shells,
   watches the folder for hot reload, and relays presenter commands. It holds no
   playback position and compiles nothing.

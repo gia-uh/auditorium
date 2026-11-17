@@ -1,5 +1,24 @@
 # Changelog
 
+## 5.0.1 (2026-11-17)
+
+### Fixed
+
+- **`preview --edit` works inside an iframe sandboxed without
+  `allow-same-origin`.** Every frame nested in such a sandbox gets its own
+  opaque origin, so the preview could not read the stage's
+  `window.auditorium` and showed an empty stage, `frame 0 / 0`. The preview now
+  drives the stage by `postMessage` only: the stage announces its timeline, the
+  preview runs its own player over it and sends each seek, and under `--edit`
+  the server adds `stage-edit.js` to the page, which reports clicks and typed
+  text back to the editor. The host still has to answer the page's requests
+  with CORS headers; Auditorium's server does not, because under `--edit` its
+  API writes files.
+- **The runtime plays without `sessionStorage` (#136).** In an opaque origin
+  even reading `sessionStorage` throws, and the throw stopped the deck before
+  it played and before `auditorium.ready` resolved. The three uses now do
+  nothing where storage is not allowed.
+
 ## 5.0.0 (2026-11-16)
 
 ### Added

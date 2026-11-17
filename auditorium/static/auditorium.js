@@ -897,6 +897,13 @@ function keyboard() {
   return presenterMode;
 }
 
+/** sessionStorage, or nothing where the page may not use it. In a document
+ *  with an opaque origin (an iframe sandboxed without allow-same-origin) even
+ *  reading the property throws, and an escaped throw stops the deck (#136). */
+function held(op, ...args) {
+  try { return sessionStorage[op](...args); } catch { return null; }
+}
+
 function live(presenterMode) {
   // Served by `auditorium run`: the server injected the mode meta.
   if (!document.querySelector('meta[name="auditorium-presenter-mode"]')) return;
@@ -907,7 +914,7 @@ function live(presenterMode) {
     role: "audience",
     onStatus(state) { dot.innerHTML = '<span class="aud-dot aud-dot-' + state + '"></span>'; },
     onReload() {
-      sessionStorage.setItem("auditorium-t", String(player.t));
+      held("setItem", "auditorium-t", String(player.t));
       location.reload();
     },
     // The presenter broadcasts intent, not positions: every surface runs the
@@ -920,7 +927,49 @@ function live(presenterMode) {
   return presenterMode;
 }
 
+/** ?embed in a frame: the shell around it (the preview) drives this page by
+ *  messages, never by reaching into it. A host may sandbox the whole page
+ *  without allow-same-origin, and then every nested frame has its own opaque
+ *  origin, so `frame.contentWindow.auditorium` throws (ainbox#428).
+ *
+ *  Out: {aud: "ready", ...timeline} once built and on every "hello", and
+ *  {aud: "key", key} for keys pressed on the stage. In: {aud: "hello"} and
+ *  {aud: "seek", t}. The shell runs its own player over the timeline and
+ *  seeks this page frame by frame, as render does. */
+function bridge() {
+  const host = window.parent;
+  if (host === window) return () => {};
+  const announce = () => {
+    if (!built) return;
+    host.postMessage({
+      aud: "ready",
+      stage: api.stage,
+      beats: api.beats.map((b) => ({ id: b.id, t: b.t, d: b.d })),
+      timeline: {
+        stops: built.timeline.stops.map((s) => ({ t: s.t, hold_ms: s.hold_ms })),
+        markers: built.timeline.markers.map((m) => ({ t: m.t, title: m.title, notes_html: m.notes_html })),
+        duration: player.duration, fps: player.fps,
+      },
+    }, "*");
+  };
+  window.addEventListener("message", (e) => {
+    const m = e.data;
+    if (e.source !== host || !m || typeof m.aud !== "string") return;
+    if (m.aud === "hello") announce();
+    else if (m.aud === "seek" && built) player.seekTo(m.t);
+  });
+  const own = new Set([" ", "ArrowLeft", "ArrowRight", "Home", "End", "PageUp", "PageDown"]);
+  document.addEventListener("keydown", (e) => {
+    const el = e.target;
+    if (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName || "")) return;
+    if (own.has(e.key)) e.preventDefault();
+    host.postMessage({ aud: "key", key: e.key }, "*");
+  });
+  return announce;
+}
+
 async function start() {
+  const announce = embedded ? bridge() : () => {};
   const root = document.querySelector("main.aud");
   if (!root) {
     fail('no <main class="aud"> in this page');
@@ -958,13 +1007,14 @@ async function start() {
   if (!embedded) {
     const presenterMode = keyboard();
     live(presenterMode);
-    const held = sessionStorage.getItem("auditorium-t");
-    sessionStorage.removeItem("auditorium-t");
-    if (held !== null) player.seekTo(Math.min(Number(held), player.duration));
+    const at = held("getItem", "auditorium-t");
+    held("removeItem", "auditorium-t");
+    if (at !== null) player.seekTo(Math.min(Number(at), player.duration));
     // Driven audiences wait to be driven; independent pages start themselves.
     else if (!presenterMode) player.playTo(player.nextBeat(0));
   }
   readyResolve(api);
+  announce();
 }
 
 // Build once the author's own deferred scripts and modules have run, so their

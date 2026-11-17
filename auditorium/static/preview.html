@@ -32,7 +32,7 @@
     </div>
 
     <script type="module">
-    import { connect, formatTime } from "/_auditorium/client.js";
+    import { connect, createPlayer, formatTime } from "/_auditorium/client.js";
     import { startEditor } from "/_auditorium/editor.js";
 
     const frame = document.getElementById('stage-frame');
@@ -49,13 +49,44 @@
     const loop = { in: 0, out: 0, enabled: false };
     let loops = 0;      // completed wraps, for tests and for the readout
     let reloads = 0;
-    let aud = null;     // the page's window.auditorium
-    let player = null;  // its player: playback, beats, render frame numbers
+    let stage = null;   // what the stage announced: its size, beats and timeline
+    let player = null;  // playback, beats, render frame numbers, once attached
     let scale = 1;      // the stage's scale in the viewport
     const panel = document.getElementById('edit-panel');
+
+    // The stage is driven by postMessage only, never through its window: a
+    // host may sandbox this page without allow-same-origin, and then the stage
+    // frame has an opaque origin of its own (ainbox#428). So this page runs
+    // its own player over the timeline the stage announced, and its engine
+    // forwards every seek to the stage, frame by frame, as render does. The
+    // protocol is in bridge() in auditorium.js.
+    const toStage = (msg) => frame.contentWindow.postMessage(msg, '*');
+    const remote = {
+        currentTime: 0,
+        load() {},
+        seek(t) { this.currentTime = t; toStage({ aud: 'seek', t }); },
+    };
+    const local = createPlayer({ engine: remote, onFrame: (p) => { if (player) onFrame(p); } });
     const editor = startEditor({
-        panel, handles: document.getElementById('edit-handles'), frame, scale: () => scale,
+        panel, handles: document.getElementById('edit-handles'), post: toStage,
     });
+    let announced = null;  // resolves the next {aud: "ready"} from the stage
+    let navigating = false; // a reload is under way: the old stage may still answer
+    window.addEventListener('message', async (e) => {
+        const m = e.data;
+        if (e.source !== frame.contentWindow || !m || typeof m.aud !== 'string') return;
+        if (m.aud === 'ready') {
+            if (announced && !navigating) { announced(m); announced = null; }
+        } else if (m.aud === 'key') {
+            onKey({ key: m.key, target: {}, preventDefault() {} });
+        } else {
+            const ed = await editor;
+            if (ed) ed.receive(m);
+        }
+    });
+    // The stage announces itself once built; a hello asks it again, in case
+    // it built before this page listened.
+    frame.addEventListener('load', () => { navigating = false; toStage({ aud: 'hello' }); });
 
     // Stepping works in TIMELINE frames: they are what seek(t) addresses, and
     // the index is authoritative with time derived from it, so stepping
@@ -77,7 +108,7 @@
     }
 
     function stageSize() {
-        return (aud && aud.stage) || { w: 1440, h: 900 };
+        return (stage && stage.stage) || { w: 1440, h: 900 };
     }
 
     function fitStage() {
@@ -149,23 +180,16 @@
         player.seekTo(timeOf(f));
     }
 
-    /** Wait for the embedded page to build, then attach to it. */
+    /** Wait for the stage to announce its timeline, then attach to it. */
     function attach() {
         return new Promise((resolve) => {
-            const poll = () => {
-                const w = frame.contentWindow;
-                if (w && w.auditorium && w.auditorium.built) {
-                    aud = w.auditorium;
-                    player = aud.player;
-                    aud.onFrame(onFrame);
-                    // Keys pressed while the stage has focus belong to the preview.
-                    w.document.addEventListener('keydown', onKey);
-                    resolve();
-                } else {
-                    requestAnimationFrame(poll);
-                }
+            announced = (m) => {
+                stage = m;
+                local.load(m.timeline);
+                player = local;
+                resolve();
             };
-            poll();
+            toStage({ aud: 'hello' });
         });
     }
 
@@ -175,7 +199,7 @@
         drawTicks();
         drawLoopBand();
         const ed = await editor;
-        if (ed) ed.attach(aud, frame.contentWindow.document);
+        if (ed) ed.attach(stage);
         fitStage();
         player.seekTo(Math.min(held, player.duration));
     }
@@ -183,12 +207,13 @@
     async function reload() {
         const held = player ? player.t : 0;
         if (player) player.pause();
-        aud = player = null;
-        frame.contentWindow.location.reload();
+        stage = player = null;
+        navigating = true;
+        frame.src = frame.src;  // a fresh load, whatever the stage's origin
+        const attached = setup(held);
         // Hold t, not node identity. If the edit changed what exists at that
         // instant the author sees the new beat at the old time.
-        await new Promise((r) => frame.addEventListener('load', r, { once: true }));
-        await setup(held);
+        await attached;
         reloads += 1;
     }
 
