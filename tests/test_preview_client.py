@@ -40,6 +40,18 @@ async def _state(page):
     return await page.evaluate("() => window.__auditorium_preview.state()")
 
 
+async def _stage_caught_up(page):
+    """Wait until the stage shows the preview's position.
+
+    The preview sends each seek to the stage by postMessage, which the stage
+    applies a task later, so a read of the stage right after a seek can see
+    the frame before it.
+    """
+    await page.wait_for_function(
+        "() => { try { return " + STAGE + ".auditorium.t === window.__auditorium_preview.state().t; }"
+        " catch (e) { return false; } }", timeout=5000)
+
+
 async def test_the_scrubber_spans_the_whole_timeline(browser_page, live_server):
     await _ready(browser_page, live_server)
     span = await browser_page.evaluate(
@@ -65,6 +77,7 @@ async def test_dragging_the_scrubber_seeks_the_stage(browser_page, live_server):
         "() => { const s = document.getElementById('scrub');"
         " s.value = 700; s.dispatchEvent(new Event('input')); }"
     )
+    await _stage_caught_up(browser_page)
     assert await browser_page.evaluate("() => " + STAGE + ".auditorium.t") == 700
 
 
@@ -105,6 +118,7 @@ async def test_step_backward_lands_on_the_same_state_as_seeking_there_fresh(
     for _ in range(4):
         await browser_page.keyboard.press("Period")
     await browser_page.keyboard.press("Comma")
+    await _stage_caught_up(browser_page)
     stepped = await browser_page.evaluate(
         "() => { const w = " + STAGE + "; const d = w.document;"
         " const m = d.getElementById('mover');"
@@ -119,6 +133,7 @@ async def test_step_backward_lands_on_the_same_state_as_seeking_there_fresh(
         " s.value = t; s.dispatchEvent(new Event('input')); }",
         stepped_t,
     )
+    await _stage_caught_up(browser_page)
     fresh = await browser_page.evaluate(
         "() => { const w = " + STAGE + "; const d = w.document;"
         " const m = d.getElementById('mover');"
@@ -159,6 +174,7 @@ async def test_hot_reload_holds_the_current_position(browser_page, live_server):
     await browser_page.wait_for_function(
         "() => window.__auditorium_preview.state().reloads === 1", timeout=10000
     )
+    await _stage_caught_up(browser_page)
     assert await browser_page.evaluate("() => " + STAGE + ".auditorium.t") == 900
 
 
