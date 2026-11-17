@@ -115,3 +115,16 @@ async def test_a_looped_clip_is_laid_to_the_end_and_faded(tmp_path):
     assert levels[0] < steady - 6, f"no fade-in: {levels}"
     assert levels[16] > steady - 1.5, f"the loop stopped after its first pass: {levels}"
     assert levels[-1] < steady - 10, f"no fade-out at the video's end: {levels}"
+
+
+async def test_audio_shorter_than_the_timeline_does_not_cut_the_video(tmp_path, tone):
+    """A narrated video with no looping bed: the last clip ends before the
+    last beat does. The mix is padded to the video's length, so -shortest
+    keeps every frame. Before, a 40 s short came out 37.3 s long."""
+    out = await render_video(_project(tmp_path / "p", tone, d=5), tmp_path / "o.mp4", fps=10, size=(320, 240))
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,duration",
+         "-of", "csv=p=0", str(out)], capture_output=True, text=True, check=True)
+    lengths = dict(line.split(",") for line in probe.stdout.split())
+    assert abs(float(lengths["video"]) - 5) < 0.2, probe.stdout
+    assert abs(float(lengths["audio"]) - 5) < 0.2, probe.stdout
