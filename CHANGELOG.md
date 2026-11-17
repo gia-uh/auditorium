@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.0.3 (2026-11-17)
+
+### Fixed
+
+- **`check` reports an `<audio>` outside every beat.** The runtime publishes
+  only the `<audio>` inside a `<section data-beat>`, so a music bed written as
+  a child of `<main>` never played and `render` mixed nothing for it: the video
+  came out silent with a clean check. `time-attrs` now says so and points at
+  the first beat.
+
 ## 5.0.2 (2026-11-17)
 
 ### Fixed
