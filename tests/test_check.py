@@ -428,3 +428,23 @@ def test_empty_fires_on_bars_drawn_zero_px_wide(tmp_path):
     hits = [f for f in report.findings if f.rule == "empty"]
     assert hits and hits[0].line == 13, report.text()
     assert "section.chart" in hits[0].fix
+
+
+def test_time_attrs_fires_on_audio_outside_a_beat(tmp_path):
+    """The runtime publishes only the <audio> inside a beat, so a music bed
+    written as a child of <main> is never played and never mixed into the
+    render, and the video ships silent. Seen from a model asked for an
+    explainer "with this music"."""
+    body = ('<audio src="assets/bed.wav" data-in="0" data-gain="0.35" loop></audio>\n'
+            '<section data-beat="one" data-d="4" class="statement"><p>One</p></section>\n'
+            '<section data-beat="two" data-d="4" class="statement">\n'
+            '  <p>Two</p>\n'
+            '  <audio src="assets/bed.wav" data-in="0" loop></audio>\n'
+            '</section>')
+    folder = write_project(tmp_path, body)
+    write_narration(folder, "bed", [("x", 0)], 1)
+    (folder / "assets" / "vo" / "bed.wav").rename(folder / "assets" / "bed.wav")
+    hits = [f for f in check(folder, layout=False).findings
+            if f.rule == "time-attrs" and "audio" in f.message]
+    assert [f.line for f in hits] == [11], hits
+    assert "first beat" in hits[0].fix

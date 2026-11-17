@@ -104,5 +104,8 @@ def graph(project: Path, clips: list[dict], duration: float, offset: float = 0.0
             if not present:
                 chains.append(f"anullsrc=r=48000:cl=stereo,atrim=duration={span:.3f}[{bus}_tap]")
     chains.append(_sum(buses, "mixed"))
-    chains.append(f"[mixed]atrim=duration={span:.3f}[aout]")
+    # Padded, then trimmed, to the video's length: a mix that ends early (the
+    # last narration clip before the last beat ends, no looping bed) would
+    # otherwise end the video with it under render's -shortest.
+    chains.append(f"[mixed]apad=whole_dur={span:.3f},atrim=duration={span:.3f}[aout]")
     return args, ";".join(chains)

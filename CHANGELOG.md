@@ -1,5 +1,19 @@
 # Changelog
 
+## 5.0.3 (2026-11-17)
+
+### Fixed
+
+- **`check` reports an `<audio>` outside every beat.** The runtime publishes
+  only the `<audio>` inside a `<section data-beat>`, so a music bed written as
+  a child of `<main>` never played and `render` mixed nothing for it: the video
+  came out silent with a clean check. `time-attrs` now says so and points at
+  the first beat.
+- **`render` no longer cuts a video at the end of its audio.** With a mixed
+  soundtrack the encode used `-shortest`, so a narrated video with no looping
+  bed ended when its last clip did: a 40 s short came out 37.3 s long. The mix
+  is now padded to the video's length.
+
 ## 5.0.2 (2026-11-17)
 
 ### Fixed
