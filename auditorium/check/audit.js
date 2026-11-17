@@ -175,12 +175,17 @@
     for (const s of sections) blocks.push(...textBlocks(s, toStage));
     blocks = blocks.filter((b) => !skip(b.el));
     const media = [];
+    // A picture that is shown but laid out at no size: a photo in a <figure>
+    // inside a layout that gives the figure no height draws nothing (empty).
+    // Not svg: an inline <svg> of definitions is 0x0 on purpose.
+    const collapsed = [];
     for (const s of sections) {
       for (const el of s.querySelectorAll("img, video, canvas, svg")) {
         if (el.parentElement.closest("svg") || el.classList.contains("aud-overlay")) continue;
         if (!shown(el) || skip(el)) continue;
         const r = toStage(el.getBoundingClientRect());
         if (r.width > 1 && r.height > 1) media.push({ el, rect: r });
+        else if (el.tagName !== "svg") collapsed.push({ el, rect: r });
       }
     }
 
@@ -354,7 +359,24 @@
           if (!bars.querySelector(".bar")) {
             push("empty", bars, "a chart with no data: .bars holds no .bar",
                  'add one <div class="bar" style="--v: 0.5"> per value, or remove the chart');
+            continue;
           }
+          // A bar with a value is drawn by its <i>; outside section.chart the
+          // grid shrinks to its content and every bar is 0 px wide (#140).
+          const drawn = [...bars.querySelectorAll(".bar > i")].some(
+            (i) => toStage(i.getBoundingClientRect()).width > 1);
+          const valued = [...bars.querySelectorAll(".bar")].some(
+            (b) => parseFloat(getComputedStyle(b).getPropertyValue("--v")) > 0);
+          if (valued && !drawn) {
+            push("empty", bars, `a chart whose bars are drawn ${px(toStage(bars.getBoundingClientRect()).width)} px wide in all: the labels show, the bars do not`,
+                 'move the .bars into a beat of its own, <section class="chart">: only section.chart gives it the width');
+          }
+        }
+        for (const m of collapsed) {
+          if (!s.contains(m.el)) continue;
+          const what = m.el.getAttribute("src") || m.el.tagName.toLowerCase();
+          push("empty", m.el, `<${m.el.tagName.toLowerCase()}> ${what} is laid out at ${px(m.rect.width)} x ${px(m.rect.height)} px: it draws nothing`,
+               'a photo goes in a beat of its own, <section class="photo"> (help layouts), or inside a <div class="frame"> with a size');
         }
       }
     }
