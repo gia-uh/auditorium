@@ -1,6 +1,6 @@
 [project]
 name = "auditorium"
-version = "1!5.0.0"
+version = "1!5.0.1"
 description = "Present, preview and render decks, posters and videos written in HTML"
 authors = [{name = "Alejandro Piad", email = "apiad@apiad.net"}]
 license = {text = "MIT"}
