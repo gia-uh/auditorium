@@ -384,3 +384,47 @@ def test_text_names_a_beat_without_a_time():
     from auditorium.check import Report, finding
     f = finding("overrun", "index.html", 12, "clip is 5 s, beat is 3 s", "shorten it", beat="intro")
     assert "index.html:12  overrun  error (beat intro)" in Report(Path("."), [f], ["structure"]).text()
+
+
+# ---- empty: what is in the page but draws nothing ------------------------------
+
+
+def test_empty_fires_on_a_picture_laid_out_at_zero_size(tmp_path):
+    """A photo in a <figure> inside a title layout, between a kicker, a headline
+    and stats: the column has no height left and the figure shrinks to 0, so the page
+    shows no picture, and nothing said so. Seen from a model making a square
+    poster "with this photo": title, date and place, and no photo. The text is
+    the one it wrote: shorter English lines leave the figure some height."""
+    body = ('<section data-beat="poster" class="title">\n'
+            '  <span class="kicker">Taller</span>\n'
+            '  <h1>Taller de cerámica para principiantes</h1>\n'
+            '  <figure>\n'
+            '    <img src="assets/hero.png" alt="El taller">\n'
+            '  </figure>\n'
+            '  <div class="stats">\n'
+            '    <div class="stat"><b>Sábado 6 de diciembre de 2026</b><span>10:00</span></div>\n'
+            '    <div class="stat"><b>Casa de Cultura de Plaza</b><span>Vedado</span></div>\n'
+            '  </div>\n'
+            '</section>')
+    folder = write_project(tmp_path, body, fmt="square")
+    (folder / "assets").mkdir()
+    shutil.copy(FIXTURES / "placeholder-asset" / "assets" / "hero.png", folder / "assets" / "hero.png")
+    hits = [f for f in check(folder).findings if f.rule == "empty"]
+    assert [f.line for f in hits] == [15], hits
+    assert " 0 " in hits[0].message and "photo" in hits[0].fix
+
+
+def test_empty_fires_on_bars_drawn_zero_px_wide(tmp_path):
+    """gia-uh/auditorium#140: .bars outside section.chart shrinks to its content
+    and every bar is drawn 0 px wide; the labels still show."""
+    body = ('<section data-beat="fig" class="figure">\n'
+            '  <h2>Water saved</h2>\n'
+            '  <div class="bars">\n'
+            '    <div class="bar" style="--v: 1"><span>cisterns</span><i></i><b>8,400</b></div>\n'
+            '    <div class="bar" style="--v: 0.5"><span>taps</span><i></i><b>4,200</b></div>\n'
+            '  </div>\n'
+            '</section>')
+    report = check(write_project(tmp_path, body, fmt="page"))
+    hits = [f for f in report.findings if f.rule == "empty"]
+    assert hits and hits[0].line == 13, report.text()
+    assert "section.chart" in hits[0].fix

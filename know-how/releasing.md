@@ -8,10 +8,9 @@ PyPI publishing is automatic once a GitHub release is published:
 `.github/workflows/deploy.yaml` builds with `uv build` and uploads through PyPI's
 trusted publisher, so no token is involved.
 
-1. On a branch, bump the version in both places it lives: `version` in
-   `pyproject.toml` and the string printed by `_version_callback` in
-   `auditorium/cli.py`. They are separate literals, and nothing checks that they
-   match.
+1. On a branch, bump `version` in `pyproject.toml` and run `uv lock`.
+   `auditorium --version` reads the installed package's metadata, so there is
+   no second literal to change.
 2. Give `CHANGELOG.md` a heading for the version, open the PR, and merge it on
    green CI.
 3. Publish the release from `main`:
