@@ -57,7 +57,7 @@ _RULES = [
     Rule("missing-asset", "structure", "error", "A referenced file that is not in the folder"),
     Rule("wall-clock", "structure", "error", "requestAnimationFrame, timers, Date.now, performance.now or Math.random in author code"),
     Rule("bare-transition", "structure", "error", "A CSS transition in author CSS (D3)"),
-    Rule("time-attrs", "structure", "error", "A timed beat without data-d, data-in after data-out, data-cue with data-in"),
+    Rule("time-attrs", "structure", "error", "A timed beat without data-d, data-in after data-out, data-cue with data-in, an <audio> outside every beat"),
     Rule("duration", "structure", "error", "A short outside 15 to 60 s, a poster with more than one beat"),
     Rule("duplicate-id", "structure", "error", "Two elements with one id"),
     # time: narration (#73). They read the alignment and the clip's header and
@@ -75,7 +75,7 @@ _RULES = [
     Rule("h-scroll", "layout", "error", "A page that scrolls sideways at 390 px"),
     Rule("placeholder", "layout", "error", "A data-placeholder element or asset still in the artifact"),
     Rule("placeholder-asset", "layout", "error", "An assets.yaml entry still showing its labelled placeholder"),
-    Rule("empty", "layout", "error", "A beat with nothing visible, a chart with no data"),
+    Rule("empty", "layout", "error", "A beat with nothing visible, a chart with no data, a picture or bars drawn at no size"),
     Rule("pop-in", "layout", "warning", "An element visible at full opacity before its entrance"),
     # audio (#90): the mix render would encode, measured with ffmpeg on the
     # audio the page publishes, so it runs with the layout pass.

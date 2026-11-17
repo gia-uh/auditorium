@@ -184,6 +184,14 @@ def time_attrs(p: Project) -> Iterator[Finding]:
                           f"a {p.format} plays on a clock, and this beat has no length",
                           'add data-d="N" to the <section>: its length in seconds',
                           selector=section.selector(), beat=section.get("data-beat"))
+    for el in p.source.find("audio"):
+        # The runtime publishes the <audio> of each beat; one outside every
+        # beat is never played, and render mixes nothing for it.
+        if not any(a.tag == "section" and a.has("data-beat") for a in el.ancestors()):
+            yield finding("time-attrs", "index.html", el.line,
+                          f'<audio src="{el.get("src", "")}"> is outside every beat: it never plays, and the video is silent',
+                          "move it into the first beat, <section data-beat>; with loop it plays to the end of the video",
+                          selector=el.selector())
     for el in p.source.elements:
         for attr in ("data-d", "data-in", "data-out", "data-dur", "data-step"):
             if el.get(attr) is not None and _num(el, attr) is None:
