@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.0.2 (2026-11-17)
+
+### Fixed
+
+- **`check` reports a picture or a chart that is in the page but draws
+  nothing.** The `empty` rule now fires on an `<img>`, `<video>` or `<canvas>`
+  laid out at 0 x 0 (a photo in a `<figure>` inside a title beat, under a
+  headline and stats, shrinks to nothing) and on a `.bars` whose bars are
+  drawn 0 px wide outside `section.chart` (#140). Both passed the check with 0
+  errors while the page showed no photo or no bars.
+
 ## 5.0.1 (2026-11-17)
 
 ### Fixed
