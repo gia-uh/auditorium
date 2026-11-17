@@ -92,7 +92,7 @@ can pass to `render --from`.
 |---|---|
 | `cli.py` | the `auditorium` command, one Typer function per command |
 | `server.py` | serves the folder, the runtime under `/_auditorium/` and the shells; watches files for hot reload; relays presenter commands; the `--edit` endpoints |
-| `static/` | the runtime (`auditorium.js`, `engine.js`, `client.js`), the shells, `editor.js`, the CSS, vendored KaTeX, highlighter and fonts |
+| `static/` | the runtime (`auditorium.js`, `engine.js`, `client.js`), the shells, `editor.js` and its stage half `stage-edit.js`, the CSS, vendored KaTeX, highlighter and fonts |
 | `render.py` | frame schedule, Chromium capture (`beginFrame` on Linux), ffmpeg encode, `--jobs` |
 | `mix.py`, `narration.py` | the audio mix graph, and alignment files for `data-say` |
 | `exporter.py`, `sheet.py` | PNG stills and the PDF; the contact sheet |

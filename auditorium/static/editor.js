@@ -5,6 +5,11 @@
 // replaces exactly that range, runs the structure check, and pushes a reload.
 // So every edit here ends in a reload of the stage, which shows the file as
 // written rather than the DOM as typed.
+//
+// The editor never touches the stage's DOM: clicks and typing happen in the
+// stage, in stage-edit.js, which reports them by postMessage. A host may
+// sandbox the preview without allow-same-origin, and then the stage frame has
+// an opaque origin of its own (ainbox#428).
 
 const API = "/_auditorium/edit";
 
@@ -25,7 +30,7 @@ const el = (tag, props = {}, ...kids) => {
 };
 
 /** Start the editor if the server allows it; resolves to null when it does not. */
-export async function startEditor({ panel, handles, frame, scale }) {
+export async function startEditor({ panel, handles, post: toStage }) {
   const r = await fetch(API);
   if (!r.ok) return null;
   const info = await r.json();
@@ -38,7 +43,8 @@ export async function startEditor({ panel, handles, frame, scale }) {
   const source = el("section", { id: "edit-source" }, el("h3", {}, "Source"));
   panel.append(findings, selected, theme, source);
 
-  let aud = null;
+  let beats = [];      // the stage's beats, {t, d} in ms
+  let duration = 0;
   let current = null; // the selected element's data-aud-pos
   let writes = 0;
 
@@ -57,69 +63,10 @@ export async function startEditor({ panel, handles, frame, scale }) {
   }
   const write = (path, body, method) => post(path, body, method).then(report, fail);
 
-  // ---- text in place --------------------------------------------------
-  const textOnly = (node) =>
-    node.hasAttribute("data-aud-pos") && node.children.length === 0 && node.textContent.trim() !== "";
-
-  function editText(node) {
-    const pos = node.getAttribute("data-aud-pos");
-    const old = node.textContent;
-    if (node instanceof node.ownerDocument.defaultView.SVGElement) {
-      // contenteditable is unreliable on SVG text: type into an overlay.
-      const box = node.getBoundingClientRect();
-      const f = frame.getBoundingClientRect();
-      const s = scale();
-      const input = el("input", { className: "edit-overlay", value: old.trim() });
-      Object.assign(input.style, {
-        left: f.left + box.left * s + "px", top: f.top + box.top * s + "px",
-        width: Math.max(80, box.width * s) + "px", height: box.height * s + "px",
-      });
-      document.body.append(input);
-      input.focus();
-      let done = false;
-      const finish = (keep) => {
-        if (done) return;
-        done = true;
-        input.remove();
-        if (keep && input.value.trim() !== old.trim()) write("/text", { pos, old, text: input.value });
-      };
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") finish(true);
-        if (e.key === "Escape") finish(false);
-        e.stopPropagation();
-      });
-      input.addEventListener("blur", () => finish(true));
-      return;
-    }
-    node.setAttribute("contenteditable", "plaintext-only");
-    node.focus();
-    let done = false;
-    const finish = (keep) => {
-      if (done) return;
-      done = true;
-      node.removeAttribute("contenteditable");
-      if (keep && node.textContent.trim() !== old.trim()) write("/text", { pos, old, text: node.textContent });
-      else node.textContent = old;
-    };
-    node.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); finish(true); }
-      if (e.key === "Escape") finish(false);
-      e.stopPropagation(); // typing is not a preview shortcut
-    });
-    node.addEventListener("blur", () => finish(true), { once: true });
-  }
-
   // ---- attributes -------------------------------------------------------
-  function sectionOf(node) {
-    const sec = node.closest("section");
-    if (!sec || !aud) return null;
-    const all = Array.from(sec.parentElement.children).filter((c) => c.tagName === "SECTION");
-    return aud.beats[all.indexOf(sec)] || null;
-  }
-
   function attrField(node, name) {
-    const pos = node.getAttribute("data-aud-pos");
-    const value = node.getAttribute(name);
+    const pos = node.pos;
+    const value = name in node.attrs ? node.attrs[name] : null;
     let input;
     if (info.motions[name]) {
       input = el("select", { name });
@@ -135,10 +82,11 @@ export async function startEditor({ panel, handles, frame, scale }) {
     return el("label", { className: "edit-field" }, el("span", {}, name), input);
   }
 
+  /** Show a node the stage described: {pos, tag, attrs, beat}. */
   function select(node) {
-    current = node.getAttribute("data-aud-pos");
-    selected.replaceChildren(el("h3", {}, "<" + node.tagName.toLowerCase() + "> at offset " + current));
-    const names = node.getAttributeNames().filter((n) => n.startsWith("data-") && !n.startsWith("data-aud-"));
+    current = node.pos;
+    selected.replaceChildren(el("h3", {}, "<" + node.tag + "> at offset " + current));
+    const names = Object.keys(node.attrs);
     for (const m of Object.keys(info.motions)) if (!names.includes(m)) names.push(m);
     for (const n of names) selected.append(attrField(node, n));
     const add = el("input", { placeholder: "data-… to add", className: "edit-add" });
@@ -156,21 +104,21 @@ export async function startEditor({ panel, handles, frame, scale }) {
   // data-in and data-out as handles on the scrubber, in the beat's own seconds.
   function drawHandles(node) {
     handles.replaceChildren();
-    const beat = node && sectionOf(node);
-    if (!beat || !aud.duration) return;
-    const pos = node.getAttribute("data-aud-pos");
+    const beat = node && node.beat !== null ? beats[node.beat] : null;
+    if (!beat || !duration) return;
+    const pos = node.pos;
     const end = beat.t + beat.d;
     for (const name of ["data-in", "data-out"]) {
-      const v = node.getAttribute(name);
+      const v = name in node.attrs ? node.attrs[name] : null;
       const at = v === null ? (name === "data-in" ? beat.t : end) : beat.t + parseFloat(v) * 1000;
       const h = el("div", { className: "edit-handle edit-" + name, title: name });
       h.dataset.attr = name;
-      h.style.left = (at / aud.duration * 100) + "%";
+      h.style.left = (at / duration * 100) + "%";
       h.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         const rect = handles.getBoundingClientRect();
-        const t = (x) => Math.min(end, Math.max(beat.t, (x - rect.left) / rect.width * aud.duration));
-        const move = (ev) => { h.style.left = (t(ev.clientX) / aud.duration * 100) + "%"; };
+        const t = (x) => Math.min(end, Math.max(beat.t, (x - rect.left) / rect.width * duration));
+        const move = (ev) => { h.style.left = (t(ev.clientX) / duration * 100) + "%"; };
         const up = (ev) => {
           window.removeEventListener("pointermove", move);
           window.removeEventListener("pointerup", up);
@@ -221,18 +169,22 @@ export async function startEditor({ panel, handles, frame, scale }) {
   if (info.files.length) load();
 
   return {
-    /** Hook into a freshly (re)loaded stage. */
-    attach(api, doc) {
-      aud = api;
-      doc.addEventListener("click", (e) => {
-        const node = e.target.closest && e.target.closest("[data-aud-pos]");
-        if (!node) return;
-        e.preventDefault();
-        select(node);
-        if (textOnly(node)) editText(node);
-      }, true);
-      const again = current && doc.querySelector('[data-aud-pos="' + current + '"]');
-      if (again) select(again); else handles.replaceChildren();
+    /** Hook into a freshly (re)loaded stage: its beats, and the element
+     *  selected before the reload, which the stage describes again. */
+    attach(stage) {
+      beats = stage.beats;
+      duration = stage.timeline.duration;
+      if (current) toStage({ aud: "reselect", pos: current });
+      else handles.replaceChildren();
+    },
+    /** A message from the stage (stage-edit.js). */
+    receive(m) {
+      if (m.aud === "select") {
+        if (m.node) select(m.node);
+        else handles.replaceChildren();
+      } else if (m.aud === "text") {
+        write("/text", { pos: m.pos, old: m.old, text: m.text });
+      }
     },
     state: () => ({ writes, selected: current, findings: findings.textContent }),
   };
