@@ -190,7 +190,7 @@ def test_every_class_a_snippet_uses_is_defined(topic, snippet):
 async def test_every_snippet_builds(browser_page, served, tmp_path, topic, snippet):
     """A snippet is either beats (sections) or a whole <main>. Placed in a
     project of its format, it builds with no error and at least one beat."""
-    main = re.search(r'<main class="aud" data-format="(\w+)">(.*)</main>', snippet, re.DOTALL)
+    main = re.search(r'<main class="aud" data-format="(\w+)"[^>]*>(.*)</main>', snippet, re.DOTALL)
     fmt, body = (main.group(1), main.group(2)) if main else ("deck", snippet)
     folder = write_project(tmp_path / topic, body, fmt=fmt)
     write_assets(folder, body)

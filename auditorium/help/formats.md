@@ -43,6 +43,26 @@ second beat.
 </main>
 ```
 
+## Captions
+
+`data-captions="auto"` on `<main class="aud">` turns a beat's `data-say`
+narration into burned-in captions. The runtime groups the words into short
+cues, breaks at punctuation and pauses, and shows each cue while the voice says
+it. Captions are part of the page, so the preview, the render and a bundle show
+the same ones; they are visual only and do not count for `reading-time`.
+
+```html
+<main class="aud" data-format="short" data-captions="auto">
+  <section data-beat="hook" data-d="4" data-say="assets/vo/01.json">
+    <h1 data-enter="words">A ball rolling downhill</h1>
+  </section>
+</main>
+```
+
+The layer sits above the bottom safe band by default; `data-caption-position="middle"`
+moves it to the lower middle. `--aud-caption-size`, `--aud-caption-bg` and
+`--aud-caption-fg` style it.
+
 ## page
 
 A page has no stage and no beats on a clock: every section shows at once and

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Captions from narration.** `data-captions="auto"` on `<main class="aud">`
+  groups a beat's `data-say` words into short cues and shows them as timed
+  elements, so the preview, the render and a bundle agree. Cues break on
+  punctuation, pauses and length; the layer sits above the bottom safe band,
+  and `data-caption-position="middle"` moves it. Captions do not count as
+  `reading-time` words (#147).
+
 ## 5.0.3 (2026-11-17)
 
 ### Fixed

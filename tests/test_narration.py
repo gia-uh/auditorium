@@ -43,7 +43,31 @@ def test_word_alignments_and_elevenlabs_responses_are_read(tmp_path):
     words = narration.load(tmp_path, "w.json")
     assert words.cue("steps") == pytest.approx(1.0) and words.end == pytest.approx(1.4)
     assert words.clip == "w.mp3"  # no "audio" key: the sibling with the same stem
-    assert narration.load(tmp_path, "e.json").cue("you") == pytest.approx(0.3)
+    assert [(w.text, w.start, w.end) for w in words.words] == [("Small", .5, .9), ("steps.", 1.0, 1.4)]
+    assert [w.text for w in narration.load(tmp_path, "e.json").words] == ["Hi", "you"]
+
+
+def test_the_words_keep_their_punctuation_and_case(tmp_path):
+    n = narration.load(tmp_path, write_narration(tmp_path, "01", WORDS, 1.6))
+    assert [w.text for w in n.words] == ["A", "ball,", "rolling", "downhill."]
+    assert n.words[0].start == pytest.approx(0.0)
+    assert n.words[-1].end == pytest.approx(1.6, abs=0.01)
+
+
+def test_caption_cues_break_on_punctuation_pause_and_length():
+    words = [narration.Word("One", 0.0, 0.2), narration.Word("two,", 0.25, 0.5),
+             narration.Word("three", 0.6, 0.9), narration.Word("four", 1.5, 1.8),
+             narration.Word("five", 1.8, 2.0), narration.Word("six", 2.0, 2.2),
+             narration.Word("seven", 2.2, 2.4)]
+    cues = narration.caption_cues(words, max_words=3, max_chars=80, pause=0.4)
+    assert [c.text for c in cues] == ["One two,", "three", "four five six", "seven"]
+    # The comma ends the first cue; the 0.6 s pause ends the second; the
+    # max_words limit ends the third.
+    assert (cues[0].start, cues[0].end) == (0.0, 0.5)
+
+    long = narration.caption_cues([narration.Word("supercalifragilistic", 0.0, 0.5)],
+                                  max_chars=4)
+    assert [c.text for c in long] == ["supercalifragilistic"]
 
 
 def test_data_say_may_name_the_clip_and_find_its_alignment_beside_it():

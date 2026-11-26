@@ -27,12 +27,12 @@ seconds. Nothing here needs JavaScript.
 | `data-duck` | `<audio>` | pressed down by about 12 dB while a narration clip speaks |
 | `loop` | `<audio>` | repeated from its time to the end of the video, faded in over 1 s |
 | `data-camera` | `<div class="camera">` | pans, zooms and tilts over its first child (below) |
+| `data-captions` | `<main class="aud">` | `auto`: show each beat's narration as captions (help formats) |
 | `data-placeholder` | any element | template content still to replace; delete when done |
 | `data-layer` | a child of `<main>` | background or grade: stays on through every beat |
 
-An element with none of the time attributes shows for its whole beat. An
-exit without `data-out` ends with a beat that has `data-d`; in a deck, give
-it `data-out`.
+An element with none of the time attributes shows for its whole beat. An exit
+without `data-out` ends with a beat that has `data-d`; in a deck, give it `data-out`.
 
 ## A beat in a deck
 

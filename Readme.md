@@ -25,6 +25,9 @@ frame by frame, exports stills and a PDF, and bundles them into one HTML file.
 </main>
 ```
 
+On a `short`, add `data-captions="auto"` to `<main>` to burn the narration's
+words in as captions (`auditorium help attributes`).
+
 Version 5 is not on PyPI yet: `pip install auditorium` still installs 4.x,
 the Python API this replaces. Until 5.0 is released, run it from a checkout,
 which also has the examples:

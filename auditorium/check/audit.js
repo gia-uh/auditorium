@@ -453,7 +453,7 @@
     const walker = document.createTreeWalker(document.querySelector("main.aud"), NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const el = walker.currentNode.parentElement;
-      if (!el || el.closest(".katex-mathml, script, style") || !shown(el)) continue;
+      if (!el || el.closest(".katex-mathml, script, style, .aud-captions") || !shown(el)) continue;
       n += (walker.currentNode.textContent.match(/\S+/g) || []).length;
     }
     return n;

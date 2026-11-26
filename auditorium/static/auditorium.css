@@ -30,6 +30,9 @@
     --aud-list-bullet-indent: 1.5em;
     --aud-block-gap: 1.1em;
     --aud-line-height: 1.7;
+    --aud-caption-size: 1.4rem;
+    --aud-caption-bg: rgb(0 0 0 / 0.72);
+    --aud-caption-fg: #ffffff;
     --aud-aspect-ratio: 16 / 9;
     --aud-grid-columns: 12;
     --aud-grid-margin: 120px;
@@ -182,6 +185,44 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 
 /* Speaker notes are for the presenter view, never the stage. */
 .aud aside.notes { display: none; }
+
+/* ---- Captions ----
+ * A caption layer the runtime creates from a beat's narration when the page
+ * asks for data-captions="auto". Cues are timed elements, so seek(t) shows the
+ * one the voice is saying. The layer sits above the bottom safe band (where
+ * the platform puts its own chrome), never inside it. --aud-caption-* are
+ * theme variables; a project can override the size or colours.
+ */
+.aud .aud-captions {
+    position: absolute;
+    left: calc(var(--aud-safe-left) + var(--aud-inset));
+    right: calc(var(--aud-safe-right) + var(--aud-inset));
+    bottom: calc(var(--aud-safe-bottom) + 24px);
+    display: grid;
+    place-items: end center;
+    z-index: 4;
+    pointer-events: none;
+}
+.aud .aud-caption {
+    grid-area: 1 / 1;
+    max-width: 100%;
+    padding: 0.3em 0.55em;
+    border-radius: 0.3em;
+    background: var(--aud-caption-bg);
+    color: var(--aud-caption-fg);
+    font-family: var(--aud-font-body);
+    font-size: var(--aud-caption-size);
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    text-wrap: balance;
+    text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
+}
+.aud[data-caption-position="middle"] .aud-captions {
+    top: 58%;
+    bottom: auto;
+    transform: translateY(-50%);
+}
 
 /* ---- The grid ----
  * data-col and data-row place a block on the format's twelve columns; the

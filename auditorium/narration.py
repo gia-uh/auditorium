@@ -34,6 +34,25 @@ class NarrationError(ValueError):
     """An alignment file that is not JSON or has no times in it."""
 
 
+@dataclass(frozen=True)
+class Word:
+    """One spoken word, with the times the aligner gave it."""
+
+    text: str
+    start: float
+    end: float
+
+
+@dataclass(frozen=True)
+class Cue:
+    """A caption cue: the words that share the screen, and their text."""
+
+    text: str
+    start: float
+    end: float
+    words: list[Word]
+
+
 @dataclass
 class Narration:
     alignment: str  # project-relative paths, as the page names them
@@ -41,6 +60,7 @@ class Narration:
     text: str       # normalised: letters and digits, single spaces
     times: list[float]  # the start time of each character of text
     end: float      # seconds: the last character's end
+    words: list[Word]   # the words, with their original text, for captions
 
     def cue(self, phrase: str) -> float | None:
         """Seconds into the clip where ``phrase`` starts, or None if it is not said."""
@@ -49,6 +69,43 @@ class Narration:
             return None
         at = f" {self.text} ".find(f" {want} ")
         return None if at < 0 else self.times[at]
+
+
+def caption_cues(words: list[Word], *, max_words: int = 6, max_chars: int = 42,
+                 pause: float = 0.4) -> list[Cue]:
+    """Group words into caption cues: short enough to read, broken on speech.
+
+    A cue ends before the word after a full stop, a comma or another mark, after
+    a pause longer than ``pause``, or when another word would exceed
+    ``max_words`` or ``max_chars``. A single word longer than ``max_chars`` is
+    kept whole. auditorium.js implements the same rule, and the two are tested
+    against the same alignment.
+    """
+    cues: list[Cue] = []
+    current: list[Word] = []
+
+    def flush() -> None:
+        if current:
+            cues.append(Cue(" ".join(w.text for w in current), current[0].start,
+                            current[-1].end, list(current)))
+            current.clear()
+
+    for w in words:
+        text = " ".join(w.text.split())
+        if not text:
+            continue
+        word = Word(text, w.start, w.end)
+        if current and (
+            len(current) >= max_words
+            or len(" ".join([x.text for x in current] + [text])) > max_chars
+            or word.start - current[-1].end > pause
+            or current[-1].text[-1] in ".!?,;:"
+        ):
+            flush()
+        current.append(word)
+    flush()
+    return cues
+
 
 
 def paths(value: str) -> tuple[str, str | None]:
@@ -74,7 +131,7 @@ def load(folder: Path, value: str) -> Narration:
     if not chars:
         raise NarrationError(f"{alignment} has no character or word times")
     text, times = _normalise("".join(chars), starts)
-    return Narration(alignment, clip, text, times, max(ends))
+    return Narration(alignment, clip, text, times, max(ends), _words(data))
 
 
 def clip_seconds(folder: Path, n: Narration) -> float:
@@ -123,6 +180,45 @@ def _times(data) -> tuple[list[str], list[float], list[float]]:
             starts.append(start)
             ends.append(end)
     return chars, starts, ends
+
+
+def _words(data) -> list[Word]:
+    """The words with their original text, from a word or character alignment."""
+    if not isinstance(data, dict):
+        return []
+    raw = data.get("words") or [w for s in data.get("segments") or [] for w in s.get("words") or []]
+    if raw:
+        out: list[Word] = []
+        for w in raw:
+            text = str(w.get("word", w.get("text", ""))).strip()
+            try:
+                start = float(w["start"])
+                end = float(w.get("end", start))
+            except (KeyError, TypeError, ValueError):
+                continue
+            if text:
+                out.append(Word(text, start, end))
+        return out
+    a = data if "characters" in data else data.get("alignment")
+    if not isinstance(a, dict) or "characters" not in a:
+        return []
+    chars = list(a["characters"])
+    starts = [float(t) for t in a.get("character_start_times_seconds", [])]
+    ends = [float(t) for t in a.get("character_end_times_seconds", starts)]
+    out = []
+    current: Word | None = None
+    for ch, start, end in zip(chars, starts, ends):
+        if ch.isspace():
+            if current is not None:
+                out.append(current)
+                current = None
+        elif current is None:
+            current = Word(ch, start, end)
+        else:
+            current = Word(current.text + ch, current.start, end)
+    if current is not None:
+        out.append(current)
+    return [w for w in out if w.text and w.end >= w.start]
 
 
 def _normalise(text: str, times: list[float]) -> tuple[str, list[float]]:

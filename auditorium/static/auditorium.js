@@ -431,6 +431,7 @@ export function build(root, { tracked = [], narration = new Map() } = {}) {
   const formatName = root.getAttribute("data-format") || "deck";
   const format = formatName in FORMATS ? FORMATS[formatName] : FORMATS.deck;
   const exclusive = formatName !== "page";
+  const captions = root.getAttribute("data-captions") || "off";
   const timeline = { ops: [], tracks: [], tweens: [], anchors: [], stops: [], markers: [] };
   const beats = [];
   const audio = [];
@@ -609,6 +610,31 @@ export function build(root, { tracked = [], narration = new Map() } = {}) {
       });
     }
 
+    // Captions: the narration's own words, grouped into cues and shown as
+    // timed elements. They live inside the beat, so they hide with it; each
+    // cue gets an on/off op and the global [data-aud-t] rule hides it between.
+    // A page with no data-captions="auto" gets no elements at all.
+    if (captions === "auto" && say && say.words && say.words.length) {
+      const layer = document.createElement("div");
+      layer.className = "aud-captions";
+      layer.setAttribute("aria-hidden", "true");
+      section.append(layer);
+      const cues = captionCues(say.words);
+      cues.forEach((cue, i) => {
+        const el = document.createElement("span");
+        el.className = "aud-caption";
+        el.setAttribute("data-aud-t", "");
+        el.textContent = cue.text;
+        layer.append(el);
+        const at = start + ms(SAY_LEAD + cue.start);
+        const nextAt = i + 1 < cues.length
+          ? start + ms(SAY_LEAD + cues[i + 1].start)
+          : start + ms(SAY_LEAD + cue.end + 0.25);
+        timeline.ops.push({ t: at, el, on: true });
+        timeline.ops.push({ t: Math.min(nextAt, start + length), el, on: false });
+      });
+    }
+
     // The section itself: on stage for [start, start + length]. The next
     // beat begins 1 ms after a stop, so the stop itself still shows this
     // beat whole, where a presenter is paused.
@@ -706,7 +732,69 @@ function cueAt(say, phrase) {
   return at < 0 ? null : say.times[at];
 }
 
-/** Fetch every data-say alignment once: value -> {clip, text, times, end}. */
+/** Words with their original text and times, from a word or character alignment. */
+export function saidWords(data) {
+  const raw = (data && data.words) || ((data && data.segments) || []).flatMap((s) => s.words || []);
+  if (raw.length) {
+    return raw.map((w) => {
+      const text = String(w.word ?? w.text ?? "").trim();
+      const start = Number(w.start);
+      const end = Number(w.end ?? w.start);
+      return { text, start, end };
+    }).filter((w) => w.text && Number.isFinite(w.start) && Number.isFinite(w.end));
+  }
+  const a = data && ("characters" in data ? data : data.alignment);
+  if (!a || !a.characters) return [];
+  const chars = Array.from(a.characters);
+  const starts = (a.character_start_times_seconds || []).map(Number);
+  const ends = (a.character_end_times_seconds || starts).map(Number);
+  const out = [];
+  let current = null;
+  for (let i = 0; i < chars.length && i < starts.length; i += 1) {
+    const ch = chars[i];
+    if (/\s/.test(ch)) {
+      if (current) { out.push(current); current = null; }
+    } else if (current) {
+      current.text += ch;
+      current.end = Number.isFinite(ends[i]) ? ends[i] : current.end;
+    } else {
+      current = { text: ch, start: starts[i], end: Number.isFinite(ends[i]) ? ends[i] : starts[i] };
+    }
+  }
+  if (current) out.push(current);
+  return out.filter((w) => w.text && Number.isFinite(w.start) && Number.isFinite(w.end));
+}
+
+/** Group words into caption cues: short enough to read, broken on speech. */
+export function captionCues(words, { maxWords = 6, maxChars = 42, pause = 0.4 } = {}) {
+  const cues = [];
+  let current = null;
+  const flush = () => {
+    if (current) { cues.push(current); current = null; }
+  };
+  for (const w of words) {
+    const text = String(w.text || "").replace(/\s+/g, " ").trim();
+    if (!text) continue;
+    const start = Number(w.start);
+    const end = Number(w.end ?? w.start);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+    const previous = current && current.words[current.words.length - 1];
+    if (current && (
+      current.words.length >= maxWords
+      || (current.text + " " + text).length > maxChars
+      || start - current.end > pause
+      || /[.!?,;:]$/.test(previous.text)
+    )) flush();
+    if (!current) current = { text: "", start, end, words: [] };
+    current.words.push({ text, start, end });
+    current.text = current.text ? `${current.text} ${text}` : text;
+    current.end = end;
+  }
+  flush();
+  return cues;
+}
+
+/** Fetch every data-say alignment once: value -> {clip, text, times, end, words}. */
 async function loadNarration(root) {
   const out = new Map();
   const values = new Set(Array.from(root.querySelectorAll("section[data-say]"), (s) => s.getAttribute("data-say")));
@@ -721,7 +809,7 @@ async function loadNarration(root) {
       const clip = !isJson ? value : data.audio ? dir + data.audio : alignment.replace(/\.json$/i, ".mp3");
       const { chars, starts, ends } = saidTimes(data);
       if (!chars.length) throw new Error("no character or word times");
-      out.set(value, { clip, ...normaliseSaid(chars, starts), end: Math.max(...ends) });
+      out.set(value, { clip, ...normaliseSaid(chars, starts), end: Math.max(...ends), words: saidWords(data) });
     } catch (e) {
       console.warn(`auditorium: data-say="${value}": ${alignment} could not be read (${e.message})`);
     }
