@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- **`reel` format and platform targets.** `data-format="reel"` is a 1080x1920
+  timed format from 3 to 180 s, sharing `short`'s safe area and type minimum.
+  `render --target instagram|whatsapp` refuses a video over the platform's
+  length and, for WhatsApp, caps it at 16 MB; `template new short --format reel`
+  starts from the same template (#143).
+
 ### Changed
 
 - **`render` encodes MP4 for social platforms.** The default MP4 now uses

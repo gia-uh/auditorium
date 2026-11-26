@@ -59,7 +59,7 @@ def test_milestone_3_adds_explainer_and_short():
     """Section 09 and 14, M3 (#107): the two templates that play on a clock."""
     known = templates()
     assert known["explainer"]["formats"] == ["explainer"]
-    assert known["short"]["formats"] == ["short"]
+    assert known["short"]["formats"] == ["short", "reel"]
 
 
 @pytest.mark.parametrize("name", sorted(templates()))
@@ -164,6 +164,13 @@ def test_new_sets_the_format_in_the_page_and_the_config(tmp_path):
     assert run("new", "poster", str(dest), "--format", "story").exit_code == 0
     assert 'data-format="story"' in (dest / "index.html").read_text()
     assert tomllib.loads((dest / "auditorium.toml").read_text())["format"] == "story"
+
+
+def test_the_short_template_also_makes_a_reel(tmp_path):
+    dest = tmp_path / "r"
+    assert run("new", "short", str(dest), "--format", "reel").exit_code == 0
+    assert 'data-format="reel"' in (dest / "index.html").read_text()
+    assert tomllib.loads((dest / "auditorium.toml").read_text())["format"] == "reel"
 
 
 def test_new_refuses_a_format_the_template_does_not_make(tmp_path):

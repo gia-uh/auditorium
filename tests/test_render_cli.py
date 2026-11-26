@@ -15,7 +15,7 @@ def test_render_command_exists_and_documents_itself():
     # Rich colours the help when it detects CI (GITHUB_ACTIONS is enough), and
     # the escape codes split "--fps" into "-" and "-fps". Match the plain text.
     plain = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout)
-    for flag in ["--fps", "--size", "--format", "--audio", "--no-normalize", "--max-size", "--jobs"]:
+    for flag in ["--fps", "--size", "--format", "--audio", "--no-normalize", "--max-size", "--target", "--jobs"]:
         assert flag in plain
 
 
