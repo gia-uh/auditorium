@@ -41,6 +41,14 @@ A4. Text stays text: it can be selected and searched.
 
 Each still is the beat at its end, the frame a render shows there.
 
+## A cover for the video
+
+    auditorium render my-reel --cover 2.5       # 2.5 s into the timeline
+    auditorium render my-reel --cover beat:hook # the end of the beat "hook"
+
+Writes `dist/NAME-cover.png` next to the MP4, at that second or that beat's
+end. It uses the same seek, so it is the frame the video shows there.
+
 ## A contact sheet
 
     auditorium sheet my-talk                   # my-talk/dist/sheet.png

@@ -41,7 +41,7 @@ async def test_declared_audio_is_published(tmp_path, tone):
 
 
 async def test_rendered_video_has_an_audio_stream(tmp_path, tone):
-    out = await render_video(_project(tmp_path / "p", tone), tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(_project(tmp_path / "p", tone), tmp_path / "o.mp4", fps=10, size=(320, 180))
     probe = subprocess.run(
         ["ffprobe", "-v", "error", "-select_streams", "a:0",
          "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(out)],
@@ -54,7 +54,7 @@ async def test_webm_audio_is_opus(tmp_path, tone):
     """WebM does not carry AAC; the muxer rejects it. Before this, a webm with
     a bed was a broken output that only showed up at upload time."""
     out = await render_video(_project(tmp_path / "p", tone), tmp_path / "o.webm",
-                             fps=10, size=(320, 240), fmt="webm")
+                             fps=10, size=(320, 180), fmt="webm")
     probe = subprocess.run(
         ["ffprobe", "-v", "error", "-select_streams", "a:0",
          "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(out)],
@@ -65,7 +65,7 @@ async def test_webm_audio_is_opus(tmp_path, tone):
 
 async def test_audio_is_truncated_to_the_video_length(tmp_path, tone):
     """The tone is 3s; the timeline is 0.5s. -shortest must win."""
-    out = await render_video(_project(tmp_path / "p", tone), tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(_project(tmp_path / "p", tone), tmp_path / "o.mp4", fps=10, size=(320, 180))
     dur = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "format=duration",
          "-of", "csv=p=0", str(out)],
@@ -75,7 +75,7 @@ async def test_audio_is_truncated_to_the_video_length(tmp_path, tone):
 
 
 async def test_a_project_without_audio_still_renders(tmp_path):
-    out = await render_video(_project(tmp_path / "p"), tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(_project(tmp_path / "p"), tmp_path / "o.mp4", fps=10, size=(320, 180))
     assert out.exists()
 
 
@@ -83,7 +83,7 @@ async def test_audio_data_in_delays_the_tone(tmp_path, tone):
     """data-in on <audio> is part of the contract, so it needs a test: a
     parameter accepted and silently discarded is worse than none."""
     project = _project(tmp_path / "p", tone, at=1.0, d=2.0)
-    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240), normalize=False)
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 180), normalize=False)
     # The mix pads each clip with silence to its time, so the tone's onset,
     # not the stream's start, is where data-in shows.
     err = subprocess.run(
@@ -121,7 +121,7 @@ async def test_a_looped_clip_is_laid_to_the_end_and_faded(tmp_path):
       <p data-enter="fade">x</p><audio src="assets/bed.wav" loop></audio></section>""")
     (folder / "assets").mkdir()
     _tone(folder / "assets" / "bed.wav", 1)
-    out = await render_video(folder, tmp_path / "o.mp4", fps=10, size=(320, 240), normalize=False)
+    out = await render_video(folder, tmp_path / "o.mp4", fps=10, size=(320, 180), normalize=False)
     levels = _levels(out)
     assert len(levels) >= 23
     steady = levels[12]  # 3 s in: past the fade-in, before the fade-out
@@ -135,7 +135,7 @@ async def test_the_audio_is_normalized_for_social(tmp_path, tone):
     """A full-scale tone would measure far above -14 LUFS; the social encode
     brings it to the platform's reference level."""
     out = await render_video(_project(tmp_path / "p", tone, d=3.0), tmp_path / "o.mp4",
-                             fps=10, size=(320, 240))
+                             fps=10, size=(320, 180))
     err = subprocess.run(
         ["ffmpeg", "-i", str(out), "-af", "ebur128=peak=true", "-f", "null", "-"],
         capture_output=True, text=True,
@@ -149,7 +149,7 @@ async def test_audio_shorter_than_the_timeline_does_not_cut_the_video(tmp_path, 
     """A narrated video with no looping bed: the last clip ends before the
     last beat does. The mix is padded to the video's length, so -shortest
     keeps every frame. Before, a 40 s short came out 37.3 s long."""
-    out = await render_video(_project(tmp_path / "p", tone, d=5), tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(_project(tmp_path / "p", tone, d=5), tmp_path / "o.mp4", fps=10, size=(320, 180))
     probe = subprocess.run(
         ["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,duration",
          "-of", "csv=p=0", str(out)], capture_output=True, text=True, check=True)

@@ -71,7 +71,8 @@ layouts stack their columns on a phone.
 
 `render --target whatsapp` refuses a video over 90 s and caps it at 16 MB;
 `--target instagram` allows up to 180 s. The target is a platform check on top
-of the format, not a different stage.
+of the format, not a different stage. `render --size` can make a smaller video
+only at the stage's aspect; another shape would letterbox it, so it is refused.
 
 The check fails type below each format's minimum, in stage pixels: deck,
 explainer, square and portrait 24; story, short and reel 28; page 12.

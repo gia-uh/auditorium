@@ -85,6 +85,14 @@ BEGIN_FRAME_ARGS = [
 ]
 
 
+class SizeMismatch(ValueError):
+    """A requested size whose aspect would letterbox the format's stage."""
+
+
+class CoverError(ValueError):
+    """A cover request that does not name a time or a beat."""
+
+
 class BeginFrames:
     """Draw and capture frames of one page under begin-frame control.
 
@@ -209,6 +217,24 @@ async def _open_for_capture(p, project: Path, size):
     return await open_project(p, project, size)
 
 
+def _check_aspect(stage: dict | None, size: tuple[int, int] | None) -> None:
+    """Refuse a size that would letterbox the stage instead of filling it.
+
+    The stage is a fixed box scaled with ``min`` so it always fits; a render at
+    a different aspect adds bars, which is never what a vertical video wanted.
+    """
+    if not stage or size is None:
+        return
+    want = stage["w"] / stage["h"]
+    got = size[0] / size[1]
+    if abs(got - want) > 0.01:
+        raise SizeMismatch(
+            f"--size {size[0]}x{size[1]} has a different aspect than the "
+            f"{stage['w']}x{stage['h']} stage; use a size with the same aspect, "
+            "or a format whose stage is that shape (short or reel for vertical)"
+        )
+
+
 async def render_frames(
     project: Path,
     out_dir: Path,
@@ -251,6 +277,7 @@ async def render_frames(
     written = 0
     async with async_playwright() as p:
         served, browser, page, published = await _open_for_capture(p, project, size)
+        _check_aspect(published["stage"], size)
         frames = getattr(page, "begin_frames", None)
         try:
             # A project with no beats has a zero-length schedule, but it is
@@ -295,6 +322,46 @@ async def published_timeline(project: Path) -> dict:
 def frame_count(duration_ms: int, stops: list[dict], fps: int) -> int:
     """Number of frames a render of this timeline will produce."""
     return len(render_schedule(duration_ms, stops, fps))
+
+
+def cover_seconds(published: dict, value: str) -> float:
+    """The timeline second a cover request names: a number, or ``beat:ID``.
+
+    A beat's cover is its end state, the same instant ``export --beat`` prints;
+    a number is clamped to the timeline so a typo cannot seek off the end.
+    """
+    value = value.strip()
+    if value.startswith("beat:"):
+        beat_id = value[len("beat:"):]
+        beat = next((b for b in published["beats"] if b["id"] == beat_id), None)
+        if beat is None:
+            known = ", ".join(b["id"] for b in published["beats"]) or "(none)"
+            raise CoverError(f"no beat {beat_id!r}; beats: {known}")
+        return (beat["t"] + beat["d"]) / 1000
+    try:
+        seconds = float(value)
+    except ValueError:
+        raise CoverError(f"--cover wants SECONDS or beat:ID, not {value!r}") from None
+    return max(0.0, min(seconds, published["duration"] / 1000))
+
+
+async def render_cover(project: Path, output: Path, *, at: str,
+                       size: tuple[int, int] | None = None) -> Path:
+    """Write one PNG of the timeline at ``at``: a number of seconds or beat:ID."""
+    from playwright.async_api import async_playwright
+
+    project, output = Path(project), Path(output)
+    async with async_playwright() as p:
+        served, browser, page, published = await open_project(p, project, size)
+        try:
+            _check_aspect(published["stage"], size)
+            await page.evaluate("(t) => window.auditorium.seek(t)", cover_seconds(published, at) * 1000)
+            output.parent.mkdir(parents=True, exist_ok=True)
+            await page.screenshot(path=str(output))
+        finally:
+            await browser.close()
+            served.stop()
+    return output
 
 
 SIZE_PRESETS = {

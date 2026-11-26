@@ -40,27 +40,27 @@ def test_an_unknown_size_is_rejected():
 
 
 async def test_produces_a_playable_mp4(project, tmp_path):
-    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 180))
     assert out.exists() and out.stat().st_size > 0
     probe = _probe(out)
     assert "h264" in probe
-    assert "320,240" in probe
+    assert "320,180" in probe
 
 
 async def test_the_video_has_the_scheduled_frame_count(project, tmp_path):
     """Asserts on the encoded artifact, not on how many PNGs we wrote."""
-    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 180))
     assert _probe(out).split(",")[-1] == "5"
 
 
 async def test_two_renders_produce_identical_video_bytes(project, tmp_path):
-    a = await render_video(project, tmp_path / "a.mp4", fps=10, size=(320, 240))
-    b = await render_video(project, tmp_path / "b.mp4", fps=10, size=(320, 240))
+    a = await render_video(project, tmp_path / "a.mp4", fps=10, size=(320, 180))
+    b = await render_video(project, tmp_path / "b.mp4", fps=10, size=(320, 180))
     assert a.read_bytes() == b.read_bytes()
 
 
 async def test_png_sequence_format_leaves_frames_on_disk(project, tmp_path):
-    out = await render_video(project, tmp_path / "seq", fps=10, size=(320, 240),
+    out = await render_video(project, tmp_path / "seq", fps=10, size=(320, 180),
                              fmt="png-sequence")
     assert len(list(Path(out).glob("*.png"))) == 5
 
@@ -68,7 +68,7 @@ async def test_png_sequence_format_leaves_frames_on_disk(project, tmp_path):
 async def test_social_mp4_has_faststart_and_high_profile(project, tmp_path):
     """A platform upload wants the index first and a profile every phone can
     play. The frame index before mdat is what faststart buys."""
-    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 180))
     data = out.read_bytes()
     assert 0 <= data.find(b"moov") < data.find(b"mdat")
     probe = subprocess.run(
@@ -92,7 +92,7 @@ def test_a_size_cap_becomes_a_video_bitrate_budget():
 
 async def test_a_cap_that_cannot_be_met_reports_the_real_size(project, tmp_path):
     with pytest.raises(RuntimeError, match="over the 0.001 MB cap"):
-        await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240), max_size=0.001)
+        await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 180), max_size=0.001)
 
 
 async def test_max_size_is_only_for_mp4(project, tmp_path):
@@ -116,14 +116,14 @@ async def test_whatsapp_rejects_a_long_timeline_before_rendering(tmp_path):
     project = write_project(tmp_path / "p", """<section data-beat="one" data-d="120">
       <p style="font-size:40px">x</p></section>""", fmt="reel")
     with pytest.raises(ValueError, match="at most 90"):
-        await render_video(project, tmp_path / "o.mp4", fps=1, size=(320, 240),
+        await render_video(project, tmp_path / "o.mp4", fps=1, size=(180, 320),
                            end_frame=1, target="whatsapp")
 
 
 async def test_instagram_accepts_a_longer_timeline(tmp_path):
     project = write_project(tmp_path / "p", """<section data-beat="one" data-d="120">
       <p style="font-size:40px">x</p></section>""", fmt="reel")
-    out = await render_video(project, tmp_path / "o.mp4", fps=1, size=(320, 240),
+    out = await render_video(project, tmp_path / "o.mp4", fps=1, size=(180, 320),
                              end_frame=1, target="instagram")
     assert out.exists() and out.stat().st_size > 0
 
