@@ -194,18 +194,17 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
  * theme variables; a project can override the size or colours.
  */
 .aud .aud-captions {
-    position: absolute;
-    left: calc(var(--aud-safe-left) + var(--aud-inset));
-    right: calc(var(--aud-safe-right) + var(--aud-inset));
-    bottom: calc(var(--aud-safe-bottom) + 24px);
-    display: grid;
-    place-items: end center;
-    z-index: 4;
-    pointer-events: none;
+    display: contents;
 }
 .aud .aud-caption {
-    grid-area: 1 / 1;
-    max-width: 100%;
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--aud-safe-bottom) + 24px);
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - var(--aud-safe-left) - var(--aud-safe-right) - 2 * var(--aud-inset));
+    z-index: 4;
+    pointer-events: none;
     padding: 0.3em 0.55em;
     border-radius: 0.3em;
     background: var(--aud-caption-bg);
@@ -218,10 +217,10 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     text-wrap: balance;
     text-shadow: 0 1px 2px rgb(0 0 0 / 0.55);
 }
-.aud[data-caption-position="middle"] .aud-captions {
+.aud[data-caption-position="middle"] .aud-caption {
     top: 58%;
     bottom: auto;
-    transform: translateY(-50%);
+    transform: translate(-50%, -50%);
 }
 
 /* ---- The grid ----
