@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from conftest import write_project
-from auditorium.render import parse_size, render_video
+from auditorium.render import parse_size, render_video, video_bitrate_budget
 
 pytestmark = pytest.mark.skipif(
     shutil.which("ffmpeg") is None, reason="ffmpeg not installed"
@@ -63,3 +63,38 @@ async def test_png_sequence_format_leaves_frames_on_disk(project, tmp_path):
     out = await render_video(project, tmp_path / "seq", fps=10, size=(320, 240),
                              fmt="png-sequence")
     assert len(list(Path(out).glob("*.png"))) == 5
+
+
+async def test_social_mp4_has_faststart_and_high_profile(project, tmp_path):
+    """A platform upload wants the index first and a profile every phone can
+    play. The frame index before mdat is what faststart buys."""
+    out = await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240))
+    data = out.read_bytes()
+    assert 0 <= data.find(b"moov") < data.find(b"mdat")
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0",
+         "-show_entries", "stream=profile,level,pix_fmt", "-of", "csv=p=0", str(out)],
+        capture_output=True, text=True, check=True,
+    )
+    assert set(probe.stdout.strip().split(",")) == {"High", "42", "yuv420p"}
+
+
+def test_a_size_cap_becomes_a_video_bitrate_budget():
+    # 16 MB over 60 s is ~2.14 Mbit/s; 192 kbit/s is the audio's share.
+    budget = video_bitrate_budget(16, 60)
+    assert 1_950_000 < budget < 2_050_000
+    assert video_bitrate_budget(16, 60, 0) > budget
+    with pytest.raises(ValueError):
+        video_bitrate_budget(0, 60)
+    with pytest.raises(ValueError):
+        video_bitrate_budget(16, 0)
+
+
+async def test_a_cap_that_cannot_be_met_reports_the_real_size(project, tmp_path):
+    with pytest.raises(RuntimeError, match="over the 0.001 MB cap"):
+        await render_video(project, tmp_path / "o.mp4", fps=10, size=(320, 240), max_size=0.001)
+
+
+async def test_max_size_is_only_for_mp4(project, tmp_path):
+    with pytest.raises(ValueError, match="only supported for mp4"):
+        await render_video(project, tmp_path / "seq", fmt="png-sequence", max_size=1)

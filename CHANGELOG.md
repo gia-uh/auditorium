@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **`render` encodes MP4 for social platforms.** The default MP4 now uses
+  H.264 High@4.2 with a keyframe every two seconds, `+faststart` (index before
+  media), AAC 192 kbps at 48 kHz, and loudness normalized to about -14 LUFS;
+  `--no-normalize` opts out. `--max-size MB` turns a size cap into a video
+  bitrate budget and reports the real size when the cap cannot be met. WebM
+  audio is now Opus, the codec the container accepts (#146).
+
 ## 5.0.3 (2026-11-17)
 
 ### Fixed

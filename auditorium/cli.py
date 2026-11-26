@@ -175,6 +175,8 @@ def render(
     size: str = typer.Option(None, "--size", help="WIDTHxHEIGHT or a preset: 1080p, 720p, vertical, square (default: the format's stage)"),
     fmt: str = typer.Option("mp4", "--format", help="mp4, webm, or png-sequence"),
     audio: Path | None = typer.Option(None, "--audio", help="Audio bed mixed into the render"),
+    normalize: bool = typer.Option(True, "--normalize/--no-normalize", help="Normalize audio to -14 LUFS for social platforms"),
+    max_size: float | None = typer.Option(None, "--max-size", help="MP4 size cap in MB; lower the video bitrate to fit"),
     from_frame: int = typer.Option(0, "--from", help="First frame to render"),
     to_frame: int | None = typer.Option(None, "--to", help="Stop before this frame"),
     jobs: int = typer.Option(1, "--jobs", min=1, help="Split the frames into N ranges, each rendered by its own browser"),
@@ -190,6 +192,7 @@ def render(
     asyncio.run(render_video(
         folder, output, fps=fps, size=dims, audio=audio, fmt=fmt,
         start_frame=from_frame, end_frame=to_frame, jobs=jobs,
+        normalize=normalize, max_size=max_size,
     ))
     console.print(f"[green]✓[/] Rendered to [bold]{output}[/]")
 

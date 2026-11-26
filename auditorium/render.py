@@ -318,12 +318,71 @@ def parse_size(value: str) -> tuple[int, int]:
     return int(parts[0]), int(parts[1])
 
 
-def _mix(project: Path, clips: list[dict], duration: float, offset: float) -> list[str]:
+# Social platforms re-encode what they receive. An upload is treated better
+# when it already carries H.264 High at a keyframe every two seconds, AAC at
+# 48 kHz, the MP4 index at the front, and a loudness close to -14 LUFS. These
+# are defaults, not a platform profile; --no-normalize and --max-size are the
+# escape hatches.
+AUDIO_BPS = 192_000
+LOUDNORM = "loudnorm=I=-14:TP=-1.0:LRA=11"
+
+
+def _audio_args(fmt: str) -> list[str]:
+    """The audio codec and format for an output container."""
+    if fmt == "mp4":
+        return ["-c:a", "aac", "-b:a", f"{AUDIO_BPS // 1000}k", "-ar", "48000", "-ac", "2"]
+    # WebM does not carry AAC; Opus is its standard audio codec.
+    return ["-c:a", "libopus", "-b:a", "128k", "-ar", "48000", "-ac", "2"]
+
+
+def _mix(project: Path, clips: list[dict], duration: float, offset: float,
+         *, normalize: bool = True) -> list[str]:
     """ffmpeg arguments that mix ``clips`` into the audio track (``auditorium.mix``)."""
     from auditorium.mix import graph
 
     args, filters = graph(project, clips, duration, offset, first=1)
-    return [*args, "-filter_complex", filters, "-map", "0:v", "-map", "[aout]", "-c:a", "aac", "-shortest"]
+    out = "aout"
+    if normalize:
+        filters += f";[aout]{LOUDNORM}[aout_n]"
+        out = "aout_n"
+    return [*args, "-filter_complex", filters, "-map", "0:v", "-map", f"[{out}]", "-shortest"]
+
+
+def _video_args(fmt: str, fps: int, video_bps: int | None = None) -> list[str]:
+    """The video codec options for an output container."""
+    if fmt == "mp4":
+        args = [
+            "-c:v", "libx264", "-preset", "medium",
+            "-profile:v", "high", "-level", "4.2", "-pix_fmt", "yuv420p",
+            # A keyframe every two seconds is what a platform's seek bar and
+            # its re-encoder want. Disable scene-cut keyframes so the interval
+            # holds; a cut is still reproduced by the next frame.
+            "-g", str(fps * 2), "-keyint_min", str(fps * 2), "-sc_threshold", "0",
+        ]
+        if video_bps is None:
+            args += ["-crf", "19"]
+        else:
+            args += ["-b:v", str(video_bps), "-maxrate", str(video_bps), "-bufsize", str(video_bps * 2)]
+        return [*args, "-movflags", "+faststart"]
+    args = ["-c:v", "libvpx-vp9"]
+    if video_bps is not None:
+        args += ["-b:v", str(video_bps)]
+    return args
+
+
+def video_bitrate_budget(max_size_mb: float, seconds: float, audio_bps: int = AUDIO_BPS) -> int:
+    """The video bitrate (bits/s) that keeps an MP4 under ``max_size_mb``.
+
+    Two percent is left for the container. A floor of 100 kbit/s keeps a very
+    small cap from asking x264 for an impossible rate; the caller still checks
+    the encoded file and reports the real size when the cap cannot be met.
+    """
+    if max_size_mb <= 0:
+        raise ValueError("max_size must be greater than zero")
+    if seconds <= 0:
+        raise ValueError("seconds must be greater than zero")
+    total = max_size_mb * 0.98 * 8 * 1024 * 1024 / seconds
+    return max(100_000, int(total - audio_bps))
 
 
 async def render_video(
@@ -337,11 +396,18 @@ async def render_video(
     start_frame: int = 0,
     end_frame: int | None = None,
     jobs: int = 1,
+    normalize: bool = True,
+    max_size: float | None = None,
 ) -> Path:
     """Render a project to a video file (or a PNG sequence directory)."""
     output = Path(output)
     project = Path(project)
     frame_range = {"start_frame": start_frame, "end_frame": end_frame, "jobs": jobs}
+
+    if max_size is not None and fmt != "mp4":
+        raise ValueError("--max-size is only supported for mp4; use --format mp4")
+    if max_size is not None and max_size <= 0:
+        raise ValueError("--max-size must be greater than zero")
 
     if fmt == "png-sequence":
         await render_frames(project, output, fps=fps, size=size, **frame_range)
@@ -360,12 +426,17 @@ async def render_video(
 
     with tempfile.TemporaryDirectory(prefix="auditorium-render-") as tmp:
         frames = Path(tmp)
-        await render_frames(project, frames, fps=fps, size=size, **frame_range)
+        written = await render_frames(project, frames, fps=fps, size=size, **frame_range)
         # A ranged render's files start at frame-%06d of the RANGE start, so
         # ffmpeg needs to be told where the sequence begins or it finds nothing.
         first_index = start_frame
 
-        codec = ["-c:v", "libx264", "-pix_fmt", "yuv420p"] if fmt == "mp4" else ["-c:v", "libvpx-vp9"]
+        # A size cap is a bitrate budget over the frames actually written, so
+        # a ranged render gets the same treatment as a full one.
+        has_audio = audio is not None or bool(clips)
+        video_bps = (video_bitrate_budget(max_size, written / fps, AUDIO_BPS if has_audio else 0)
+                     if max_size is not None else None)
+        codec = _video_args(fmt, fps, video_bps)
         cmd = [
             "ffmpeg", "-y",
             "-framerate", str(fps),
@@ -373,11 +444,15 @@ async def render_video(
             "-i", str(frames / "frame-%06d.png"),
         ]
         if audio is not None:
-            cmd += ["-i", str(audio), "-c:a", "aac", "-shortest"]
+            cmd += ["-i", str(audio)]
+            if normalize:
+                cmd += ["-af", LOUDNORM]
+            cmd += [*_audio_args(fmt), "-shortest"]
         elif clips:
             # The video's length counts the frames a stop holds, not only the timeline.
             length = frame_count(published["duration"], published["stops"], fps) / fps
-            cmd += _mix(project, clips, length, start_frame / fps)
+            cmd += _mix(project, clips, length, start_frame / fps, normalize=normalize)
+            cmd += _audio_args(fmt)
         cmd += codec
         # Strip metadata so two renders of the same project are byte-identical;
         # ffmpeg otherwise stamps an encoder string and creation time.
@@ -388,5 +463,13 @@ async def render_video(
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"ffmpeg failed (rc={result.returncode}):\n{result.stderr[-2000:]}")
+
+        if max_size is not None:
+            actual = output.stat().st_size / (1024 * 1024)
+            if actual > max_size:
+                raise RuntimeError(
+                    f"the encode is {actual:.2f} MB, over the {max_size:g} MB cap. "
+                    f"Raise --max-size, shorten the video, or lower the audio bitrate."
+                )
 
     return output
