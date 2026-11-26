@@ -147,5 +147,5 @@ def _onset(path) -> float:
 @needs_ffmpeg
 async def test_render_mixes_the_clip_at_its_beats_lead(tmp_path, narrated):
     assert (await published_timeline(narrated))["audio"][0]["src"] == "assets/vo/01.wav"
-    out = await render_video(narrated, tmp_path / "o.mp4", fps=10, size=(320, 240))
+    out = await render_video(narrated, tmp_path / "o.mp4", fps=10, size=(320, 180))
     assert _onset(out) == pytest.approx(narration.LEAD, abs=0.08)

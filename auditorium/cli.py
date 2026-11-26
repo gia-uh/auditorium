@@ -178,24 +178,35 @@ def render(
     normalize: bool = typer.Option(True, "--normalize/--no-normalize", help="Normalize audio to -14 LUFS for social platforms"),
     max_size: float | None = typer.Option(None, "--max-size", help="MP4 size cap in MB; lower the video bitrate to fit"),
     target: str = typer.Option(None, "--target", help="Platform limit: instagram (<=180 s) or whatsapp (<=90 s, <=16 MB)"),
+    cover: str = typer.Option(None, "--cover", help="Also write a cover PNG at SECONDS or beat:ID"),
     from_frame: int = typer.Option(0, "--from", help="First frame to render"),
     to_frame: int | None = typer.Option(None, "--to", help="Stop before this frame"),
     jobs: int = typer.Option(1, "--jobs", min=1, help="Split the frames into N ranges, each rendered by its own browser"),
 ) -> None:
     """Render a project to video by stepping frames deterministically."""
-    from auditorium.render import render_video
+    from auditorium.render import CoverError, SizeMismatch, render_cover, render_video
 
     folder = _project(project)
     dims = _size(size)
     if output is None:
         output = folder / "dist" / ("frames" if fmt == "png-sequence" else f"{folder.name}.{fmt}")
 
-    asyncio.run(render_video(
-        folder, output, fps=fps, size=dims, audio=audio, fmt=fmt,
-        start_frame=from_frame, end_frame=to_frame, jobs=jobs,
-        normalize=normalize, max_size=max_size, target=target,
-    ))
+    try:
+        asyncio.run(render_video(
+            folder, output, fps=fps, size=dims, audio=audio, fmt=fmt,
+            start_frame=from_frame, end_frame=to_frame, jobs=jobs,
+            normalize=normalize, max_size=max_size, target=target,
+        ))
+    except SizeMismatch as exc:
+        raise typer.BadParameter(str(exc), param_hint="--size") from exc
     console.print(f"[green]✓[/] Rendered to [bold]{output}[/]")
+    if cover is not None:
+        cover_output = output.with_name(f"{output.stem}-cover.png")
+        try:
+            asyncio.run(render_cover(folder, cover_output, at=cover, size=dims))
+        except CoverError as exc:
+            raise typer.BadParameter(str(exc), param_hint="--cover") from exc
+        console.print(f"[green]✓[/] Cover at [bold]{cover_output}[/]")
 
 
 @app.command()

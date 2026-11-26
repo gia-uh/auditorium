@@ -9,6 +9,12 @@
   `render --target instagram|whatsapp` refuses a video over the platform's
   length and, for WhatsApp, caps it at 16 MB; `template new short --format reel`
   starts from the same template (#143).
+- **A cover from the same render.** `render --cover SECONDS` or
+  `--cover beat:ID` writes `dist/NAME-cover.png` next to the MP4, at that
+  timeline instant or that beat's end (#145).
+- **A `--size` that would letterbox is refused.** A size whose aspect differs
+  from the format's stage now fails with a usage error instead of rendering a
+  video with bars (#145).
 
 ### Changed
 

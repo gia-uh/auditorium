@@ -28,7 +28,7 @@ def _digests(d: Path):
 
 async def test_renders_the_expected_number_of_frames(project, tmp_path):
     out = tmp_path / "out"
-    n = await render_frames(project, out, fps=10, size=(320, 240))
+    n = await render_frames(project, out, fps=10, size=(320, 180))
     assert n == 10
     assert len(list(out.glob("*.png"))) == 10
 
@@ -37,14 +37,14 @@ async def test_frames_are_not_all_identical(project, tmp_path):
     """Guards the whole point: if seek() were a no-op every frame would match
     and a frame-count assertion alone would still pass."""
     out = tmp_path / "out"
-    await render_frames(project, out, fps=10, size=(320, 240))
+    await render_frames(project, out, fps=10, size=(320, 180))
     assert len(set(_digests(out))) > 1
 
 
 async def test_two_renders_are_byte_identical(project, tmp_path):
     a, b = tmp_path / "a", tmp_path / "b"
-    await render_frames(project, a, fps=10, size=(320, 240))
-    await render_frames(project, b, fps=10, size=(320, 240))
+    await render_frames(project, a, fps=10, size=(320, 180))
+    await render_frames(project, b, fps=10, size=(320, 180))
     assert _digests(a) == _digests(b)
 
 
@@ -56,8 +56,8 @@ async def test_frame_zero_is_not_blank(project, tmp_path):
     """
     empty = write_project(tmp_path / "empty", '<section data-beat="none" data-d="1"></section>')
     blank_dir, real_dir = tmp_path / "blank", tmp_path / "real"
-    await render_frames(empty, blank_dir, fps=10, size=(320, 240))
-    await render_frames(project, real_dir, fps=10, size=(320, 240))
+    await render_frames(empty, blank_dir, fps=10, size=(320, 180))
+    await render_frames(project, real_dir, fps=10, size=(320, 180))
     blank_size = sorted(blank_dir.glob("*.png"))[0].stat().st_size
     first_size = sorted(real_dir.glob("*.png"))[0].stat().st_size
     assert first_size > blank_size * 2, (
@@ -78,7 +78,7 @@ async def test_the_default_size_is_the_format_stage(tmp_path):
 
 
 async def test_a_frame_range_renders_only_that_range(project, tmp_path):
-    n = await render_frames(project, tmp_path / "o", fps=10, size=(320, 240),
+    n = await render_frames(project, tmp_path / "o", fps=10, size=(320, 180),
                             start_frame=3, end_frame=6)
     assert n == 3
     names = sorted(p.name for p in (tmp_path / "o").glob("*.png"))
@@ -89,8 +89,8 @@ async def test_a_range_matches_the_same_frames_of_a_full_render(project, tmp_pat
     """The claim that makes parallel rendering safe: a worker starting at frame
     N produces exactly what a sequential render produces at frame N."""
     full, part = tmp_path / "full", tmp_path / "part"
-    await render_frames(project, full, fps=10, size=(320, 240))
-    await render_frames(project, part, fps=10, size=(320, 240), start_frame=4, end_frame=7)
+    await render_frames(project, full, fps=10, size=(320, 180))
+    await render_frames(project, part, fps=10, size=(320, 180), start_frame=4, end_frame=7)
     full_d = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in full.glob("*.png")}
     part_d = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in part.glob("*.png")}
     assert part_d
@@ -105,15 +105,15 @@ async def test_jobs_write_the_same_frames_as_one_worker(project, tmp_path):
     workers replay the schedule up to their start without capturing.
     """
     one, three = tmp_path / "one", tmp_path / "three"
-    await render_frames(project, one, fps=10, size=(320, 240))
-    n = await render_frames(project, three, fps=10, size=(320, 240), jobs=3)
+    await render_frames(project, one, fps=10, size=(320, 180))
+    n = await render_frames(project, three, fps=10, size=(320, 180), jobs=3)
     assert n == 10
     assert _digests(three) == _digests(one)
 
 
 async def test_jobs_split_a_frame_range(project, tmp_path):
     out = tmp_path / "o"
-    n = await render_frames(project, out, fps=10, size=(320, 240), start_frame=2, end_frame=7, jobs=2)
+    n = await render_frames(project, out, fps=10, size=(320, 180), start_frame=2, end_frame=7, jobs=2)
     assert n == 5
     assert [p.name for p in sorted(out.glob("*.png"))] == [f"frame-{i:06d}.png" for i in range(2, 7)]
 
@@ -127,7 +127,7 @@ async def test_linux_renders_under_begin_frame_control(project):
     from auditorium.render import _open_for_capture
 
     async with async_playwright() as p:
-        served, browser, page, _ = await _open_for_capture(p, project, (320, 240))
+        served, browser, page, _ = await _open_for_capture(p, project, (320, 180))
         try:
             assert hasattr(page, "begin_frames")
         finally:
@@ -148,6 +148,6 @@ async def test_a_page_with_web_fonts_renders_in_its_font(tmp_path):
     webfont = write_project(tmp_path / "webfont", text("'Playfair Display'"))
     fallback = write_project(tmp_path / "fallback", text("serif"))
     a, b = tmp_path / "a", tmp_path / "b"
-    await asyncio.wait_for(render_frames(webfont, a, fps=10, size=(320, 240), end_frame=1), 60)
-    await asyncio.wait_for(render_frames(fallback, b, fps=10, size=(320, 240), end_frame=1), 60)
+    await asyncio.wait_for(render_frames(webfont, a, fps=10, size=(320, 180), end_frame=1), 60)
+    await asyncio.wait_for(render_frames(fallback, b, fps=10, size=(320, 180), end_frame=1), 60)
     assert _digests(a) != _digests(b)
