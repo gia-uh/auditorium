@@ -4,6 +4,12 @@
 
 ### Added
 
+- **Captions from narration.** `data-captions="auto"` on `<main class="aud">`
+  groups a beat's `data-say` words into short cues and shows them as timed
+  elements, so the preview, the render and a bundle agree. Cues break on
+  punctuation, pauses and length; the layer sits above the bottom safe band,
+  and `data-caption-position="middle"` moves it. Captions do not count as
+  `reading-time` words (#147).
 - **`reel` format and platform targets.** `data-format="reel"` is a 1080x1920
   timed format from 3 to 180 s, sharing `short`'s safe area and type minimum.
   `render --target instagram|whatsapp` refuses a video over the platform's
