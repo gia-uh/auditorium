@@ -19,12 +19,12 @@ STATIC = Path(__file__).parent.parent / "static"
 # is 27.5 px on a deck), so the stylesheet passes and anything smaller fails.
 # The eval (#96) may move them.
 MIN_TYPE = {"deck": 24, "explainer": 24, "square": 24, "portrait": 24,
-            "story": 28, "short": 28, "page": 12}
+            "story": 28, "short": 28, "reel": 28, "page": 12}
 
 # The longest a timed format may sit still and silent, in seconds (dead-air):
 # a short is watched in a feed and loses its viewer sooner than an explainer.
 # The eval (#96) may move them.
-DEAD_AIR = {"explainer": 4.0, "short": 2.0}
+DEAD_AIR = {"explainer": 4.0, "short": 2.0, "reel": 2.0}
 
 
 def _block(text: str, start: str, end: str) -> str:

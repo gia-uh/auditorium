@@ -582,8 +582,8 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
 
 /* ---- What each format sets ----
  * The safe area is the inset that platform chrome covers (the app bars over a
- * story or a short); a layout keeps its content inside it plus --aud-inset.
- * Vertical formats (story, short) keep out of the union of the bands each
+ * story, short or reel); a layout keeps its content inside it plus --aud-inset.
+ * Vertical formats (story, short, reel) keep out of the union of the bands each
  * platform documents at 1080 x 1920, as checked for #83 in November 2026:
  * Meta's single 9:16 zone for Stories and Reels (14 % top = 269 px, 35 %
  * bottom = 672 px, 6 % sides = 65 px) and TikTok's in-feed template (240 px
@@ -626,7 +626,8 @@ html:not(.aud-staged) body { display: block; overflow: auto; height: auto; }
     --aud-columns: 1;
 }
 .aud[data-format="story"],
-.aud[data-format="short"] {
+.aud[data-format="short"],
+.aud[data-format="reel"] {
     --aud-safe-top: 270px;
     --aud-safe-right: 120px;
     --aud-safe-bottom: 670px;

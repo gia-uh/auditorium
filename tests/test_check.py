@@ -105,9 +105,11 @@ def test_structure_errors_stop_the_layout_pass():
 
 @pytest.mark.parametrize("fmt, lengths, fires", [
     ("short", [10, 5], False), ("short", [30, 30], False), ("short", [40, 21], True),
-    ("short", [7, 7.9], True), ("explainer", [5], False), ("deck", [], False),
+    ("short", [7, 7.9], True), ("reel", [2], True), ("reel", [3], False),
+    ("reel", [180], False), ("reel", [181], True),
+    ("explainer", [5], False), ("deck", [], False),
 ])
-def test_duration_holds_a_short_to_15_to_60_seconds(fmt, lengths, fires, tmp_path):
+def test_duration_holds_a_timed_format_to_its_bounds(fmt, lengths, fires, tmp_path):
     body = "".join(f'<section data-beat="b{i}" data-d="{d}" class="statement"><p>Beat</p></section>'
                    for i, d in enumerate(lengths)) or '<section class="statement"><p>Beat</p></section>' * 3
     report = check(write_project(tmp_path, body, fmt=fmt), layout=False)

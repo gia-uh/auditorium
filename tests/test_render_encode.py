@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from conftest import write_project
-from auditorium.render import parse_size, render_video, video_bitrate_budget
+from auditorium.render import TARGETS, parse_size, render_video, target_cap, video_bitrate_budget
 
 pytestmark = pytest.mark.skipif(
     shutil.which("ffmpeg") is None, reason="ffmpeg not installed"
@@ -98,3 +98,36 @@ async def test_a_cap_that_cannot_be_met_reports_the_real_size(project, tmp_path)
 async def test_max_size_is_only_for_mp4(project, tmp_path):
     with pytest.raises(ValueError, match="only supported for mp4"):
         await render_video(project, tmp_path / "seq", fmt="png-sequence", max_size=1)
+
+
+def test_platform_targets_cap_duration_and_size():
+    assert set(TARGETS) == {"instagram", "whatsapp"}
+    assert target_cap("whatsapp", 45) == 16
+    assert target_cap("whatsapp", 45, 8) == 8      # the caller's cap is smaller
+    assert target_cap("whatsapp", 45, 32) == 16    # a target never raises it
+    assert target_cap("instagram", 170) is None
+    with pytest.raises(ValueError, match="at most 90"):
+        target_cap("whatsapp", 120)
+    with pytest.raises(ValueError, match="unknown target"):
+        target_cap("tiktok", 10)
+
+
+async def test_whatsapp_rejects_a_long_timeline_before_rendering(tmp_path):
+    project = write_project(tmp_path / "p", """<section data-beat="one" data-d="120">
+      <p style="font-size:40px">x</p></section>""", fmt="reel")
+    with pytest.raises(ValueError, match="at most 90"):
+        await render_video(project, tmp_path / "o.mp4", fps=1, size=(320, 240),
+                           end_frame=1, target="whatsapp")
+
+
+async def test_instagram_accepts_a_longer_timeline(tmp_path):
+    project = write_project(tmp_path / "p", """<section data-beat="one" data-d="120">
+      <p style="font-size:40px">x</p></section>""", fmt="reel")
+    out = await render_video(project, tmp_path / "o.mp4", fps=1, size=(320, 240),
+                             end_frame=1, target="instagram")
+    assert out.exists() and out.stat().st_size > 0
+
+
+async def test_target_requires_mp4(project, tmp_path):
+    with pytest.raises(ValueError, match="requires --format mp4"):
+        await render_video(project, tmp_path / "seq", fmt="png-sequence", target="instagram")

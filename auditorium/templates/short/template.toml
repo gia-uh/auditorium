@@ -1,3 +1,3 @@
-summary = "a vertical video, 15 to 60 s"
-for = "A clip for Reels, TikTok or Shorts: a hook, a number, a line, a call to action, over a music bed that ducks under optional narration. Rendered to mp4."
-formats = ["short"]
+summary = "a vertical video, 15 to 60 s (reel: 3 to 180 s)"
+for = "A clip for Reels, TikTok or Shorts: a hook, a number, a line, a call to action, over a music bed that ducks under optional narration. Rendered to mp4. The short format is 15 to 60 s; --format reel makes a 3 to 180 s Instagram-first cut."
+formats = ["short", "reel"]

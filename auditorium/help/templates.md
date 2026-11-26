@@ -13,7 +13,7 @@ DIR` copies it, and the folder is then yours.
 | report | page | a long document read on a screen or printed to A4: prose, a figure, a table, a chart |
 | dashboard | page | numbers someone checks in a browser: KPI tiles, a chart, a table, filter chips, live data |
 | explainer | explainer | a narrated landscape video of 1 to 6 minutes that explains one idea |
-| short | short | a vertical video of 15 to 60 s for Reels, TikTok or Shorts: music, optional narration |
+| short | short, reel | a vertical video for Reels, TikTok or Shorts: music, optional narration. Short is 15 to 60 s; reel is a 3 to 180 s Instagram-first cut |
 
 The first format listed is the default; `--format` picks another, and the
 template refuses one it does not make.

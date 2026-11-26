@@ -304,6 +304,36 @@ SIZE_PRESETS = {
     "square": (1080, 1080),
 }
 
+# Platform limits a render can enforce. Instagram recommends reels up to three
+# minutes; a WhatsApp Status is shorter and has a practical size cap. The
+# numbers are deliberately conservative and live here, not in the format table:
+# the format says what the artifact is, the target says where it is going.
+TARGETS = {
+    "instagram": {"seconds": 180.0, "max_size": None},
+    "whatsapp": {"seconds": 90.0, "max_size": 16.0},
+}
+
+
+def target_cap(target: str, seconds: float, max_size: float | None = None) -> float | None:
+    """Validate a target's duration and return the effective size cap in MB.
+
+    A target never makes a cap larger: the smallest of the platform's cap and
+    the caller's wins. Raises ValueError with the measured length when the
+    timeline is too long for the platform.
+    """
+    if target not in TARGETS:
+        raise ValueError(f"unknown target {target!r}; use {', '.join(sorted(TARGETS))}")
+    limits = TARGETS[target]
+    if seconds > limits["seconds"]:
+        raise ValueError(
+            f"a {target} video lasts at most {limits['seconds']:g} s; "
+            f"this timeline is {seconds:.1f} s. Shorten it or choose another target."
+        )
+    cap = limits["max_size"]
+    if cap is None:
+        return max_size
+    return cap if max_size is None else min(cap, max_size)
+
 
 def parse_size(value: str) -> tuple[int, int]:
     """Resolve a named preset or a WIDTHxHEIGHT string."""
@@ -398,12 +428,18 @@ async def render_video(
     jobs: int = 1,
     normalize: bool = True,
     max_size: float | None = None,
+    target: str | None = None,
 ) -> Path:
     """Render a project to a video file (or a PNG sequence directory)."""
     output = Path(output)
     project = Path(project)
     frame_range = {"start_frame": start_frame, "end_frame": end_frame, "jobs": jobs}
 
+    if target is not None:
+        if target not in TARGETS:
+            raise ValueError(f"unknown target {target!r}; use {', '.join(sorted(TARGETS))}")
+        if fmt != "mp4":
+            raise ValueError("--target requires --format mp4")
     if max_size is not None and fmt != "mp4":
         raise ValueError("--max-size is only supported for mp4; use --format mp4")
     if max_size is not None and max_size <= 0:
@@ -421,8 +457,13 @@ async def render_video(
     # its own time and gain, looped, faded and ducked (auditorium.mix). Audio
     # is not part of the visual state -- seek() never sees it -- so this is
     # the only place it is read.
-    published = None if audio is not None else await published_timeline(project)
+    published = (None if audio is not None and target is None
+                 else await published_timeline(project))
     clips = [] if published is None else published["audio"]
+
+    if target is not None:
+        seconds = frame_count(published["duration"], published["stops"], fps) / fps
+        max_size = target_cap(target, seconds, max_size)
 
     with tempfile.TemporaryDirectory(prefix="auditorium-render-") as tmp:
         frames = Path(tmp)
