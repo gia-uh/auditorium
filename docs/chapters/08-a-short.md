@@ -1,8 +1,8 @@
 # A short video
 
-The job: a vertical clip of under twenty seconds for Reels, TikTok and Shorts,
-telling people that a dripping tap wastes a bathtub of water a week, over music
-that drops when the voice speaks.
+The job: a vertical clip for Reels, TikTok, Shorts and WhatsApp Status, about
+twenty seconds long, telling people that a dripping tap wastes a bathtub of
+water a week, over music that drops when the voice speaks.
 
 ```{bash echo=false output=false}
 rm -rf build/short && mkdir -p build/gallery
@@ -21,6 +21,20 @@ auditorium template show short | head -3
 EX=$(python -c "import auditorium.templates as t; print(t.TEMPLATES)")
 cp -r "$EX/short/example" build/short
 ```
+
+## Short or reel
+
+`short` is the one file that posts everywhere: 15 to 60 s, inside the length
+every platform accepts. `reel` is the Instagram-first cut: 3 to 180 s, at the
+same stage and with the same safe area. The same template starts one:
+
+```bash
+auditorium template new short build/reel --format reel
+```
+
+`render --target whatsapp` refuses a video over 90 s and caps it at 16 MB;
+`--target instagram` allows up to 180 s. A `short` already fits both, so the
+target is a check on top of the file, not a different format.
 
 ## A music bed that ducks
 
@@ -52,6 +66,26 @@ or the music is louder than the voice (`audio-peak`):
 ```{bash}
 auditorium check build/short
 ```
+
+## Captions
+
+Put `data-captions="auto"` on `<main>` and every beat with `data-say` shows its
+words while the voice says them. The template example already does. Captions are
+part of the page, so the preview, the render and the exported HTML show the same
+ones, and the check measures them against the safe area. They break at
+punctuation and pauses and stay up for the phrase, not a fixed timer.
+
+```html
+<main class="aud" data-format="short" data-captions="auto">
+  <section data-beat="hook" data-d="4" data-say="assets/vo/01.json">
+    <h1 data-enter="words">A dripping tap wastes water all day</h1>
+  </section>
+</main>
+```
+
+`data-caption-position="middle"` moves the layer from above the bottom safe
+band to the lower middle. `--aud-caption-size`, `--aud-caption-bg` and
+`--aud-caption-fg` style it from `theme.css`.
 
 ## Edit in place
 
@@ -99,7 +133,25 @@ and the check flags both.
 ## Ship it
 
 The video itself is `auditorium render build/short`, an MP4 at 1080 × 1920
-with the narration and the bed mixed in. The HTML version plays in a browser:
+with the narration and the bed mixed in. The default encode is already the one
+a social platform wants: H.264 High, a keyframe every two seconds, `+faststart`,
+AAC at 48 kHz and about -14 LUFS. `--no-normalize` opts out of the loudness
+pass; `--max-size` caps the file and lowers the video bitrate to fit.
+
+A platform check goes on top. WhatsApp Status is shorter and smaller;
+Instagram accepts more:
+
+```bash
+auditorium render build/short --target whatsapp
+auditorium render build/short --target instagram --cover 2.5
+```
+
+`--cover 2.5` writes `dist/short-cover.png` at that second; `--cover beat:hook`
+uses the end of a beat. A cover is the frame the video shows there, so it
+matches the upload. `--size` may make a smaller render only at the stage's
+aspect; a different shape would letterbox it, and the command refuses.
+
+The HTML version plays in a browser:
 
 ```{bash}
 auditorium export build/short -f html -o build/gallery/short.html

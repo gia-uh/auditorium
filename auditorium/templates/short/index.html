@@ -16,8 +16,10 @@
      Narration is optional: give a beat data-say="assets/vo/01.json" (the
      alignment of assets/vo/01.wav) and its clip plays 0.3 s in, with the
      music ducked under it; data-cue="a phrase" enters an element when the
-     phrase is said. Times, narration and the mix: auditorium help attributes. -->
-<main class="aud" data-format="short">
+     phrase is said. data-captions="auto" on <main> burns each narration's
+     words in as captions; delete it for a caption-free cut.
+     Times, narration and the mix: auditorium help attributes. -->
+<main class="aud" data-format="short" data-captions="auto">
   <!-- A moving background, so a still beat never freezes the video (dead-air). -->
   <div data-layer="background" data-ambient="aurora"></div>
   <!-- The logo slot: on every beat, in the band the layouts leave free.

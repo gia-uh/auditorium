@@ -517,6 +517,13 @@ def test_the_video_examples_are_narrated_from_clips_in_their_folder(name):
         assert (example / narration.clip).is_file() and narration.text
 
 
+def test_the_short_example_teaches_captions():
+    """The example is the finished artifact an agent copies; it should show
+    the caption layer the narration already makes possible."""
+    text = (TEMPLATES / "short" / "example" / "index.html").read_text()
+    assert 'data-captions="auto"' in text
+
+
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
 async def test_a_narrated_short_renders_from_its_folder_alone(tmp_path):
     """The M3 criterion: the short example, copied away from the package,
